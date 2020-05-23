@@ -94,6 +94,7 @@ class MainFrame(wx.Frame):
         print('OnLatency')
 
     def OnClear(self, args = None):
+        self.gatherer.clear()
         res = self.gatherer.experiment_list()
         self.exp_list.update(res)
 

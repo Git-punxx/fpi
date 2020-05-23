@@ -169,6 +169,7 @@ class FPIGatherer:
         self.path = app_config.base_dir()
         self._children = None
         self.experiments = None
+        self.working_list = self.experiment_list()
 
 
     def __getitem__(self, item):
@@ -187,8 +188,7 @@ class FPIGatherer:
 
     def find(self, exp_number):
         print('Searching for ', exp_number)
-        for item in self.experiments:
-            print(item.name)
+        for item in self.working_list:
             if exp_number == item.name:
                 return item
 
@@ -221,17 +221,26 @@ class FPIGatherer:
             self.experiments = result
             return self.experiments
 
+    def clear(self):
+        self.working_list = self.experiment_list()
+
     def filterLine(self, line):
-        exps = self.experiment_list()
-        return [exp for exp in exps if exp.line.upper() == line.upper()]
+        exps = self.working_list
+        print(exps)
+        self.working_list = [exp for exp in exps if exp.line.upper() == line.upper()]
+        return self.working_list
 
     def filterGenotype(self, gen):
-        exps = self.experiment_list()
-        return [exp for exp in exps if exp.genotype.upper() == gen.upper()]
+        exps = self.working_list
+        print(exps)
+        self.working_list = [exp for exp in exps if exp.genotype.upper() == gen.upper()]
+        return self.working_list
 
     def filterStimulus(self, stim):
-        exps = self.experiment_list()
-        return [exp for exp in exps if exp.stimulus.upper() == stim.upper()]
+        exps = self.working_list
+        print(exps)
+        self.working_list = [exp for exp in exps if exp.stimulus.upper() == stim.upper()]
+        return self.working_list
 
     def __str__(self):
         return f'FPIGatherer@{self.path}'
