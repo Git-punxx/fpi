@@ -242,6 +242,29 @@ class FPIGatherer:
         self.working_list = [exp for exp in exps if exp.stimulus.upper() == stim.upper()]
         return self.working_list
 
+    def get_active(self):
+        '''
+        Check whci experiments are contained in the working list (after the filtering performed from the gui)
+        :return: A list of FPIExperiment object
+        '''
+        working_names = [exp.name for exp in self.working_list]
+        res = []
+        for exp in self.experiments:
+            if exp.name in working_names:
+                res.append(exp)
+            else:
+                print(f'{exp.name } not in the list')
+        return res
+
+
+    def get_response_peak(self):
+        experiments = self.get_active()
+        return [exp.peak_latency() for exp in experiments]
+
+    def get_response_latency(self):
+        experiments = self.get_active()
+        return [exp.response_latency() for exp in experiments]
+
     def __str__(self):
         return f'FPIGatherer@{self.path}'
 
@@ -411,6 +434,31 @@ class FPIExperiment:
     @property
     def timecourse(self):
         return self._all_pixel
+
+    def baseline_mean(self, n_baseline = 30):
+        data = self.response
+        # Compute the mean of the baseline
+        baseline = np.array(data[:n_baseline])
+        baseline_mean = np.mean(baseline)
+        return baseline_mean
+
+    def peak_latency(self):
+        data = self.response
+        if data is None:
+            return
+        response_region = data[:]
+        peak = np.argmax(response_region)
+        peak_value = np.max(response_region)
+        return (peak, peak_value)
+
+    def response_latency(self, ratio = 0.3, n_baseline = 30):
+        data = self.response
+        if data is None:
+            return
+        mean_baseline = self.baseline_mean(n_baseline)
+        latency = [(index, val) for index, val in enumerate(data[31:], n_baseline +1) if val > abs(1 + ratio) * mean_baseline]
+        return latency
+
 
     def __str__(self):
         return f'{self.name}: {self.stimulation} -> {self.genotype}'

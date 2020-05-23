@@ -88,10 +88,12 @@ class MainFrame(wx.Frame):
         print('On timecourse')
 
     def OnResponse(self, event):
-        print('On response')
+        response_latency = self.gatherer.get_response_latency()
+        print(response_latency)
 
     def OnLatency(self, event):
-        print('OnLatency')
+        response_peak = self.gatherer.get_response_peak()
+        print(response_peak)
 
     def OnClear(self, args = None):
         self.gatherer.clear()
