@@ -498,7 +498,8 @@ class FPIExperiment:
         if data is None:
             return
         x = range(len(data))
-        ax.plot(x, data, 'k-')
+        ax.set_title(f'Response: {self.name}')
+        ax.boxplot(data, True)
 
     def plot_response_latency(self, ax):
         data = self.response_latency()

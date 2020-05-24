@@ -1,0 +1,10 @@
+1. Create a config panel to set the application configuration options
+2. Create something like a style manager for the various plots
+3. Create an option to create the folder structure the application expects. All experiments should be stored in the
+appropriate folder.
+4. Create a function that checks the folder structure
+5. We could store that parsed experiments in an hdf5 file or an sqlite db so we don't have to parse the folder structure
+in every instance of the application. This means that there should be an option for updating the db.
+6. Having this application in a working condition we could relate it to the imaging sript. That means that we could
+run the multianalysis.py script inside this app and specify the output folder for the hdf5 file. That means that we should
+

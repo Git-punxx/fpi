@@ -17,7 +17,7 @@ class MainFrame(wx.Frame):
     def __init__(self, parent, id=wx.ID_ANY, title='FPIAnalyzer'):
         super(MainFrame, self).__init__(parent, id, title)
         self.setup()
-
+        self.Maximize(True)
         self.exp_list = FPIExperimentList(self)
         self.exp_list.add_columns(app_config.categories())
         self.exp_list.add_rows(self.gatherer.experiment_list())
@@ -26,9 +26,9 @@ class MainFrame(wx.Frame):
 
         self.plotter = PlotNotebook(self)
 
-        self.response_btn = wx.Button(self, label='Analyze response')
-        self.timecourse_btn = wx.Button(self, label='Analyze timecourse')
-        self.latency_button = wx.Button(self, label='Response Latency')
+        self.response_btn = wx.Button(self, label='Plot response')
+        self.timecourse_btn = wx.Button(self, label='Plot timecourse')
+        self.latency_button = wx.Button(self, label='Plot Response Latency')
 
         self.CreateStatusBar()
 
@@ -55,6 +55,7 @@ class MainFrame(wx.Frame):
         main_sizer.Add(plot_sizer, 1, wx.EXPAND)
         main_sizer.Add(footer_sizer, 0, wx.EXPAND)
         self.SetSizer(main_sizer)
+        self.Fit()
 
         # Publishing
         pub.subscribe(self.OnLineChange, LINE_CHANGED)
@@ -246,6 +247,7 @@ class Plot(wx.Panel):
 
     def plot(self, plot_type=None):
         ax = self.figure.gca()
+        ax.grid(True, color = 'grey', linewidth = 0.5)
         print('Plotting ', self.fpi_list)
         [exp.plot(ax, plot_type) for exp in self.fpi_list]
         self.canvas.draw()
@@ -272,7 +274,7 @@ class PlotNotebook(wx.Panel):
 
 class FPI(wx.App):
     def OnInit(self):
-        frame = MainFrame(None, -1, 'Plotter')
+        frame = MainFrame(None, -1, 'FPI Plotter')
         frame.Show()
         return True
 
