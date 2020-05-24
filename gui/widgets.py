@@ -5,6 +5,7 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
 from fpi import *
 from pubsub import pub
+from gui.menus import FPIMenuBar
 
 LINE_CHANGED = 'line.changed'
 STIMULUS_CHANGED = 'stimulus.changed'
@@ -18,12 +19,15 @@ class MainFrame(wx.Frame):
         super(MainFrame, self).__init__(parent, id, title)
         self.setup()
         self.Maximize(True)
+
+        # Menubar
+        self.menubar = FPIMenuBar()
+        self.SetMenuBar(self.menubar)
         self.exp_list = FPIExperimentList(self)
         self.exp_list.add_columns(app_config.categories())
         self.exp_list.add_rows(self.gatherer.experiment_list())
 
         self.filter = FilterPanel(self)
-
         self.plotter = PlotNotebook(self)
 
         self.response_btn = wx.Button(self, label='Plot response')
@@ -36,6 +40,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnTimecourse, self.timecourse_btn)
         self.Bind(wx.EVT_BUTTON, self.OnResponse, self.response_btn)
         self.Bind(wx.EVT_BUTTON, self.OnLatency, self.latency_button)
+        self.Bind(wx.EVT_MENU, self.OnMenu)
 
         # Layout
         header_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -73,6 +78,11 @@ class MainFrame(wx.Frame):
                                   wx.OK | wx.ICON_ERROR) as dlg:
                 dlg.ShowModal()
                 exit(1)
+
+    def OnMenu(self, event):
+        evt_id = event.GetId()
+        print(evt_id)
+
 
     def OnLineChange(self, args):
         res = self.gatherer.filterLine(args)
