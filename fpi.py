@@ -171,8 +171,8 @@ def fpiparser(path):
         else:
             raise ValueError(f'{path} could not be matched against a parser')
     else:
-        raise ValueError(f'{path} could not be matched against a parser')
-
+        #raise ValueError(f'{path} could not be matched against a parser')
+        pass
 
 #### Model #####
 class FPIGatherer:
@@ -433,9 +433,10 @@ class FPIExperiment:
         '''
         self.build_path()
         self._parser = fpiparser(self._path)
-        self._all_pixel = self._parser.all_pixel()
-        self._response = self._parser.response()
-        self._timecourse = self._parser.timecourse()
+        if self._parser:
+            self._all_pixel = self._parser.all_pixel()
+            self._response = self._parser.response()
+            self._timecourse = self._parser.timecourse()
 
     def build_path(self):
         base_dir = app_config.base_dir()

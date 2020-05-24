@@ -8,3 +8,10 @@ in every instance of the application. This means that there should be an option 
 6. Having this application in a working condition we could relate it to the imaging sript. That means that we could
 run the multianalysis.py script inside this app and specify the output folder for the hdf5 file. That means that we should
 
+
+
+
+
+###################################### Fixes ######################################
+
+
