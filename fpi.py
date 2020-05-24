@@ -85,7 +85,7 @@ class CSVParser(FPIParser):
 
     def timecourse(self):
         y = []
-        fname = [f for f in self._path if 'response' in f][0]
+        fname = [f for f in self._path if 'timecourse' in f][0]
         with open(fname, 'r') as f:
             f.readline()
             for line in f:
@@ -97,7 +97,7 @@ class CSVParser(FPIParser):
 
     def all_pixel(self):
         data = []
-        fname = [f for f in self._path if 'response' in f][0]
+        fname = [f for f in self._path if 'all_pixel' in f][0]
         with open(fname, 'r') as f:
             f.readline()
             for line in f:
@@ -120,10 +120,14 @@ class HD5Parser(FPIParser):
         store.close()
 
     def timecourse(self):
-        pass
+        print('HD5 parser parses timecourse')
+        store = h5py.File(self._path, 'r')
+        store.close()
 
     def all_pixel(self):
-        pass
+        print('HD5 parser parses all_pixel')
+        store = h5py.File(self._path, 'r')
+        store.close()
 
 #### Utility functions #######
 def debug(func):
@@ -257,13 +261,17 @@ class FPIGatherer:
         return res
 
 
-    def get_response_peak(self):
+    def get_response_peak(self, selected):
         experiments = self.get_active()
-        return [exp.peak_latency() for exp in experiments]
+        return [exp.peak_latency() for exp in experiments if exp.name in selected]
 
-    def get_response_latency(self):
+    def get_response_latency(self, selected):
         experiments = self.get_active()
-        return [exp.response_latency() for exp in experiments]
+        return [exp.response_latency() for exp in experiments if exp.name in selected]
+
+    def get_timecourse(self, selected):
+        experiements = self.get_active()
+        return [exp.timecourse() for exp in experiements if exp.name in selected]
 
     def __str__(self):
         return f'FPIGatherer@{self.path}'
@@ -429,11 +437,11 @@ class FPIExperiment:
 
     @property
     def response(self):
-        return self._all_pixel
+        return self._response
 
     @property
     def timecourse(self):
-        return self._all_pixel
+        return self._timecourse
 
     def baseline_mean(self, n_baseline = 30):
         data = self.response

@@ -85,15 +85,26 @@ class MainFrame(wx.Frame):
         self.exp_list.update(res)
 
     def OnTimecourse(self, event):
-        print('On timecourse')
+        selected = self.exp_list.GetSelection()
+        timecourse = self.gatherer.get_timecourse(selected)
+        res = zip(selected, timecourse)
+        for item, val in res:
+            print(f'{item}: {val}')
+
 
     def OnResponse(self, event):
-        response_latency = self.gatherer.get_response_latency()
-        print(response_latency)
+        selected = self.exp_list.GetSelection()
+        response_latency = self.gatherer.get_response_latency(selected)
+        res = zip(selected, response_latency)
+        for item, val in res:
+            print(f'{item}: {val}')
 
     def OnLatency(self, event):
-        response_peak = self.gatherer.get_response_peak()
-        print(response_peak)
+        selected = self.exp_list.GetSelection()
+        response_peak = self.gatherer.get_response_peak(selected)
+        res = zip(selected, response_peak)
+        for item, val in res:
+            print(f'{item}: {val}')
 
     def OnClear(self, args = None):
         self.gatherer.clear()
@@ -168,6 +179,12 @@ class FPIExperimentList(wx.Panel):
         wx.Panel.__init__(self, parent, *args, **kwargs)
         self.list = wx.ListCtrl(self, -1, style = wx.LC_REPORT)
 
+        self.current_selection = []
+
+        self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnSelect, self.list)
+        self.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.OnDeselect, self.list)
+
+
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.list, 1, wx.EXPAND)
         self.SetSizer(sizer)
@@ -188,6 +205,15 @@ class FPIExperimentList(wx.Panel):
     def add_rows(self, data):
         for row in data:
             self.list.Append(row)
+
+    def OnSelect(self, event):
+        self.current_selection.append(event.GetText())
+
+    def OnDeselect(self, event):
+        self.current_selection.remove(event.GetText())
+
+    def GetSelection(self):
+        return self.current_selection
 
 class Plot(wx.Panel):
     def __init__(self, parent, id=wx.ID_ANY, dpi=None, fpi=None, **kwargs):
