@@ -12,6 +12,7 @@ GENOTYPE_CHANGED = 'genotype.changed'
 EXPERIMENT_CHANGED = 'experiment.changed'
 CLEAR_FILTERS = 'clear.filters'
 
+
 class MainFrame(wx.Frame):
     def __init__(self, parent, id=wx.ID_ANY, title='FPIAnalyzer'):
         super(MainFrame, self).__init__(parent, id, title)
@@ -25,9 +26,9 @@ class MainFrame(wx.Frame):
 
         self.plotter = PlotNotebook(self)
 
-        self.response_btn = wx.Button(self, label = 'Analyze response')
-        self.timecourse_btn = wx.Button(self, label = 'Analyze timecourse')
-        self.latency_button = wx.Button(self, label = 'Response Latency')
+        self.response_btn = wx.Button(self, label='Analyze response')
+        self.timecourse_btn = wx.Button(self, label='Analyze timecourse')
+        self.latency_button = wx.Button(self, label='Response Latency')
 
         self.CreateStatusBar()
 
@@ -38,7 +39,7 @@ class MainFrame(wx.Frame):
 
         # Layout
         header_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        header_sizer.Add(self.filter, 0, wx.EXPAND |wx.ALL, 2)
+        header_sizer.Add(self.filter, 0, wx.EXPAND | wx.ALL, 2)
 
         plot_sizer = wx.BoxSizer(wx.HORIZONTAL)
         plot_sizer.Add(self.exp_list, 0, wx.EXPAND)
@@ -89,7 +90,6 @@ class MainFrame(wx.Frame):
         exp = self.gatherer.filter_selected(selected)
         canvas = self.plotter.add(exp, 'Timecourse')
 
-
     def OnResponse(self, event):
         selected = self.exp_list.GetSelection()
         exp = self.gatherer.filter_selected(selected)
@@ -100,7 +100,7 @@ class MainFrame(wx.Frame):
         exp = self.gatherer.filter_selected(selected)
         self.plotter.add(exp, 'Latency')
 
-    def OnClear(self, args = None):
+    def OnClear(self, args=None):
         self.gatherer.clear()
         res = self.gatherer.experiment_list()
         self.exp_list.update(res)
@@ -110,15 +110,15 @@ class FilterPanel(wx.Panel):
     def __init__(self, parent, *args, **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
 
-        an_line_lbl = wx.StaticText(self, label = 'Mouseline')
-        stim_lbl = wx.StaticText(self, label = 'Stimulus')
-        gen_lbl = wx.StaticText(self, label = 'Genotype')
+        an_line_lbl = wx.StaticText(self, label='Mouseline')
+        stim_lbl = wx.StaticText(self, label='Stimulus')
+        gen_lbl = wx.StaticText(self, label='Genotype')
 
-        self.an_line_choice = wx.Choice(self, choices = app_config.animal_lines())
-        self.stim_choice = wx.Choice(self, choices = app_config.stimulations())
-        self.gen_choice = wx.Choice(self, choices = app_config.genotypes())
+        self.an_line_choice = wx.Choice(self, choices=app_config.animal_lines())
+        self.stim_choice = wx.Choice(self, choices=app_config.stimulations())
+        self.gen_choice = wx.Choice(self, choices=app_config.genotypes())
 
-        self.clear_btn = wx.Button(self, label = 'Clear')
+        self.clear_btn = wx.Button(self, label='Clear')
 
         # Bindings
         self.an_line_choice.Bind(wx.EVT_CHOICE, self.OnLineChoice)
@@ -127,7 +127,7 @@ class FilterPanel(wx.Panel):
         self.clear_btn.Bind(wx.EVT_BUTTON, self.OnClear)
 
         # Layout
-        sizer = wx.GridBagSizer(vgap = 5, hgap = 5)
+        sizer = wx.GridBagSizer(vgap=5, hgap=5)
         sizer.Add(an_line_lbl, (0, 0))
         sizer.Add(self.an_line_choice, (1, 0))
 
@@ -138,7 +138,6 @@ class FilterPanel(wx.Panel):
         sizer.Add(self.gen_choice, (1, 2))
 
         sizer.Add(self.clear_btn, (0, 3))
-
 
         self.SetSizer(sizer)
         self.Fit()
@@ -152,32 +151,31 @@ class FilterPanel(wx.Panel):
     def SetStimulusChoices(self, items):
         self.stim_choice.SetItems(items)
 
-
     def OnLineChoice(self, choices):
         selection = self.an_line_choice.GetStringSelection()
-        pub.sendMessage(LINE_CHANGED, args = selection)
+        pub.sendMessage(LINE_CHANGED, args=selection)
 
     def OnStimChoice(self, event):
         selection = self.stim_choice.GetStringSelection()
-        pub.sendMessage(STIMULUS_CHANGED, args = selection)
+        pub.sendMessage(STIMULUS_CHANGED, args=selection)
 
     def OnGenChoice(self, event):
         selection = self.gen_choice.GetStringSelection()
-        pub.sendMessage(GENOTYPE_CHANGED, args = selection)
+        pub.sendMessage(GENOTYPE_CHANGED, args=selection)
 
     def OnClear(self, event):
-        pub.sendMessage(CLEAR_FILTERS, args = None)
+        pub.sendMessage(CLEAR_FILTERS, args=None)
+
 
 class FPIExperimentList(wx.Panel):
     def __init__(self, parent, *args, **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
-        self.list = wx.ListCtrl(self, -1, style = wx.LC_REPORT)
+        self.list = wx.ListCtrl(self, -1, style=wx.LC_REPORT)
 
         self.current_selection = []
 
         self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnSelect, self.list)
         self.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.OnDeselect, self.list)
-
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.list, 1, wx.EXPAND)
@@ -209,6 +207,7 @@ class FPIExperimentList(wx.Panel):
     def GetSelection(self):
         return self.current_selection
 
+
 class Plot(wx.Panel):
     def __init__(self, parent, id=wx.ID_ANY, dpi=None, fpi_list=None, **kwargs):
         wx.Panel.__init__(self, parent, id)
@@ -217,7 +216,6 @@ class Plot(wx.Panel):
         self.canvas = FigureCanvas(self, -1, self.figure)
         self.toolbar = NavigationToolbar(self.canvas)
         self.toolbar.Realize()
-
 
         # Bindings
         self.Bind(wx.EVT_BUTTON, self.OnPlot)
@@ -230,14 +228,12 @@ class Plot(wx.Panel):
         sizer.Add(self.toolbar, 0, wx.LEFT | wx.EXPAND)
         self.SetSizer(sizer)
 
-
-
     def OnPlot(self, event):
-        '''
+        """
         Pass the canvas to a possibly empyt list of experiments to plot themselves
         :param event:
         :return:
-        '''
+        """
         if self.fpi_list is None or self.fpi_list.empty():
             with wx.MessageDialog(self, 'Please select an fpi experiment before plotting', 'No experiment(s) provided',
                                   wx.OK | wx.ICON_ERROR) as dlg:
@@ -248,7 +244,7 @@ class Plot(wx.Panel):
             [exp.plot(ax) for exp in self.fpi_list]
             self.canvas.draw()
 
-    def plot(self, plot_type = None):
+    def plot(self, plot_type=None):
         ax = self.figure.gca()
         print('Plotting ', self.fpi_list)
         [exp.plot(ax, plot_type) for exp in self.fpi_list]
@@ -260,7 +256,7 @@ class Plot(wx.Panel):
 
 class PlotNotebook(wx.Panel):
     def __init__(self, parent, id=-1):
-        super(wx.Panel, self).__init__(parent, id)
+        wx.Panel.__init__(self, parent, id)
         self.nb = aui.AuiNotebook(self)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -268,8 +264,8 @@ class PlotNotebook(wx.Panel):
         self.SetSizer(sizer)
 
     def add(self, fpi_list, title):
-        page = Plot(self.nb, fpi_list = fpi_list)
-        self.nb.AddPage(page, caption = title)
+        page = Plot(self.nb, fpi_list=fpi_list)
+        self.nb.AddPage(page, caption=title)
         page.plot(title.lower())
         return page
 
@@ -279,6 +275,7 @@ class FPI(wx.App):
         frame = MainFrame(None, -1, 'Plotter')
         frame.Show()
         return True
+
 
 if __name__ == '__main__':
     app = FPI()

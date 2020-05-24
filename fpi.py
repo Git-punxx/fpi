@@ -9,8 +9,6 @@ from pathlib import Path
 import re
 from itertools import takewhile
 
-
-
 '''
 The point here is that we design a class hirearchy that will be able to handle different types
 of files (csv, h5py) providing a united interface.
@@ -30,6 +28,8 @@ So we have to divide them based on their filename. That means that there should 
 
 '''
 fpi_meta = namedtuple('fpi_meta', 'name line stimulus genotype')
+
+
 ###### Parsers ######
 class FPIParser:
     '''
@@ -37,11 +37,11 @@ class FPIParser:
     it reconstructs its path.
     Depending on the file format we will use a factory method to return the appropriate parser.
     '''
+
     def __init__(self, experiment, path):
         self.experiment = experiment
         self._path = path
         self._file_type = None
-
 
     @abstractmethod
     def parser_type(self):
@@ -62,6 +62,7 @@ class FPIParser:
     @abstractmethod
     def parse(self):
         raise NotImplementedError
+
 
 class CSVParser(FPIParser):
     def __init__(self, experiment, path):
@@ -107,6 +108,7 @@ class CSVParser(FPIParser):
                     data.append(float(line.split(',')[1]))
         return np.array(data)
 
+
 class HD5Parser(FPIParser):
     def __init__(self, experiment, path):
         FPIParser.__init__(self, experiment, path)
@@ -129,6 +131,7 @@ class HD5Parser(FPIParser):
         store = h5py.File(self._path, 'r')
         store.close()
 
+
 #### Utility functions #######
 def debug(func):
     def wrapper(*args, **kwargs):
@@ -136,7 +139,9 @@ def debug(func):
         res = func(*args, **kwargs)
         print(res)
         return res
+
     return wrapper
+
 
 def extract_name(path):
     '''
@@ -147,6 +152,7 @@ def extract_name(path):
     '''
     name = re.search(app_config.name_pattern(), str(path))
     return name.group(0)[1:]
+
 
 def fpiparser(path):
     '''
@@ -161,11 +167,12 @@ def fpiparser(path):
     # timecourse and all_pixels. This should be enforced in the analysis step
     elif len(path) == 3:
         if len(list(takewhile(lambda x: x.endswith('.csv'), path))) == 3:
-            return CSVParser(extract_name(path), path) # and pray that they are response, timecourse and all pixels
+            return CSVParser(extract_name(path), path)  # and pray that they are response, timecourse and all pixels
         else:
             raise ValueError(f'{path} could not be matched against a parser')
     else:
         raise ValueError(f'{path} could not be matched against a parser')
+
 
 #### Model #####
 class FPIGatherer:
@@ -175,20 +182,17 @@ class FPIGatherer:
         self.experiments = None
         self.working_list = self.experiment_list()
 
-
     def __getitem__(self, item):
         for animal_line in self.children.keys():
             print(animal_line.path)
             if item in animal_line.path:
                 return animal_line
 
-    def experiment_list(self, filtered_list = None):
+    def experiment_list(self, filtered_list=None):
         result = []
         for exp in self.get_experiments():
             result.append(fpi_meta._make((exp.name, exp.animal_line, exp.stimulation, exp.genotype)))
         return result
-
-
 
     def find(self, exp_number):
         print('Searching for ', exp_number)
@@ -198,17 +202,18 @@ class FPIGatherer:
 
     @property
     def children(self):
-        '''
+        """
         Scan the base directory and return the animal line folders.
         Create a dict in which the directory is the key and an AnimalLine is the value.
         :return:
-        '''
+        """
         if self._children is not None:
             return self._children
         else:
             animal_lines = app_config.animal_lines()
             base_path = Path(self.path)
-            self._children = {AnimalLine(str(d)): d for d in base_path.iterdir() if os.path.basename(d).upper() in animal_lines}
+            self._children = {AnimalLine(str(d)): d for d in base_path.iterdir() if
+                              os.path.basename(d).upper() in animal_lines}
             return self._children
 
     def gather(self):
@@ -257,9 +262,8 @@ class FPIGatherer:
             if exp.name in working_names:
                 res.append(exp)
             else:
-                print(f'{exp.name } not in the list')
+                print(f'{exp.name} not in the list')
         return res
-
 
     def get_response_peak(self, selected):
         experiments = self.get_active()
@@ -273,15 +277,13 @@ class FPIGatherer:
         experiements = self.get_active()
         return [exp.timecourse() for exp in experiements if exp.name in selected]
 
-
-
-
     def filter_selected(self, selected):
         experiments = self.get_active()
         return [exp for exp in experiments if exp.name in selected]
 
     def __str__(self):
         return f'FPIGatherer@{self.path}'
+
 
 class AnimalLine:
     def __init__(self, path):
@@ -308,7 +310,7 @@ class AnimalLine:
         else:
             stims = app_config.stimulations()
             base_path = Path(self.path)
-            children = [str(d) for d in base_path.iterdir() ]
+            children = [str(d) for d in base_path.iterdir()]
             self._children = {Stimulation(str(d)): d for d in base_path.iterdir() if
                               os.path.basename(d).upper() in stims}
             return self._children
@@ -326,6 +328,7 @@ class AnimalLine:
     def __str__(self):
         return f'AnimalLine {os.path.basename(str(self.path))}'
 
+
 class Stimulation:
     def __init__(self, path):
         self._path = path
@@ -335,6 +338,7 @@ class Stimulation:
         for genotype in self._children.keys():
             if item in genotype.path.upper():
                 return genotype
+
     @property
     def children(self):
         '''
@@ -361,6 +365,7 @@ class Stimulation:
     def __str__(self):
         return f'Stimulation {os.path.basename(str(self._path))}'
 
+
 class Genotype:
     def __init__(self, path):
         self.path = path
@@ -379,10 +384,11 @@ class Genotype:
         genotype = os.path.basename(self.path)
         stimulation = os.path.basename(str(base_path.parent))
         animal_line = os.path.basename(str(base_path.parent.parent))
-        self._children = {extract_name(str(d)): FPIExperiment(name=extract_name(d), animal_line = animal_line, stimulation=stimulation, genotype=genotype)
-                          for d in base_path.iterdir()}
+        self._children = {
+            extract_name(str(d)): FPIExperiment(name=extract_name(d), animal_line=animal_line, stimulation=stimulation,
+                                                genotype=genotype)
+            for d in base_path.iterdir()}
         return self._children
-
 
     def gather(self):
         for line in self.children.values():
@@ -394,6 +400,7 @@ class Genotype:
     def __str__(self):
         return f'Genotype {os.path.basename(str(self.path))}'
 
+
 class FPIExperiment:
     '''
     This class represents the results of an FPI experiment.
@@ -404,6 +411,7 @@ class FPIExperiment:
     operations should be handled by the parser.
     By providing the name of the experiment we could build the path using the config options
     '''
+
     def __init__(self, name, animal_line, stimulation, genotype):
         self.animal_line = animal_line
         self.stimulation = stimulation
@@ -450,7 +458,7 @@ class FPIExperiment:
     def timecourse(self):
         return self._timecourse
 
-    def baseline_mean(self, n_baseline = 30):
+    def baseline_mean(self, n_baseline=30):
         data = self.response
         # Compute the mean of the baseline
         baseline = np.array(data[:n_baseline])
@@ -466,12 +474,13 @@ class FPIExperiment:
         peak_value = np.max(response_region)
         return (peak, peak_value)
 
-    def response_latency(self, ratio = 0.3, n_baseline = 30):
+    def response_latency(self, ratio=0.3, n_baseline=30):
         data = self.response
         if data is None:
             return
         mean_baseline = self.baseline_mean(n_baseline)
-        latency = [(index, val) for index, val in enumerate(data[31:], n_baseline +1) if val > abs(1 + ratio) * mean_baseline]
+        latency = [(index, val) for index, val in enumerate(data[31:], n_baseline + 1) if
+                   val > abs(1 + ratio) * mean_baseline]
         return latency
 
     def plot(self, ax, type):
@@ -498,14 +507,12 @@ class FPIExperiment:
         x = range(len(data))
         ax.plot(x, data, 'k-')
 
-
     def plot_timecourse(self, ax):
         data = self.timecourse
         if data is None:
             return
         x = range(len(data))
         ax.plot(x, data, 'k-')
-
 
     def __str__(self):
         return f'{self.name}: {self.stimulation} -> {self.genotype}'
@@ -525,6 +532,7 @@ class FPIExperiment:
         else:
             result.append('No all_pixelsj')
         return result
+
 
 if __name__ == '__main__':
     gatherer = FPIGatherer()
