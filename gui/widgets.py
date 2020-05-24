@@ -86,25 +86,19 @@ class MainFrame(wx.Frame):
 
     def OnTimecourse(self, event):
         selected = self.exp_list.GetSelection()
-        timecourse = self.gatherer.get_timecourse(selected)
-        res = zip(selected, timecourse)
-        for item, val in res:
-            print(f'{item}: {val}')
+        exp = self.gatherer.filter_selected(selected)
+        canvas = self.plotter.add(exp, 'Timecourse')
 
 
     def OnResponse(self, event):
         selected = self.exp_list.GetSelection()
-        response_latency = self.gatherer.get_response_latency(selected)
-        res = zip(selected, response_latency)
-        for item, val in res:
-            print(f'{item}: {val}')
+        exp = self.gatherer.filter_selected(selected)
+        self.plotter.add(exp, 'Response')
 
     def OnLatency(self, event):
         selected = self.exp_list.GetSelection()
-        response_peak = self.gatherer.get_response_peak(selected)
-        res = zip(selected, response_peak)
-        for item, val in res:
-            print(f'{item}: {val}')
+        exp = self.gatherer.filter_selected(selected)
+        self.plotter.add(exp, 'Latency')
 
     def OnClear(self, args = None):
         self.gatherer.clear()
@@ -216,10 +210,9 @@ class FPIExperimentList(wx.Panel):
         return self.current_selection
 
 class Plot(wx.Panel):
-    def __init__(self, parent, id=wx.ID_ANY, dpi=None, fpi=None, **kwargs):
+    def __init__(self, parent, id=wx.ID_ANY, dpi=None, fpi_list=None, **kwargs):
         wx.Panel.__init__(self, parent, id)
-        if fpi is not None:
-            self.fpi = fpi
+        self.fpi_list = fpi_list
         self.figure = mpl.figure.Figure(dpi=dpi, figsize=(5, 8))
         self.canvas = FigureCanvas(self, -1, self.figure)
         self.toolbar = NavigationToolbar(self.canvas)
@@ -231,28 +224,35 @@ class Plot(wx.Panel):
         self.canvas.mpl_connect('button_press_event', self.OnClick)
 
         # Layouts
-        left_sizer = wx.BoxSizer(wx.VERTICAL)
-        right_sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer = wx.BoxSizer(wx.VERTICAL)
 
-        sizer = wx.BoxSizer(wx.HORIZONTAL)
-        right_sizer.Add(self.canvas, 1, wx.EXPAND)
-        right_sizer.Add(self.toolbar, 0, wx.LEFT | wx.EXPAND)
-        sizer.Add(left_sizer, 0, wx.EXPAND)
-        sizer.Add(right_sizer, 1, wx.EXPAND)
+        sizer.Add(self.canvas, 1, wx.EXPAND)
+        sizer.Add(self.toolbar, 0, wx.LEFT | wx.EXPAND)
         self.SetSizer(sizer)
 
 
 
     def OnPlot(self, event):
-        if self.fpi is None:
-            with wx.MessageDialog(self, 'Please open an fpi file before plotting', 'File error',
+        '''
+        Pass the canvas to a possibly empyt list of experiments to plot themselves
+        :param event:
+        :return:
+        '''
+        if self.fpi_list is None or self.fpi_list.empty():
+            with wx.MessageDialog(self, 'Please select an fpi experiment before plotting', 'No experiment(s) provided',
                                   wx.OK | wx.ICON_ERROR) as dlg:
                 dlg.ShowModal()
             return
         else:
             ax = self.figure.gca()
-            self.fpi.plot(ax)
+            [exp.plot(ax) for exp in self.fpi_list]
             self.canvas.draw()
+
+    def plot(self, plot_type = None):
+        ax = self.figure.gca()
+        print('Plotting ', self.fpi_list)
+        [exp.plot(ax, plot_type) for exp in self.fpi_list]
+        self.canvas.draw()
 
     def OnClick(self, event):
         pass
@@ -267,10 +267,11 @@ class PlotNotebook(wx.Panel):
         sizer.Add(self.nb, 1, wx.EXPAND)
         self.SetSizer(sizer)
 
-    def add(self, abf):
-        page = Plot(self.nb, abf=abf)
-        self.nb.AddPage(page, abf.protocol)
-        return page.figure
+    def add(self, fpi_list, title):
+        page = Plot(self.nb, fpi_list = fpi_list)
+        self.nb.AddPage(page, caption = title)
+        page.plot(title.lower())
+        return page
 
 
 class FPI(wx.App):

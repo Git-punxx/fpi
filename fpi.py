@@ -273,6 +273,13 @@ class FPIGatherer:
         experiements = self.get_active()
         return [exp.timecourse() for exp in experiements if exp.name in selected]
 
+
+
+
+    def filter_selected(self, selected):
+        experiments = self.get_active()
+        return [exp for exp in experiments if exp.name in selected]
+
     def __str__(self):
         return f'FPIGatherer@{self.path}'
 
@@ -466,6 +473,38 @@ class FPIExperiment:
         mean_baseline = self.baseline_mean(n_baseline)
         latency = [(index, val) for index, val in enumerate(data[31:], n_baseline +1) if val > abs(1 + ratio) * mean_baseline]
         return latency
+
+    def plot(self, ax, type):
+        if type == 'response':
+            self.plot_response(ax)
+        elif type == 'latency':
+            self.plot_response_latency(ax)
+        elif type == 'timecourse':
+            self.plot_timecourse(ax)
+        else:
+            raise ValueError('Unsupported plot type')
+
+    def plot_response(self, ax):
+        data = self.response
+        if data is None:
+            return
+        x = range(len(data))
+        ax.plot(x, data, 'k-')
+
+    def plot_response_latency(self, ax):
+        data = self.response_latency()
+        if data is None:
+            return
+        x = range(len(data))
+        ax.plot(x, data, 'k-')
+
+
+    def plot_timecourse(self, ax):
+        data = self.timecourse
+        if data is None:
+            return
+        x = range(len(data))
+        ax.plot(x, data, 'k-')
 
 
     def __str__(self):
