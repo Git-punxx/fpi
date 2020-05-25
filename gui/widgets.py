@@ -104,6 +104,10 @@ class MainFrame(wx.Frame):
         res = self.gatherer.filterStimulus(args)
         self.exp_list.update(res)
 
+    def OnTreatChange(self, args):
+        res = self.gatherer.filterTreatment(args)
+        self.exp_list.update(res)
+
     def OnTimecourse(self, event):
         selected = self.exp_list.GetSelection()
         exp = self.gatherer.filter_selected(selected)

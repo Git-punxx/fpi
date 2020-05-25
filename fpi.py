@@ -239,7 +239,7 @@ class FPIGatherer:
         self.working_list = [exp for exp in exps if exp.line.upper() == line.upper()]
         return self.working_list
 
-    def filterLine(self, line):
+    def filterTreatment(self, line):
         exps = self.working_list
         self.working_list = [exp for exp in exps if exp.line.upper() == line.upper()]
         return self.working_list
