@@ -92,11 +92,8 @@ def SetDataPath(parent):
 
 @register(ID_CREATE_FOLDERS)
 def CreateFolderStructure(parent):
-    folders = config['Categories'].keys()
-    for folder in folders:
-        val = config['Categories'][folder]
-        print(val)
-    print(folders)
+    animal_lines = app_config.animal_lines()
+    genotypes = app_config.gent
 
 print(command_registry)
 
