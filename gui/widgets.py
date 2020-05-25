@@ -159,10 +159,13 @@ class FilterPanel(wx.Panel):
         sizer.Add(stim_lbl, (0, 1))
         sizer.Add(self.stim_choice, (1, 1))
 
-        sizer.Add(gen_lbl, (0, 2))
-        sizer.Add(self.gen_choice, (1, 2))
+        sizer.Add(treat_lbl, (0, 2))
+        sizer.Add(self.treat_choice, (1, 2))
 
-        sizer.Add(self.clear_btn, (0, 3))
+        sizer.Add(gen_lbl, (0, 3))
+        sizer.Add(self.gen_choice, (1, 3))
+
+        sizer.Add(self.clear_btn, (1, 4))
 
         self.SetSizer(sizer)
         self.Fit()
