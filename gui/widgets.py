@@ -5,7 +5,8 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
 from fpi import *
 from pubsub import pub
-from gui.menus import FPIMenuBar
+from gui.menus import *
+from gui.dialogs import *
 
 LINE_CHANGED = 'line.changed'
 STIMULUS_CHANGED = 'stimulus.changed'
@@ -17,12 +18,15 @@ CLEAR_FILTERS = 'clear.filters'
 class MainFrame(wx.Frame):
     def __init__(self, parent, id=wx.ID_ANY, title='FPIAnalyzer'):
         super(MainFrame, self).__init__(parent, id, title)
-        self.setup()
         self.Maximize(True)
 
         # Menubar
         self.menubar = FPIMenuBar()
         self.SetMenuBar(self.menubar)
+
+        self.CreateStatusBar()
+
+        self.setup()
         self.exp_list = FPIExperimentList(self)
         self.exp_list.add_columns(app_config.categories())
         self.exp_list.add_rows(self.gatherer.experiment_list())
@@ -34,7 +38,6 @@ class MainFrame(wx.Frame):
         self.timecourse_btn = wx.Button(self, label='Plot timecourse')
         self.latency_button = wx.Button(self, label='Plot Response Latency')
 
-        self.CreateStatusBar()
 
         # Bindings
         self.Bind(wx.EVT_BUTTON, self.OnTimecourse, self.timecourse_btn)
@@ -69,6 +72,9 @@ class MainFrame(wx.Frame):
         pub.subscribe(self.OnClear, CLEAR_FILTERS)
 
     def setup(self):
+        if not os.path.exists(app_config.base_dir()):
+            SetDataPath(self)
+
         self.gatherer = FPIGatherer()
         # here we should pop a
         try:
