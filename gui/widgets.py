@@ -10,6 +10,7 @@ from gui.dialogs import *
 
 LINE_CHANGED = 'line.changed'
 STIMULUS_CHANGED = 'stimulus.changed'
+TREATMENT_CHANGED = 'treatment.changed'
 GENOTYPE_CHANGED = 'genotype.changed'
 EXPERIMENT_CHANGED = 'experiment.changed'
 CLEAR_FILTERS = 'clear.filters'
@@ -68,6 +69,7 @@ class MainFrame(wx.Frame):
         # Publishing
         pub.subscribe(self.OnLineChange, LINE_CHANGED)
         pub.subscribe(self.OnGenChange, GENOTYPE_CHANGED)
+        pub.subscribe(self.OnTreatChange, TREATMENT_CHANGED)
         pub.subscribe(self.OnStimChange, STIMULUS_CHANGED)
         pub.subscribe(self.OnClear, CLEAR_FILTERS)
 
@@ -129,10 +131,12 @@ class FilterPanel(wx.Panel):
 
         an_line_lbl = wx.StaticText(self, label='Mouseline')
         stim_lbl = wx.StaticText(self, label='Stimulus')
+        treat_lbl = wx.StaticText(self, label='Treatment')
         gen_lbl = wx.StaticText(self, label='Genotype')
 
         self.an_line_choice = wx.Choice(self, choices=app_config.animal_lines())
         self.stim_choice = wx.Choice(self, choices=app_config.stimulations())
+        self.treat_choice = wx.Choice(self, choices=app_config.treatments())
         self.gen_choice = wx.Choice(self, choices=app_config.genotypes())
 
         self.clear_btn = wx.Button(self, label='Clear')
@@ -175,6 +179,10 @@ class FilterPanel(wx.Panel):
     def OnStimChoice(self, event):
         selection = self.stim_choice.GetStringSelection()
         pub.sendMessage(STIMULUS_CHANGED, args=selection)
+
+    def OnTreatChoice(self, event):
+        selection = self.treat_choice.GetStringSelection()
+        pub.sendMessage(TREATMENT_CHANGED, args=selection)
 
     def OnGenChoice(self, event):
         selection = self.gen_choice.GetStringSelection()

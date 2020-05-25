@@ -239,6 +239,11 @@ class FPIGatherer:
         self.working_list = [exp for exp in exps if exp.line.upper() == line.upper()]
         return self.working_list
 
+    def filterLine(self, line):
+        exps = self.working_list
+        self.working_list = [exp for exp in exps if exp.line.upper() == line.upper()]
+        return self.working_list
+
     def filterGenotype(self, gen):
         exps = self.working_list
         print(exps)
@@ -345,6 +350,43 @@ class Stimulation:
         Scan the animal line directory for animal folders
         :return:
         '''
+        treatments = app_config.treatments()
+        base_path = Path(self._path)
+        self._children = {Treatment(str(d)): d for d in base_path.iterdir() if
+                          os.path.basename(d) in treatments}
+        return self._children
+
+    def gather(self):
+        for genotype in self.children.keys():
+            genotype.gather()
+
+    def get_experiments(self):
+        result = []
+        for child in self.children.keys():
+            exp = child.get_experiments()
+            result += exp
+        return result
+
+    def __str__(self):
+        return f'Stimulation {os.path.basename(str(self._path))}'
+
+
+class Treatment:
+    def __init__(self, path):
+        self._path = path
+        self._children = None
+
+    def __getitem__(self, item):
+        for treatment in self._children.keys():
+            if item in treatment.path.upper():
+                return treatment
+
+    @property
+    def children(self):
+        '''
+        Scan the animal line directory for animal folders
+        :return:
+        '''
         genotypes = app_config.genotypes()
         base_path = Path(self._path)
         self._children = {Genotype(str(d)): d for d in base_path.iterdir() if
@@ -364,7 +406,6 @@ class Stimulation:
 
     def __str__(self):
         return f'Stimulation {os.path.basename(str(self._path))}'
-
 
 class Genotype:
     def __init__(self, path):

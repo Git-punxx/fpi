@@ -92,8 +92,8 @@ def SetDataPath(parent):
 
 @register(ID_CREATE_FOLDERS)
 def CreateFolderStructure(parent):
-    animal_lines = app_config.animal_lines()
-    genotypes = app_config.gent
+    app_config.create_folders()
+
 
 print(command_registry)
 

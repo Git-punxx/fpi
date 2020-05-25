@@ -1,6 +1,7 @@
 import configparser
 import os
 from itertools import product
+from pathlib import Path
 
 CONFIG_FILE = 'config.ini'
 
@@ -15,7 +16,6 @@ def set_base_dir(path):
     config['Paths']['DataBaseDir'] = path
     with open(CONFIG_FILE, 'w') as f:
         config.write(f)
-        print('Changes saved...')
 
 
 def animal_lines():
@@ -40,11 +40,16 @@ def categories():
 
 def folder_structure():
     base = base_dir()
-    structure = []
+    structure = [['Data']]
     for option, values in config.items('Categories'):
         structure.append(values.split())
     paths = [os.path.join(base, *folders) for folders in product(*structure)]
     return paths
+
+def create_folders():
+    paths = folder_structure()
+    for path in paths:
+        Path(path).mkdir(parents=True, exist_ok=True)
 
 
 if __name__ == '__main__':
