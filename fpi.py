@@ -27,7 +27,7 @@ csv files are produced from a datastore file that represents an experiment.
 So we have to divide them based on their filename. That means that there should be triads od csv files for every experiment.
 
 '''
-fpi_meta = namedtuple('fpi_meta', 'name line stimulus genotype')
+fpi_meta = namedtuple('fpi_meta', 'name line stimulus treament genotype')
 
 
 ###### Parsers ######
@@ -221,7 +221,7 @@ class FPIGatherer:
     def experiment_list(self, filtered_list=None):
         result = []
         for exp in self.get_experiments():
-            result.append(fpi_meta._make((exp.name, exp.animal_line, exp.stimulation, exp.genotype)))
+            result.append(fpi_meta._make((exp.name, exp.animal_line, exp.stimulation, exp.treatment, exp.genotype)))
         return result
 
     def find(self, exp_number):
