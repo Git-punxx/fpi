@@ -512,7 +512,7 @@ class FPIExperiment:
             self._timecourse = self._parser.timecourse()
 
     def build_path(self):
-        base_dir = app_config.base_dir()
+        base_dir = app_config.base_dir
         base_path = os.path.join(base_dir, self.animal_line, self.stimulation, self.treatment, self.genotype)
         data_paths = [os.path.join(base_path, f) for f in os.listdir(base_path) if self.name in f]
         self._path = data_paths
