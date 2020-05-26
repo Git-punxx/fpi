@@ -120,7 +120,7 @@ class HD5Parser(FPIParser):
         with h5py.File(self._path, 'r') as datastore:
             # here we need to see if we will use 'response' or 'resp_map'
             try:
-                response = datastore['df']['response'][()]
+                response = datastore['df']['resp_map'][()]
                 return response
             except Exception as e:
                 print('No response map')
@@ -585,7 +585,7 @@ class FPIExperiment:
             return
         x = range(len(data))
         ax.set_title(f'Response: {self.name}')
-        ax.plot(x, data, True)
+        ax.plot(x, data)
 
     def plot_response_latency(self, ax):
         data = self.response_latency()
