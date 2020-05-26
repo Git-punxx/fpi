@@ -119,8 +119,12 @@ class HD5Parser(FPIParser):
     def response(self):
         with h5py.File(self._path, 'r') as datastore:
             # here we need to see if we will use 'response' or 'resp_map'
-            response = datastore['df']['resp_map'][()]
-        return response
+            try:
+                response = datastore['df']['resp_map'][()]
+                return response
+            except Exception as e:
+                print('No response map')
+                return
 
     def timecourse(self):
         with h5py.File(self._path, 'r') as datastore:
@@ -129,19 +133,27 @@ class HD5Parser(FPIParser):
             # normalize_stack(self.stack, self.n_baseline
             # self.stack is returned on avg_stack()
             # which is df['stack'] in the datastore
-            avg_stack = datastore['df']['stack']
-            df = normalize_stack(avg_stack)
-            # Compute the mean
-            df_avg = df.std((0,1))
-            df_std = df.mean((0,1))
-            # Compute the average
-            timecourse = np.vstack((np.arange(1, df_avg.shape[0] + 1, dtype=np.intp), df_avg, df_std)).T
-        return timecourse
+            try:
+                avg_stack = datastore['df']['stack']
+                df = normalize_stack(avg_stack)
+                # Compute the mean
+                df_avg = df.std((0,1))
+                df_std = df.mean((0,1))
+                # Compute the average
+                timecourse = np.vstack((np.arange(1, df_avg.shape[0] + 1, dtype=np.intp), df_avg, df_std)).T
+                return timecourse
+            except Exception as e:
+                print('Invalid datastore file. Needs update')
+                return
 
     def all_pixel(self):
         with h5py.File(self._path, 'r') as datastore:
-            area = datastore['df']['area'][()]
-        return area
+            try:
+                area = datastore['df']['area'][()]
+                return area
+            except Exception as e:
+                print('No are in datastore file')
+                return
 
 
 #### Utility functions #######
