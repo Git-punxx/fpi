@@ -279,7 +279,7 @@ class Plot(wx.Panel):
     def plot(self, plot_type=None):
         ax = self.figure.gca()
         ax.grid(True, color = 'grey', linewidth = 0.5)
-        print('Plotting ', self.fpi_list)
+        print(f'In widget: Plotting {plot_type} for ', self.fpi_list)
         [exp.plot(ax, plot_type) for exp in self.fpi_list]
         self.canvas.draw()
 

@@ -72,10 +72,18 @@ class CSVParser(FPIParser):
         return 'csv'
 
     def response(self):
-        print(f'Generating response data for {self._path}')
+        name = extract_name(self._path)
+        try:
+            candidates = [os.path.join(os.path.dirname(self._path), f) for f in os.scandir(self._path[0])]
+        except Exception:
+            return
         data = []
-        fname = [f for f in self._path if 'response' in f][0]
-        with open(fname, 'r') as datafile:
+        fname = [f for f in candidates if 'response' in f and name in f]
+        if not fname:
+            return
+        if not os.path.exists(fname[0]):
+            return
+        with open(fname[0], 'r') as datafile:
             datafile.readline()
             for line in datafile:
                 if ',' not in line:
@@ -83,12 +91,22 @@ class CSVParser(FPIParser):
                 else:
                     row = float(line.split(',')[1].rstrip())
                     data.append(row)
-        return np.array(data)
+            res = np.array(data)
+            return res
 
     def timecourse(self):
+        name = extract_name(self._path)
+        try:
+            candidates = [os.path.join(os.path.dirname(self._path), f) for f in os.scandir(self._path)[0]]
+        except Exception:
+            return
         y = []
-        fname = [f for f in self._path if 'timecourse' in f][0]
-        with open(fname, 'r') as f:
+        fname = [f for f in candidates if 'timecourse' in f and name in f]
+        if not fname:
+            return
+        if not os.path.exists(fname[0]):
+            return
+        with open(fname[0], 'r') as f:
             f.readline()
             for line in f:
                 if ',' not in line:
@@ -98,9 +116,18 @@ class CSVParser(FPIParser):
         return np.array(y)
 
     def all_pixel(self):
+        name = extract_name(self._path)
+        try:
+            candidates = [os.path.join(os.path.dirname(self._path), f) for f in os.scandir(self._path[0])]
+        except Exception:
+            return
+        fname = [f for f in candidates if 'all_pixel' in f and name in f]
         data = []
-        fname = [f for f in self._path if 'all_pixel' in f][0]
-        with open(fname, 'r') as f:
+        if not fname:
+            return
+        if not os.path.exists(fname[0]):
+            return
+        with open(fname[0], 'r') as f:
             f.readline()
             for line in f:
                 if ',' not in line:
@@ -120,11 +147,10 @@ class HD5Parser(FPIParser):
     def response(self):
         with h5py.File(self._path, 'r') as datastore:
             # here we need to see if we will use 'response' or 'resp_map'
+            print(f'Reading {self._path} file for response')
             try:
-                response = datastore['df']['resp_map'][()]
-                return response
+                return datastore['df']['avg_df']
             except Exception as e:
-                print(f'No response map for {self._path}')
                 return
 
     def timecourse(self):
@@ -144,7 +170,6 @@ class HD5Parser(FPIParser):
                 timecourse = np.vstack((np.arange(1, df_avg.shape[0] + 1, dtype=np.intp), df_avg, df_std)).T
                 return timecourse
             except Exception as e:
-                print('Invalid datastore file. Needs update')
                 return
 
     def all_pixel(self):
@@ -153,7 +178,6 @@ class HD5Parser(FPIParser):
                 area = datastore['df']['area'][()]
                 return area
             except Exception as e:
-                print(f'No area in datastore file {self._path}')
                 return
 
 
@@ -173,7 +197,6 @@ def extract_name(path):
     their path.
     :return: the name of the experiment as a string
     '''
-    print(f'Searching {path}')
     name = re.search(app_config.name_pattern, str(path))
     return name.group(0)[1:]
 
@@ -185,15 +208,12 @@ def fpiparser(path):
     :return: A FPIParser object
     '''
     # Check if there is only one file and that it ends with h5. Then we return an HD%Parser
+    print(f'In fpiparser: {path}')
     if len(path) == 1 and os.path.basename(path[0]).endswith('h5'):
+        print(f'Setting HD5Parser for {extract_name(path[0])}')
         return HD5Parser(extract_name(path[0]), path[0])
     # else if there are more files with the same experiment name, assume there are three csv files, one for response,
     # timecourse and all_pixels. This should be enforced in the analysis step
-    elif len(path) == 3:
-        if len(list(takewhile(lambda x: x.endswith('.csv'), path))) == 3:
-            return CSVParser(extract_name(path), path)  # and pray that they are response, timecourse and all pixels
-        else:
-            raise ValueError(f'{path} could not be matched against a parser')
     else:
         #raise ValueError(f'{path} could not be matched against a parser')
         pass
@@ -236,7 +256,6 @@ class FPIGatherer:
         return result
 
     def find(self, exp_number):
-        print('Searching for ', exp_number)
         for item in self.working_list:
             if exp_number == item.name:
                 return item
@@ -276,7 +295,6 @@ class FPIGatherer:
 
     def filterLine(self, line):
         exps = self.working_list
-        print(exps)
         self.working_list = [exp for exp in exps if exp.line.upper() == line.upper()]
         return self.working_list
 
@@ -287,13 +305,11 @@ class FPIGatherer:
 
     def filterGenotype(self, gen):
         exps = self.working_list
-        print(exps)
         self.working_list = [exp for exp in exps if exp.genotype.upper() == gen.upper()]
         return self.working_list
 
     def filterStimulus(self, stim):
         exps = self.working_list
-        print(exps)
         self.working_list = [exp for exp in exps if exp.stimulus.upper() == stim.upper()]
         return self.working_list
 
@@ -468,7 +484,7 @@ class Genotype:
         self._children = {
             extract_name(str(d)): FPIExperiment(name=extract_name(d), animal_line=animal_line, treatment = treatment, stimulation=stimulation,
                                                 genotype=genotype)
-            for d in base_path.iterdir()}
+            for d in base_path.iterdir() if not str(d).endswith('csv')}
         return self._children
 
     def gather(self):
@@ -517,6 +533,7 @@ class FPIExperiment:
         self._parser = fpiparser(self._path)
         print(f'Parser set to {self._parser}')
         if self._parser:
+            print(f'Materializing {self.name}')
             self._all_pixel = self._parser.all_pixel()
             self._response = self._parser.response()
             self._timecourse = self._parser.timecourse()
@@ -532,14 +549,20 @@ class FPIExperiment:
 
     @property
     def all_pixel(self):
+        if self._all_pixel is None:
+            self._all_pixel = self._parser.all_pixel()
         return self._all_pixel
 
     @property
     def response(self):
+        if self._response is None:
+            self._response = self._parser.response()
         return self._response
 
     @property
     def timecourse(self):
+        if self._timecourse is None:
+            self._timecourse = self._parser.timecourse()
         return self._timecourse
 
     def baseline_mean(self, n_baseline=30):
@@ -579,10 +602,7 @@ class FPIExperiment:
             raise ValueError('Unsupported plot type')
 
     def plot_response(self, ax):
-        data = self.response
-        print(data)
-        if data is None:
-            return
+        data = self._parser.response()
         print(data)
         x = range(len(data))
         ax.set_title(f'Response: {self.name}')
@@ -590,7 +610,6 @@ class FPIExperiment:
 
     def plot_response_latency(self, ax):
         data = self.response_latency()
-        print(data)
         if data is None:
             return
         x = range(len(data))
@@ -598,7 +617,6 @@ class FPIExperiment:
 
     def plot_timecourse(self, ax):
         data = self.timecourse
-        print(data)
         if data is None:
             return
         x = range(len(data))
