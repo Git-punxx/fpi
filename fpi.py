@@ -72,6 +72,7 @@ class CSVParser(FPIParser):
         return 'csv'
 
     def response(self):
+        print(f'Generating response data for {self._path}')
         data = []
         fname = [f for f in self._path if 'response' in f][0]
         with open(fname, 'r') as datafile:
@@ -123,7 +124,7 @@ class HD5Parser(FPIParser):
                 response = datastore['df']['resp_map'][()]
                 return response
             except Exception as e:
-                print('No response map')
+                print(f'No response map for {self._path}')
                 return
 
     def timecourse(self):
@@ -152,16 +153,14 @@ class HD5Parser(FPIParser):
                 area = datastore['df']['area'][()]
                 return area
             except Exception as e:
-                print('No are in datastore file')
+                print(f'No area in datastore file {self._path}')
                 return
 
 
 #### Utility functions #######
 def debug(func):
     def wrapper(*args, **kwargs):
-        print(f'Running {func.__name__}')
         res = func(*args, **kwargs)
-        print(res)
         return res
 
     return wrapper
@@ -174,6 +173,7 @@ def extract_name(path):
     their path.
     :return: the name of the experiment as a string
     '''
+    print(f'Searching {path}')
     name = re.search(app_config.name_pattern, str(path))
     return name.group(0)[1:]
 
@@ -226,7 +226,6 @@ class FPIGatherer:
 
     def __getitem__(self, item):
         for animal_line in self.children.keys():
-            print(animal_line.path)
             if item in animal_line.path:
                 return animal_line
 
@@ -339,7 +338,6 @@ class AnimalLine:
 
     def __getitem__(self, item):
         for stim in self._children.keys():
-            print(stim._path)
             if item in stim._path.upper():
                 return stim
 
@@ -358,7 +356,7 @@ class AnimalLine:
             stims = [s.lower() for s in app_config.stimulations]
             base_path = Path(self.path)
             self._children = {Stimulation(str(d)): d for d in base_path.iterdir() if
-                              os.path.basename(d) in stims}
+                              os.path.basename(d).lower() in stims}
             return self._children
 
     def gather(self):
@@ -471,7 +469,6 @@ class Genotype:
             extract_name(str(d)): FPIExperiment(name=extract_name(d), animal_line=animal_line, treatment = treatment, stimulation=stimulation,
                                                 genotype=genotype)
             for d in base_path.iterdir()}
-        print(self._children)
         return self._children
 
     def gather(self):
@@ -518,6 +515,7 @@ class FPIExperiment:
         '''
         self.build_path()
         self._parser = fpiparser(self._path)
+        print(f'Parser set to {self._parser}')
         if self._parser:
             self._all_pixel = self._parser.all_pixel()
             self._response = self._parser.response()
@@ -570,6 +568,7 @@ class FPIExperiment:
         return latency
 
     def plot(self, ax, type):
+        print(f'Plotting {type}')
         if type == 'response':
             self.plot_response(ax)
         elif type == 'latency':
@@ -581,6 +580,7 @@ class FPIExperiment:
 
     def plot_response(self, ax):
         data = self.response
+        print(data)
         if data is None:
             return
         print(data)
@@ -590,6 +590,7 @@ class FPIExperiment:
 
     def plot_response_latency(self, ax):
         data = self.response_latency()
+        print(data)
         if data is None:
             return
         x = range(len(data))
@@ -597,6 +598,7 @@ class FPIExperiment:
 
     def plot_timecourse(self, ax):
         data = self.timecourse
+        print(data)
         if data is None:
             return
         x = range(len(data))
