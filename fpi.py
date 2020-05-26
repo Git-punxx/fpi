@@ -240,10 +240,10 @@ class FPIGatherer:
         if self._children is not None:
             return self._children
         else:
-            animal_lines = app_config.animal_lines
+            animal_lines = [a.lower() for a in app_config.animal_lines]
             base_path = Path(self.path)
             self._children = {AnimalLine(str(d)): d for d in base_path.iterdir() if
-                              os.path.basename(d).upper() in animal_lines}
+                              os.path.basename(d).lower() in animal_lines}
             return self._children
 
     def gather(self):
@@ -343,11 +343,10 @@ class AnimalLine:
         if self._children is not None:
             return self._children
         else:
-            stims = app_config.stimulations
+            stims = [s.lower() for s in app_config.stimulations]
             base_path = Path(self.path)
-            children = [str(d) for d in base_path.iterdir()]
             self._children = {Stimulation(str(d)): d for d in base_path.iterdir() if
-                              os.path.basename(d).upper() in stims}
+                              os.path.basename(d) in stims}
             return self._children
 
     def gather(self):
@@ -380,10 +379,10 @@ class Stimulation:
         Scan the animal line directory for animal folders
         :return:
         '''
-        treatments = app_config.treatments
+        treatments = [t.lower() for t in app_config.treatments]
         base_path = Path(self._path)
         self._children = {Treatment(str(d)): d for d in base_path.iterdir() if
-                          os.path.basename(d) in treatments}
+                          os.path.basename(d).lower() in treatments}
         return self._children
 
     def gather(self):
@@ -417,10 +416,10 @@ class Treatment:
         Scan the animal line directory for animal folders
         :return:
         '''
-        genotypes = app_config.genotypes
+        genotypes = [g.lower() for g in app_config.genotypes]
         base_path = Path(self._path)
         self._children = {Genotype(str(d)): d for d in base_path.iterdir() if
-                          os.path.basename(d) in genotypes}
+                          os.path.basename(d).lower() in genotypes}
         return self._children
 
     def gather(self):
@@ -460,6 +459,7 @@ class Genotype:
             extract_name(str(d)): FPIExperiment(name=extract_name(d), animal_line=animal_line, treatment = treatment, stimulation=stimulation,
                                                 genotype=genotype)
             for d in base_path.iterdir()}
+        print(self._children)
         return self._children
 
     def gather(self):
