@@ -149,7 +149,7 @@ class HD5Parser(FPIParser):
             # here we need to see if we will use 'response' or 'resp_map'
             print(f'Reading {self._path} file for response')
             try:
-                return datastore['df']['avg_df']
+                return datastore['df']['avg_df'][()]
             except Exception as e:
                 return
 
