@@ -117,19 +117,31 @@ class HD5Parser(FPIParser):
         return 'hdf5'
 
     def response(self):
-        print('HD5 parser parses response')
-        store = h5py.File(self._path, 'r')
-        store.close()
+        with h5py.File(self._path, 'r') as datastore:
+            # here we need to see if we will use 'response' or 'resp_map'
+            response = datastore['df']['resp_map'][()]
+        return response
 
     def timecourse(self):
-        print('HD5 parser parses timecourse')
-        store = h5py.File(self._path, 'r')
-        store.close()
+        with h5py.File(self._path, 'r') as datastore:
+            # Get the normalized stack
+            # We need to get the normalized stack
+            # normalize_stack(self.stack, self.n_baseline
+            # self.stack is returned on avg_stack()
+            # which is df['stack'] in the datastore
+            avg_stack = datastore['df']['stack']
+            df = normalize_stack(avg_stack)
+            # Compute the mean
+            df_avg = df.std((0,1))
+            df_std = df.mean((0,1))
+            # Compute the average
+            timecourse = np.vstack((np.arange(1, df_avg.shape[0] + 1, dtype=np.intp), df_avg, df_std)).T
+        return timecourse
 
     def all_pixel(self):
-        print('HD5 parser parses all_pixel')
-        store = h5py.File(self._path, 'r')
-        store.close()
+        with h5py.File(self._path, 'r') as datastore:
+            area = datastore['df']['area'][()]
+        return area
 
 
 #### Utility functions #######
@@ -173,6 +185,24 @@ def fpiparser(path):
     else:
         #raise ValueError(f'{path} could not be matched against a parser')
         pass
+
+def normalize_stack(stack, n_baseline=30):
+    # Global average
+    y = np.nanmean(stack, (0, 1))[1:n_baseline]
+    y_min, y_max = y.min(), y.max()
+    # Exponential fit during baseline
+    t = np.arange(1, n_baseline)
+    z = 1 + (y - y_min) / (y_max - y_min)
+    p = np.polyfit(t, np.log(z), 1)
+    # Modeled decay
+    full_t = np.arange(stack.shape[2])
+    decay = np.exp(p[1]) * np.exp(full_t * p[0])
+    # Renormalized
+    decay = (decay - 1) * (y_max - y_min) + y_min
+    norm_stack = stack - decay
+
+    return norm_stack
+
 
 #### Model #####
 class FPIGatherer:
@@ -423,10 +453,11 @@ class Genotype:
         '''
         base_path = Path(self.path)
         genotype = os.path.basename(self.path)
-        stimulation = os.path.basename(str(base_path.parent))
-        animal_line = os.path.basename(str(base_path.parent.parent))
+        treatment = os.path.basename(str(base_path.parent))
+        stimulation = os.path.basename(str(base_path.parent.parent))
+        animal_line = os.path.basename(str(base_path.parent.parent.parent))
         self._children = {
-            extract_name(str(d)): FPIExperiment(name=extract_name(d), animal_line=animal_line, stimulation=stimulation,
+            extract_name(str(d)): FPIExperiment(name=extract_name(d), animal_line=animal_line, treatment = treatment, stimulation=stimulation,
                                                 genotype=genotype)
             for d in base_path.iterdir()}
         return self._children
@@ -453,9 +484,10 @@ class FPIExperiment:
     By providing the name of the experiment we could build the path using the config options
     '''
 
-    def __init__(self, name, animal_line, stimulation, genotype):
+    def __init__(self, name, animal_line, stimulation, treatment, genotype):
         self.animal_line = animal_line
         self.stimulation = stimulation
+        self.treatment = treatment
         self.genotype = genotype
         self.name = name
 
@@ -481,7 +513,7 @@ class FPIExperiment:
 
     def build_path(self):
         base_dir = app_config.base_dir()
-        base_path = os.path.join(base_dir, self.animal_line, self.stimulation, self.genotype)
+        base_path = os.path.join(base_dir, self.animal_line, self.stimulation, self.treatment, self.genotype)
         data_paths = [os.path.join(base_path, f) for f in os.listdir(base_path) if self.name in f]
         self._path = data_paths
 

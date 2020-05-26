@@ -2,8 +2,98 @@ import configparser
 import os
 from itertools import product
 from pathlib import Path
+import json
 
 CONFIG_FILE = 'config.ini'
+CONFIG_JSON = 'config.json'
+
+class ConfigManager:
+    def __init__(self, config_file):
+        self._file = config_file
+
+    @property
+    def base_dir(self):
+        raise NotImplementedError
+
+    @base_dir.setter
+    def base_dir(self):
+        raise NotImplementedError
+
+    @property
+    def animal_lines(self):
+        raise NotImplementedError
+
+    @property
+    def genotypes(self):
+        raise NotImplementedError
+
+    @property
+    def treatments(self):
+        raise NotImplementedError
+
+    @property
+    def stimulations(self):
+        raise NotImplementedError
+
+    @property
+    def name_pattern(self):
+        raise NotImplementedError
+
+    @property
+    def categories(self):
+        raise NotImplementedError
+
+    def folder_structure(self):
+        raise NotImplementedError
+
+    def create_folders(self):
+        raise NotImplementedError
+
+class JSONConfigManager(ConfigManager):
+    def __init__(self, json_file):
+        ConfigManager.__init__(self, json)
+        with open(self._file, 'r+') as _file:
+            self._json = json.loads(_file.read())
+
+    @property
+    def base_dir(self):
+        return self._json.paths.databasedir
+
+    @base_dir.setter
+    def base_dir(self):
+        raise NotImplementedError
+
+    @property
+    def animal_lines(self):
+        raise NotImplementedError
+
+    @property
+    def genotypes(self):
+        raise NotImplementedError
+
+    @property
+    def treatments(self):
+        raise NotImplementedError
+
+    @property
+    def stimulations(self):
+        raise NotImplementedError
+
+    @property
+    def name_pattern(self):
+        raise NotImplementedError
+
+    @property
+    def categories(self):
+        raise NotImplementedError
+
+    def folder_structure(self):
+        raise NotImplementedError
+
+    def create_folders(self):
+        raise NotImplementedError
+
+
 
 config = configparser.ConfigParser()
 config.read(os.path.join(os.path.dirname(__file__), CONFIG_FILE))
@@ -51,8 +141,7 @@ def create_folders():
     for path in paths:
         Path(path).mkdir(parents=True, exist_ok=True)
 
-
-if __name__ == '__main__':
+def test_module():
     import re
     print(animal_lines())
     print(genotypes())
@@ -68,6 +157,12 @@ if __name__ == '__main__':
         print(m.group(0)[1:])
     else:
         print('No result')
-
-
     print(folder_structure())
+
+def test_json():
+    cfg_manager = JSONConfigManager(CONFIG_JSON)
+    print(cfg_manager.base_dir)
+
+
+if __name__ == '__main__':
+    test_json()

@@ -1,0 +1,52 @@
+{
+  "paths": {
+    "databasedir":,
+    "C:/Users/spyros/Documents/PythonProjects/bi/fpi/Data"
+  },
+  "categories": {
+    "mouselines": [
+      "PTEN",
+      "Shank",
+      "FMKO"
+    ],
+    "stimulations": [
+      "hindpaw",
+      "whiskers"
+    ],
+    "treatment": [
+      "DMSO",
+      "BSM",
+      "BSM",
+      "No"
+    ],
+    "genotypes": [
+      "KO",
+      "WT",
+      "Heterogenous"
+    ]
+  },
+  "metadata": {
+    "experinemtnames": "_[0-9]*_[0-9]*",
+    "filetypes": [
+      "csv",
+      "h5"
+    ]
+  },
+  "grid": {
+    "show": true,
+    "color": "grey",
+    "linewidth": 0.5
+  },
+  "responseplot": {
+    "fmt": "k-",
+    "linewdith": 0.5,
+    "marker": "o",
+    "markersize": 12,
+    "linestyle": "continuous",
+    "linewidth": 0.5,
+    "alpha": 1
+  }
+}
+
+
+
