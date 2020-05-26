@@ -162,7 +162,7 @@ def extract_name(path):
     their path.
     :return: the name of the experiment as a string
     '''
-    name = re.search(app_config.name_pattern(), str(path))
+    name = re.search(app_config.name_pattern, str(path))
     return name.group(0)[1:]
 
 

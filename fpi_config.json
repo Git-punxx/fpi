@@ -24,7 +24,7 @@
     ]
   },
   "metadata": {
-    "experinemtnames": "_[0-9]*_[0-9]*",
+    "experimentnames": "_[0-9]*_[0-9]*",
     "filetypes": [
       "csv",
       "h5"
