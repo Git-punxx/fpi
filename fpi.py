@@ -4,7 +4,7 @@ import os
 import h5py
 from collections import namedtuple
 from abc import abstractmethod
-import app_config
+from app_config import config_manager as app_config
 from pathlib import Path
 import re
 from itertools import takewhile
@@ -207,7 +207,7 @@ def normalize_stack(stack, n_baseline=30):
 #### Model #####
 class FPIGatherer:
     def __init__(self):
-        self.path = app_config.base_dir()
+        self.path = app_config.base_dir
         self._children = None
         self.experiments = None
         self.working_list = self.experiment_list()
@@ -240,7 +240,7 @@ class FPIGatherer:
         if self._children is not None:
             return self._children
         else:
-            animal_lines = app_config.animal_lines()
+            animal_lines = app_config.animal_lines
             base_path = Path(self.path)
             self._children = {AnimalLine(str(d)): d for d in base_path.iterdir() if
                               os.path.basename(d).upper() in animal_lines}
@@ -343,7 +343,7 @@ class AnimalLine:
         if self._children is not None:
             return self._children
         else:
-            stims = app_config.stimulations()
+            stims = app_config.stimulations
             base_path = Path(self.path)
             children = [str(d) for d in base_path.iterdir()]
             self._children = {Stimulation(str(d)): d for d in base_path.iterdir() if
@@ -380,7 +380,7 @@ class Stimulation:
         Scan the animal line directory for animal folders
         :return:
         '''
-        treatments = app_config.treatments()
+        treatments = app_config.treatments
         base_path = Path(self._path)
         self._children = {Treatment(str(d)): d for d in base_path.iterdir() if
                           os.path.basename(d) in treatments}
@@ -417,7 +417,7 @@ class Treatment:
         Scan the animal line directory for animal folders
         :return:
         '''
-        genotypes = app_config.genotypes()
+        genotypes = app_config.genotypes
         base_path = Path(self._path)
         self._children = {Genotype(str(d)): d for d in base_path.iterdir() if
                           os.path.basename(d) in genotypes}

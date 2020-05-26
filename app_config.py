@@ -5,11 +5,12 @@ from pathlib import Path
 import json
 
 CONFIG_FILE = 'config.ini'
-CONFIG_JSON = 'config.json'
+FPI_CONFIG_JSON = os.path.join(os.path.dirname(__file__), 'fpi_config.json')
+
 
 class ConfigManager:
-    def __init__(self, config_file):
-        self._file = config_file
+    def __init__(self, configuration_file):
+        self._file = configuration_file
 
     @property
     def base_dir(self):
@@ -50,50 +51,58 @@ class ConfigManager:
         raise NotImplementedError
 
 class JSONConfigManager(ConfigManager):
-    def __init__(self, json_file):
-        ConfigManager.__init__(self, json)
-        with open(self._file, 'r+') as _file:
-            self._json = json.loads(_file.read())
+    def __init__(self, configuration_file):
+        ConfigManager.__init__(self, configuration_file)
+        with open(self._file, 'r') as f:
+            self._json = json.load(f)
 
     @property
     def base_dir(self):
-        return self._json.paths.databasedir
+        return self._json['paths']['databasedir']
 
     @base_dir.setter
-    def base_dir(self):
-        raise NotImplementedError
+    def base_dir(self, path):
+        self._json['paths']['databasedir'] = path
+        with open(self._file, 'w') as f:
+            json.dump(self._json, f)
+
 
     @property
     def animal_lines(self):
-        raise NotImplementedError
+        return self._json['categories']['mouselines']
 
     @property
     def genotypes(self):
-        raise NotImplementedError
+        return self._json['categories']['genotypes']
 
     @property
     def treatments(self):
-        raise NotImplementedError
+        return self._json['categories']['treatment']
 
     @property
     def stimulations(self):
-        raise NotImplementedError
+        return self._json['categories']['stimulations']
 
     @property
     def name_pattern(self):
-        raise NotImplementedError
+        return self._json['metadata']['experimentnames']
 
     @property
     def categories(self):
-        raise NotImplementedError
+        return self._json['categories']
 
     def folder_structure(self):
-        raise NotImplementedError
+        base = self.base_dir
+        structure = [['Data']]
+        for option, values in self.categories.items():
+            structure.append(values)
+        paths = [os.path.join(base, *folders) for folders in product(*structure)]
+        return paths
 
     def create_folders(self):
         raise NotImplementedError
 
-
+config_manager = JSONConfigManager(FPI_CONFIG_JSON)
 
 config = configparser.ConfigParser()
 config.read(os.path.join(os.path.dirname(__file__), CONFIG_FILE))
@@ -160,9 +169,14 @@ def test_module():
     print(folder_structure())
 
 def test_json():
-    cfg_manager = JSONConfigManager(CONFIG_JSON)
+    cfg_manager = JSONConfigManager(FPI_CONFIG_JSON)
     print(cfg_manager.base_dir)
+    cfg_manager.base_dir = 'Some other folder'
+    print(cfg_manager.base_dir)
+    print(cfg_manager.categories)
+    print(cfg_manager.folder_structure())
 
 
 if __name__ == '__main__':
     test_json()
+

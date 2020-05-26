@@ -1,7 +1,6 @@
 {
   "paths": {
-    "databasedir":,
-    "C:/Users/spyros/Documents/PythonProjects/bi/fpi/Data"
+    "databasedir": "C:\\Users\\spyros\\Documents\\PythonProjects\\bi\\fpi\\Data"
   },
   "categories": {
     "mouselines": [
@@ -15,7 +14,6 @@
     ],
     "treatment": [
       "DMSO",
-      "BSM",
       "BSM",
       "No"
     ],
@@ -47,6 +45,3 @@
     "alpha": 1
   }
 }
-
-
-

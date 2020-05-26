@@ -29,7 +29,7 @@ class MainFrame(wx.Frame):
 
         self.setup()
         self.exp_list = FPIExperimentList(self)
-        self.exp_list.add_columns(app_config.categories())
+        self.exp_list.add_columns(app_config.categories)
         self.exp_list.add_rows(self.gatherer.experiment_list())
 
         self.filter = FilterPanel(self)
@@ -74,7 +74,7 @@ class MainFrame(wx.Frame):
         pub.subscribe(self.OnClear, CLEAR_FILTERS)
 
     def setup(self):
-        if not os.path.exists(app_config.base_dir()):
+        if not os.path.exists(app_config.base_dir):
             SetDataPath(self)
 
         self.gatherer = FPIGatherer()
@@ -138,10 +138,10 @@ class FilterPanel(wx.Panel):
         treat_lbl = wx.StaticText(self, label='Treatment')
         gen_lbl = wx.StaticText(self, label='Genotype')
 
-        self.an_line_choice = wx.Choice(self, choices=app_config.animal_lines())
-        self.stim_choice = wx.Choice(self, choices=app_config.stimulations())
-        self.treat_choice = wx.Choice(self, choices=app_config.treatments())
-        self.gen_choice = wx.Choice(self, choices=app_config.genotypes())
+        self.an_line_choice = wx.Choice(self, choices=app_config.animal_lines)
+        self.stim_choice = wx.Choice(self, choices=app_config.stimulations)
+        self.treat_choice = wx.Choice(self, choices=app_config.treatments)
+        self.gen_choice = wx.Choice(self, choices=app_config.genotypes)
 
         self.clear_btn = wx.Button(self, label='Clear')
 

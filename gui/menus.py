@@ -1,7 +1,6 @@
 import wx
 from gui.dialogs import *
-import app_config
-from app_config import config
+from app_config import config_manager as app_config
 
 ID_CHECK_FOLDERS = wx.NewId()
 ID_CREATE_FOLDERS = wx.NewId()
@@ -83,7 +82,7 @@ def SetDataPath(parent):
     if path is not None:
         # here we should check if the directory contains the proper data structure
         # if not we should offer to create it
-        app_config.set_base_dir(path)
+        app_config.base_dir = path
         top = parent.GetTopLevelParent()
         status = top.GetStatusBar()
         status.SetStatusText(f'Path set to {path}')
