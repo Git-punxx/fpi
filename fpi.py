@@ -583,6 +583,7 @@ class FPIExperiment:
         data = self.response
         if data is None:
             return
+        print(data)
         x = range(len(data))
         ax.set_title(f'Response: {self.name}')
         ax.plot(x, data)
