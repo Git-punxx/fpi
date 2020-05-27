@@ -6,6 +6,7 @@ from abc import abstractmethod
 from app_config import config_manager as app_config
 import re
 from pubsub import pub
+from intrinsic.imaging import check_datastore
 
 '''
 The point here is that we design a class hirearchy that will be able to handle different types
@@ -139,6 +140,7 @@ class CSVParser(FPIParser):
 class HD5Parser(FPIParser):
     def __init__(self, experiment, path):
         FPIParser.__init__(self, experiment, path)
+        check_datastore(self._path)
 
     def parser_type(self):
         return 'hdf5'
@@ -212,10 +214,12 @@ def fpiparser(path):
     '''
     # Check if there is only one file and that it ends with h5. Then we return an HD%Parser
     if os.path.basename(path).endswith('h5'):
+        print('Setting HDF%Parser for ', path)
         return HD5Parser(extract_name(path), path)
     # timecourse and all_pixels. This should be enforced in the analysis step
     else:
         #raise ValueError(f'{path} could not be matched against a parser')
+        print('No parser for ', path)
         pass
 
 def normalize_stack(stack, n_baseline=30):

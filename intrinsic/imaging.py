@@ -4,7 +4,7 @@ from matplotlib.patches import Rectangle
 from matplotlib.cm import viridis, YlOrRd
 from matplotlib.gridspec import GridSpec
 import seaborn as sns
-from stack import Stack
+from intrinsic.stack import Stack
 import numpy as np
 import os
 from tqdm import tqdm
@@ -27,8 +27,10 @@ from typing import Union
 from warnings import warn
 import pandas as pd
 from itertools import combinations, product
+
 try:
     import moviepy.editor as mpy
+
     MOVIE_EXPORT = True
 except ImportError:
     print("No movie exporting available")
@@ -41,7 +43,7 @@ ALL_PNG = '*.png'
 
 def stim(t, t_on=30, tau_on=2, tau_off=4):
     # Time constants in frames
-    return np.exp(-(t-t_on) / tau_off) - np.exp(-(t-t_on) / tau_on)
+    return np.exp(-(t - t_on) / tau_off) - np.exp(-(t - t_on) / tau_on)
 
 
 def img_to_uint8(img):
@@ -82,7 +84,7 @@ class TiffStack(Stack):
         # Open the Tiff Stack
         self._pics = imread(path)
         # List of the paths to all the stack images
-        self.images = np.array([os.path.basename(path)+f'_{ix}' for ix in range(self._pics.shape[0])])
+        self.images = np.array([os.path.basename(path) + f'_{ix}' for ix in range(self._pics.shape[0])])
 
     def next(self):
         for im in self._pics:
@@ -175,7 +177,7 @@ class Intrinsic(object):
             # _, centers, cov = self.id_sources()
             # analysed_grp.create_dataset('centers', data=centers)
             # analysed_grp.create_dataset('cov', data=cov)
-         # imsave((self.path / 'overlay.png').as_posix(), self.overlay())
+        # imsave((self.path / 'overlay.png').as_posix(), self.overlay())
 
     def compute_baselines(self):
         self.l_base = [s[:self.n_baseline].mean(0)
@@ -208,7 +210,7 @@ class Intrinsic(object):
     def max_project(self):
         if self._max_project is None:
             stack = self.norm_stack()
-            stim_frames = stack[..., self.n_baseline:self.n_baseline+20]
+            stim_frames = stack[..., self.n_baseline:self.n_baseline + 20]
             self._max_project = np.nanmax(stim_frames, 2)
         return self._max_project
 
@@ -297,7 +299,7 @@ class Session(object):
     @property
     def max_project(self):
         return self.file['df']['max_project'][()]
-    
+
     @property
     def response(self):
         return self.file['df']['response'][()]
@@ -337,7 +339,8 @@ class Session(object):
             self._movie_stack = self.norm_stack.copy()
             self._movie_stack = np.clip(self._movie_stack, 0, np.percentile(self._movie_stack, 99))
             # self._movie_stack = np.clip(self._movie_stack, 0, 0.01)
-            self._movie_stack = (self._movie_stack - self._movie_stack.min()) / (self._movie_stack.max() - self._movie_stack.min())
+            self._movie_stack = (self._movie_stack - self._movie_stack.min()) / (
+                        self._movie_stack.max() - self._movie_stack.min())
             animation = mpy.VideoClip(self._make_frame, duration=duration)
         except NameError as e:
             print(f'Name Error: {e}')
@@ -390,7 +393,7 @@ class Session(object):
         stim_rect = Rectangle((self.n_baseline * dt, y_bot), 30 * dt, y_top,
                               facecolor='darkred')
         ax.add_patch(stim_rect)
-        ax.text((self.n_baseline*2+30)/2*dt, y_bot + y_top/2, 'Stimulation', color='w',
+        ax.text((self.n_baseline * 2 + 30) / 2 * dt, y_bot + y_top / 2, 'Stimulation', color='w',
                 verticalalignment='center', horizontalalignment='center')
         for xtick, ytick in zip(ax.get_xticklabels(), ax.get_yticklabels()):
             xtick.set_fontname(DEJAVU)
@@ -452,7 +455,7 @@ class Session(object):
         s_path = self.path.parent / (self.path.stem + '_timecourse.csv')
         save_path = self.get_file(s_path, 'csv')
         np.savetxt(save_path,
-                   np.vstack((np.arange(1, df_avg.shape[0]+1, dtype=np.intp), df_avg, df_std)).T,
+                   np.vstack((np.arange(1, df_avg.shape[0] + 1, dtype=np.intp), df_avg, df_std)).T,
                    ["%d", "%.4f", "%.4f"], delimiter=",", header='frame, average, std')
         return save_path
 
@@ -515,7 +518,7 @@ def find_resp(avg_stack, n_baseline=30, pvalue=0.05):
             # cs /= cs[n_baseline:].max()
             # nreg = (reg - reg.min()) / (reg.max() - reg.min())
             r, p = pearsonr(c_slice[1:-1], reg[1:-1])
-            if p < pvalue/(resp.shape[0]*resp.shape[1]) or p < pvalue:
+            if p < pvalue / (resp.shape[0] * resp.shape[1]) or p < pvalue:
                 resp[row, col] = r
     f_resp = med_filt(resp, disk(3))
     resp[f_resp == 0] = 0
@@ -620,6 +623,27 @@ def multi_analysis(path: Union[str, Path], pattern=ALL_PNG):
     return True
 
 
+def is_complete(h5file):
+    print(list(h5file['df'].keys()))
+    if 'avg_df' in list(h5file['df'].keys()):
+        return True
+    else:
+        return False
+
+
+def do_analysis(h5file):
+    session = Session(h5file)
+    session.resp_mapping()
+
+
+def check_datastore(path):
+    print(f'Checking {path}')
+    with h5py.File(path, 'r+') as datastore:
+        if not is_complete(datastore):
+            print(f'Analyszing {datastore}')
+            do_analysis(path)
+
+
 def clean_response(resp):
     resp2 = med_filt(resp.copy(), disk(3)) > 0
     l_im = label(resp2)
@@ -691,7 +715,7 @@ def list_h5(path, strain='shank', show=False):
         # plt.title(S.path)
         l_dfs.append(pd.DataFrame({'path': f.as_posix(), 'strain': strain, 'genotype': genotype,
                                    'area': grp['area'][()], 'max_df': grp['max_df'][()],
-                                   'fwhm': hw, 'peak': peak*100,
+                                   'fwhm': hw, 'peak': peak * 100,
                                    'avg_df': [100 * signal], 'treatment': treatment}))
         S.close()
 
@@ -838,25 +862,25 @@ def find_roots(func, a, b, step=1e-3, roots=None):
         return roots
     if func(a) == 0:
         roots.append(a)
-        find_roots(func, a+1e-3, b, roots)
+        find_roots(func, a + 1e-3, b, roots)
     if func(b) == 0:
         roots.append(b)
-        find_roots(func, a, b-1e-3, roots)
+        find_roots(func, a, b - 1e-3, roots)
     # n_steps = 1000
     # step = 1./n_steps
-    n_steps = int(1./step)
+    n_steps = int(1. / step)
     win_size = b - a
-    for s in np.linspace(a+step, b-step, n_steps):
-        if func(s) * func(s+step*win_size) >= 0:
+    for s in np.linspace(a + step, b - step, n_steps):
+        if func(s) * func(s + step * win_size) >= 0:
             continue
-        r = brentq(func, s, s+step*win_size)
+        r = brentq(func, s, s + step * win_size)
         roots.append(r)
 
     return roots
 
 
 def fwhm(sweep, t, amp, min_dt=10, w=None):
-    c = find_cross(t, sweep - amp/2, min_dt=min_dt, w=w)
+    c = find_cross(t, sweep - amp / 2, min_dt=min_dt, w=w)
     return np.diff(c)
 
 
@@ -865,7 +889,7 @@ def find_cross(t, trace, min_dt=50, w=None):
         w = np.ones(len(t))
     sp_data = UnivariateSpline(t, trace, k=5, s=0, w=w)
     crosses = np.array(find_roots(sp_data, 3, t.max()))
-    gc = np.ones((len(crosses), ), dtype=np.bool)
+    gc = np.ones((len(crosses),), dtype=np.bool)
     gc[1:] = np.diff(crosses) > min_dt
     g_crosses = crosses[gc]
     plt.figure()
@@ -873,7 +897,7 @@ def find_cross(t, trace, min_dt=50, w=None):
     plt.plot(t, sp_data(t))
     if len(g_crosses) > 2:
         start = g_crosses.min()
-        g_crosses = np.hstack([start, g_crosses[g_crosses-start > min_dt].min()])
+        g_crosses = np.hstack([start, g_crosses[g_crosses - start > min_dt].min()])
     if len(g_crosses) == 0:
         g_crosses = np.zeros((2,)) + np.nan
     if len(g_crosses) == 1 and g_crosses[0] < 4:
@@ -892,5 +916,5 @@ if __name__ == '__main__':
     # I = Intrinsic('/home/remi/Programming/EPhys/Intrinsic/data/20180222_1729_0', binning=3)
     # I.average_trials()
     # I.save_analysis()
-#    plt.ion()
+    #    plt.ion()
     pass
