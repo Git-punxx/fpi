@@ -7,6 +7,9 @@ ID_CREATE_FOLDERS = wx.NewId()
 ID_CONFIG_RESPONSE_PLOT = wx.NewId()
 ID_SET_DATABASE_DIR = wx.NewId()
 
+
+ID_PLOT_MEAN_BASELINE = wx.NewId()
+
 # A dict that associates wx.Ids with functions
 # We will use a decorator to populate it
 command_registry = {}
@@ -15,7 +18,6 @@ def register(wx_id):
     def deco(func):
         global command_registry
         command_registry[wx_id] = func
-        print(f'{func.__name__} associated with wx id')
         def wrapper(*args, **kwargs):
             return func(*args, **kwargs)
         return wrapper
@@ -52,7 +54,6 @@ class FPIMenuBar(wx.MenuBar):
 
     def OnMenu(self, event):
         try:
-            print(event.GetId())
             command_registry[event.GetId()](self)
         except KeyError as e:
             ErrorDialog('This action is not yet implemented')
@@ -94,6 +95,5 @@ def CreateFolderStructure(parent):
     app_config.create_folders()
 
 
-print(command_registry)
 
 

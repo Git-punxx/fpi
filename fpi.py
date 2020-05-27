@@ -1,13 +1,11 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import os
 import h5py
 from collections import namedtuple
 from abc import abstractmethod
 from app_config import config_manager as app_config
-from pathlib import Path
 import re
-from itertools import takewhile
+from pubsub import pub
 
 '''
 The point here is that we design a class hirearchy that will be able to handle different types
@@ -27,8 +25,9 @@ csv files are produced from a datastore file that represents an experiment.
 So we have to divide them based on their filename. That means that there should be triads od csv files for every experiment.
 
 '''
-fpi_meta = namedtuple('fpi_meta', 'name line stimulus treament genotype')
+fpi_meta = namedtuple('fpi_meta', 'name line stimulus treatment genotype')
 
+CHOICES_CHANGED = 'choices.changed'
 
 ###### Parsers ######
 class FPIParser:
@@ -234,266 +233,6 @@ def normalize_stack(stack, n_baseline=30):
 
 
 #### Model #####
-class FPIGatherer:
-    def __init__(self):
-        self.path = app_config.base_dir
-        self._children = None
-        self.experiments = None
-        self.working_list = self.experiment_list()
-
-    def __getitem__(self, item):
-        for animal_line in self.children.keys():
-            if item in animal_line.path:
-                return animal_line
-
-    def experiment_list(self, filtered_list=None):
-        result = []
-        for exp in self.get_experiments():
-            result.append(fpi_meta._make((exp.name, exp.animal_line, exp.stimulation, exp.treatment, exp.genotype)))
-        return result
-
-    def find(self, exp_number):
-        for item in self.working_list:
-            if exp_number == item.name:
-                return item
-
-    @property
-    def children(self):
-        """
-        Scan the base directory and return the animal line folders.
-        Create a dict in which the directory is the key and an AnimalLine is the value.
-        :return:
-        """
-        if self._children is not None:
-            return self._children
-        else:
-            animal_lines = [a.lower() for a in app_config.animal_lines]
-            base_path = Path(self.path)
-            self._children = {AnimalLine(str(d)): d for d in base_path.iterdir() if
-                              os.path.basename(d).lower() in animal_lines}
-            return self._children
-
-    def gather(self):
-        for line in self.children.keys():
-            line.gather()
-
-    def get_experiments(self):
-        if self.experiments is not None:
-            return self.experiments
-        else:
-            result = []
-            for child in self.children.keys():
-                result += child.get_experiments()
-            self.experiments = result
-            return self.experiments
-
-    def clear(self):
-        self.working_list = self.experiment_list()
-
-    def filterLine(self, line):
-        exps = self.working_list
-        self.working_list = [exp for exp in exps if exp.line.upper() == line.upper()]
-        return self.working_list
-
-    def filterTreatment(self, line):
-        exps = self.working_list
-        self.working_list = [exp for exp in exps if exp.line.upper() == line.upper()]
-        return self.working_list
-
-    def filterGenotype(self, gen):
-        exps = self.working_list
-        self.working_list = [exp for exp in exps if exp.genotype.upper() == gen.upper()]
-        return self.working_list
-
-    def filterStimulus(self, stim):
-        exps = self.working_list
-        self.working_list = [exp for exp in exps if exp.stimulus.upper() == stim.upper()]
-        return self.working_list
-
-    def get_active(self):
-        '''
-        Check whci experiments are contained in the working list (after the filtering performed from the gui)
-        :return: A list of FPIExperiment object
-        '''
-        working_names = [exp.name for exp in self.working_list]
-        res = []
-        for exp in self.experiments:
-            if exp.name in working_names:
-                res.append(exp)
-            else:
-                print(f'{exp.name} not in the list')
-        return res
-
-    def get_response_peak(self, selected):
-        experiments = self.get_active()
-        return [exp.peak_latency() for exp in experiments if exp.name in selected]
-
-    def get_response_latency(self, selected):
-        experiments = self.get_active()
-        return [exp.response_latency() for exp in experiments if exp.name in selected]
-
-    def get_timecourse(self, selected):
-        experiements = self.get_active()
-        return [exp.timecourse() for exp in experiements if exp.name in selected]
-
-    def filter_selected(self, selected):
-        experiments = self.get_active()
-        return [exp for exp in experiments if exp.name in selected]
-
-    def __str__(self):
-        return f'FPIGatherer@{self.path}'
-
-
-class AnimalLine:
-    def __init__(self, path):
-        self.path = path
-        self._children = None
-
-    def __getitem__(self, item):
-        for stim in self._children.keys():
-            if item in stim._path.upper():
-                return stim
-
-    def items(self):
-        return self.children.items()
-
-    @property
-    def children(self):
-        '''
-        Scan the animal line directory for animal folders
-        :return:
-        '''
-        if self._children is not None:
-            return self._children
-        else:
-            stims = [s.lower() for s in app_config.stimulations]
-            base_path = Path(self.path)
-            self._children = {Stimulation(str(d)): d for d in base_path.iterdir() if
-                              os.path.basename(d).lower() in stims}
-            return self._children
-
-    def gather(self):
-        for stim in self.children.keys():
-            stim.gather()
-
-    def get_experiments(self):
-        result = []
-        for child in self.children.keys():
-            result += child.get_experiments()
-        return result
-
-    def __str__(self):
-        return f'AnimalLine {os.path.basename(str(self.path))}'
-
-
-class Stimulation:
-    def __init__(self, path):
-        self._path = path
-        self._children = None
-
-    def __getitem__(self, item):
-        for genotype in self._children.keys():
-            if item in genotype.path.upper():
-                return genotype
-
-    @property
-    def children(self):
-        '''
-        Scan the animal line directory for animal folders
-        :return:
-        '''
-        treatments = [t.lower() for t in app_config.treatments]
-        base_path = Path(self._path)
-        self._children = {Treatment(str(d)): d for d in base_path.iterdir() if
-                          os.path.basename(d).lower() in treatments}
-        return self._children
-
-    def gather(self):
-        for genotype in self.children.keys():
-            genotype.gather()
-
-    def get_experiments(self):
-        result = []
-        for child in self.children.keys():
-            exp = child.get_experiments()
-            result += exp
-        return result
-
-    def __str__(self):
-        return f'Stimulation {os.path.basename(str(self._path))}'
-
-
-class Treatment:
-    def __init__(self, path):
-        self._path = path
-        self._children = None
-
-    def __getitem__(self, item):
-        for treatment in self._children.keys():
-            if item in treatment.path.upper():
-                return treatment
-
-    @property
-    def children(self):
-        '''
-        Scan the animal line directory for animal folders
-        :return:
-        '''
-        genotypes = [g.lower() for g in app_config.genotypes]
-        base_path = Path(self._path)
-        self._children = {Genotype(str(d)): d for d in base_path.iterdir() if
-                          os.path.basename(d).lower() in genotypes}
-        return self._children
-
-    def gather(self):
-        for genotype in self.children.keys():
-            genotype.gather()
-
-    def get_experiments(self):
-        result = []
-        for child in self.children.keys():
-            exp = child.get_experiments()
-            result += exp
-        return result
-
-    def __str__(self):
-        return f'Stimulation {os.path.basename(str(self._path))}'
-
-class Genotype:
-    def __init__(self, path):
-        self.path = path
-        self._children = None
-
-    def __getitem__(self, item):
-        return self.children.get(item)
-
-    @property
-    def children(self):
-        '''
-        Scan the animal line directory for animal folders
-        :return:
-        '''
-        base_path = Path(self.path)
-        genotype = os.path.basename(self.path)
-        treatment = os.path.basename(str(base_path.parent))
-        stimulation = os.path.basename(str(base_path.parent.parent))
-        animal_line = os.path.basename(str(base_path.parent.parent.parent))
-        self._children = {
-            extract_name(str(d)): FPIExperiment(name=extract_name(d), animal_line=animal_line, treatment = treatment, stimulation=stimulation,
-                                                genotype=genotype)
-            for d in base_path.iterdir() if not str(d).endswith('csv')}
-        return self._children
-
-    def gather(self):
-        for line in self.children.values():
-            line.gather()
-
-    def get_experiments(self):
-        return self.children.values()
-
-    def __str__(self):
-        return f'Genotype {os.path.basename(str(self.path))}'
-
 
 class ExperimentManager:
     def __init__(self, root):
@@ -503,6 +242,8 @@ class ExperimentManager:
         self.filtered = []
         self._exp_list = []
         self.scan()
+
+        pub.subscribe(self.filterAll, CHOICES_CHANGED)
 
     def scan(self):
         for path, dirs, files in os.walk(self.root):
@@ -533,6 +274,9 @@ class ExperimentManager:
     def filterGenotype(self, gen):
         self.filtered = [experiment for experiment in self.filtered if self.get_experiment(experiment).genotype == gen]
         return self.to_tuple()
+
+    def filterAll(self, selections):
+        print(selections)
 
     def filterSelected(self, selected):
         self.filtered = list(self._experiments.keys())
@@ -581,9 +325,6 @@ class FPIExperiment:
         self._timecourse = None
 
 
-    def gather(self):
-        pass
-
     @property
     def all_pixel(self):
         if self._all_pixel is None:
@@ -628,7 +369,6 @@ class FPIExperiment:
         return latency
 
     def plot(self, ax, type):
-        print(f'Plotting {type}')
         if type == 'response':
             self.plot_response(ax)
         elif type == 'latency':

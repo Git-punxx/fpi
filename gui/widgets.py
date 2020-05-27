@@ -8,6 +8,7 @@ from pubsub import pub
 from gui.menus import *
 from gui.dialogs import *
 
+CHOICES_CHANGED = 'choices.changed'
 LINE_CHANGED = 'line.changed'
 STIMULUS_CHANGED = 'stimulus.changed'
 TREATMENT_CHANGED = 'treatment.changed'
@@ -76,11 +77,11 @@ class MainFrame(wx.Frame):
     def setup(self):
         if not os.path.exists(app_config.base_dir):
             SetDataPath(self)
-
         # here we should pop a
         try:
             self.gatherer = ExperimentManager(app_config.base_dir)
         except Exception as e:
+            print(e)
             with wx.MessageDialog(self, 'Something is wrong with the FPI configuration file', 'Configuration error',
                                   wx.OK | wx.ICON_ERROR) as dlg:
                 dlg.ShowModal()
@@ -114,9 +115,7 @@ class MainFrame(wx.Frame):
 
     def OnResponse(self, event):
         selected = self.exp_list.GetSelection()
-        print(f'Selected items in ListCtrl: {selected}')
         exp = self.gatherer.filterSelected(selected)
-        print(f'Selected items in Experiment Manager: {exp}')
         self.plotter.add(exp, 'Response')
 
     def OnLatency(self, event):
@@ -132,29 +131,35 @@ class MainFrame(wx.Frame):
 class FilterPanel(wx.Panel):
     def __init__(self, parent, *args, **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
+        self.choices = []
 
         an_line_lbl = wx.StaticText(self, label='Mouseline')
         stim_lbl = wx.StaticText(self, label='Stimulus')
         treat_lbl = wx.StaticText(self, label='Treatment')
         gen_lbl = wx.StaticText(self, label='Genotype')
 
-        self.an_line_choice = wx.Choice(self, choices=app_config.animal_lines)
+        self.animal_line_choice = wx.Choice(self, choices=app_config.animal_lines)
         self.stim_choice = wx.Choice(self, choices=app_config.stimulations)
         self.treat_choice = wx.Choice(self, choices=app_config.treatments)
         self.gen_choice = wx.Choice(self, choices=app_config.genotypes)
 
+        self.choices = [self.animal_line_choice, self.stim_choice, self.treat_choice, self.gen_choice]
+
         self.clear_btn = wx.Button(self, label='Clear')
 
         # Bindings
-        self.an_line_choice.Bind(wx.EVT_CHOICE, self.OnLineChoice)
+        self.animal_line_choice.Bind(wx.EVT_CHOICE, self.OnLineChoice)
         self.stim_choice.Bind(wx.EVT_CHOICE, self.OnStimChoice)
         self.gen_choice.Bind(wx.EVT_CHOICE, self.OnGenChoice)
+        self.treat_choice.Bind(wx.EVT_CHOICE, self.OnTreatChoice)
         self.clear_btn.Bind(wx.EVT_BUTTON, self.OnClear)
+
+
 
         # Layout
         sizer = wx.GridBagSizer(vgap=5, hgap=5)
         sizer.Add(an_line_lbl, (0, 0))
-        sizer.Add(self.an_line_choice, (1, 0))
+        sizer.Add(self.animal_line_choice, (1, 0))
 
         sizer.Add(stim_lbl, (0, 1))
         sizer.Add(self.stim_choice, (1, 1))
@@ -171,7 +176,7 @@ class FilterPanel(wx.Panel):
         self.Fit()
 
     def SetLineChoice(self, items):
-        self.an_line_choice.SetItems(items)
+        self.animal_line_choice.SetItems(items)
 
     def SetGenotypeChoice(self, items):
         self.gen_choice.SetItems(items)
@@ -180,23 +185,35 @@ class FilterPanel(wx.Panel):
         self.stim_choice.SetItems(items)
 
     def OnLineChoice(self, choices):
-        selection = self.an_line_choice.GetStringSelection()
+        selection = self.animal_line_choice.GetStringSelection()
+        all = self.GetChoices()
         pub.sendMessage(LINE_CHANGED, args=selection)
+        pub.sendMessage(CHOICES_CHANGED, selections=all)
 
     def OnStimChoice(self, event):
+        all = self.GetChoices()
         selection = self.stim_choice.GetStringSelection()
         pub.sendMessage(STIMULUS_CHANGED, args=selection)
+        pub.sendMessage(CHOICES_CHANGED, selections=all)
 
     def OnTreatChoice(self, event):
+        all = self.GetChoices()
         selection = self.treat_choice.GetStringSelection()
         pub.sendMessage(TREATMENT_CHANGED, args=selection)
+        pub.sendMessage(CHOICES_CHANGED, selections=all)
 
     def OnGenChoice(self, event):
+        all = self.GetChoices()
         selection = self.gen_choice.GetStringSelection()
         pub.sendMessage(GENOTYPE_CHANGED, args=selection)
+        pub.sendMessage(CHOICES_CHANGED, selections=all)
 
     def OnClear(self, event):
         pub.sendMessage(CLEAR_FILTERS, args=None)
+
+    def GetChoices(self):
+        return [choice.GetStringSelection() for choice in self.choices]
+
 
 
 class FPIExperimentList(wx.Panel):

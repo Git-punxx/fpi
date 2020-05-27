@@ -14,5 +14,8 @@ run the multianalysis.py script inside this app and specify the output folder fo
 
 ###################################### Fixes ######################################
 1. Decide the folder names for treatment
+2. Need to reffactor the filter panel. I need it to return what filters are applied and find a way to filter the elements
+of the ExperimentManager based on there filters.
+3. Need to add a blank choice to the FilterChoice panel
 
 
