@@ -7,6 +7,7 @@ from fpi import *
 from pubsub import pub
 from gui.menus import *
 from gui.dialogs import *
+from fpi_plotter import FPIPlotter
 
 CHOICES_CHANGED = 'choices.changed'
 LINE_CHANGED = 'line.changed'
@@ -15,6 +16,7 @@ TREATMENT_CHANGED = 'treatment.changed'
 GENOTYPE_CHANGED = 'genotype.changed'
 EXPERIMENT_CHANGED = 'experiment.changed'
 CLEAR_FILTERS = 'clear.filters'
+EXPERIMENT_LIST_CHANGED = 'experiments.list.changed'
 
 
 class MainFrame(wx.Frame):
@@ -37,14 +39,16 @@ class MainFrame(wx.Frame):
         self.plotter = PlotNotebook(self)
 
         self.response_btn = wx.Button(self, label='Plot response')
-        self.timecourse_btn = wx.Button(self, label='Plot timecourse')
+        self.baseline_btn = wx.Button(self, label='Plot mean baseline')
         self.latency_button = wx.Button(self, label='Plot Response Latency')
+        self.peak_button = wx.Button(self, label='Plot Peak Latency')
 
 
         # Bindings
-        self.Bind(wx.EVT_BUTTON, self.OnTimecourse, self.timecourse_btn)
+        self.Bind(wx.EVT_BUTTON, self.OnBaseline, self.baseline_btn)
         self.Bind(wx.EVT_BUTTON, self.OnResponse, self.response_btn)
-        self.Bind(wx.EVT_BUTTON, self.OnLatency, self.latency_button)
+        self.Bind(wx.EVT_BUTTON, self.OnResponseLatency, self.latency_button)
+        self.Bind(wx.EVT_BUTTON, self.OnPeakLatency, self.peak_button)
         self.Bind(wx.EVT_MENU, self.OnMenu)
 
         # Layout
@@ -57,8 +61,9 @@ class MainFrame(wx.Frame):
 
         footer_sizer = wx.BoxSizer(wx.HORIZONTAL)
         footer_sizer.Add(self.response_btn, 0)
-        footer_sizer.Add(self.timecourse_btn, 0)
+        footer_sizer.Add(self.baseline_btn, 0)
         footer_sizer.Add(self.latency_button)
+        footer_sizer.Add(self.peak_button)
 
         main_sizer = wx.BoxSizer(wx.VERTICAL)
         main_sizer.Add(header_sizer, 0, wx.EXPAND)
@@ -108,20 +113,25 @@ class MainFrame(wx.Frame):
         res = self.gatherer.filterTreatment(args)
         self.exp_list.update(res)
 
-    def OnTimecourse(self, event):
+    def OnBaseline(self, event):
         selected = self.exp_list.GetSelection()
         exp = self.gatherer.filterSelected(selected)
-        canvas = self.plotter.add(exp, 'Timecourse')
+        self.plotter.add(exp, 'Baseline')
 
     def OnResponse(self, event):
         selected = self.exp_list.GetSelection()
         exp = self.gatherer.filterSelected(selected)
         self.plotter.add(exp, 'Response')
 
-    def OnLatency(self, event):
+    def OnResponseLatency(self, event):
         selected = self.exp_list.GetSelection()
         exp = self.gatherer.filterSelected(selected)
-        self.plotter.add(exp, 'Latency')
+        self.plotter.add(exp, 'Response_Latency')
+
+    def OnPeakLatency(self, event):
+        selected = self.exp_list.GetSelection()
+        exp = self.gatherer.filterSelected(selected)
+        self.plotter.add(exp, 'Peak_Latency')
 
     def OnClear(self, args=None):
         res = self.gatherer.clear_filters()
@@ -230,6 +240,7 @@ class FPIExperimentList(wx.Panel):
         sizer.Add(self.list, 1, wx.EXPAND)
         self.SetSizer(sizer)
         self.Fit()
+        pub.subscribe(self.update, EXPERIMENT_LIST_CHANGED)
 
     def OnSelect(self, event):
         item = self.list.GetItem(event.GetIndex())
@@ -246,9 +257,11 @@ class FPIExperimentList(wx.Panel):
     def clear(self):
         self.list.DeleteAllItems()
 
-    def update(self, data):
+    def update(self, choices):
+        print('Received message')
+        print(choices)
         self.clear()
-        self.add_rows(data)
+        self.add_rows(choices)
 
     def add_columns(self, columns):
         self.list.InsertColumn(0, 'Experiment')
@@ -305,7 +318,11 @@ class Plot(wx.Panel):
         ax.grid(True, color = 'grey', linewidth = 0.5)
         gatherer = self.GetTopLevelParent().gatherer
         experiment_list = gatherer.to_tuple()
-        [gatherer.get_experiment(exp.name).plot(ax, plot_type) for exp in experiment_list]
+        experiment_data = [gatherer.get_experiment(exp.name) for exp in experiment_list]
+
+        plotter = FPIPlotter(ax, experiment_data)
+        plotter.plot(plot_type)
+
         self.canvas.draw()
 
     def OnClick(self, event):

@@ -17,5 +17,6 @@ run the multianalysis.py script inside this app and specify the output folder fo
 2. Need to reffactor the filter panel. I need it to return what filters are applied and find a way to filter the elements
 of the ExperimentManager based on there filters.
 3. Need to add a blank choice to the FilterChoice panel
+4. Persist the parser. At this time we instantiate it each time we plot something
 
 

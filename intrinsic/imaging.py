@@ -624,7 +624,11 @@ def multi_analysis(path: Union[str, Path], pattern=ALL_PNG):
 
 
 def is_complete(h5file):
-    print(list(h5file['df'].keys()))
+    """
+    Check to see if the additional analysis has been performed in the datastore file
+    :param h5file: An open hdf5 file
+    :return: Boolean
+    """
     if 'avg_df' in list(h5file['df'].keys()):
         return True
     else:

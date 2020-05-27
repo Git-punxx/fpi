@@ -1,3 +1,5 @@
+from typing import Type
+
 import numpy as np
 import os
 import h5py
@@ -29,6 +31,7 @@ So we have to divide them based on their filename. That means that there should 
 fpi_meta = namedtuple('fpi_meta', 'name line stimulus treatment genotype')
 
 CHOICES_CHANGED = 'choices.changed'
+EXPERIMENT_LIST_CHANGED = 'experiments.list.changed'
 
 ###### Parsers ######
 class FPIParser:
@@ -179,6 +182,7 @@ class HD5Parser(FPIParser):
                 area = datastore['df']['area'][()]
                 return area
             except Exception as e:
+                print(e)
                 return
 
 
@@ -244,11 +248,18 @@ def normalize_stack(stack, n_baseline=30):
 
 class ExperimentManager:
     def __init__(self, root):
-        self.root = root
-        self._exp_paths = set()
-        self._experiments = {}
-        self.filtered = []
-        self._exp_list = []
+        """
+        This is where we manage our experiments.
+        It is also the interface through which the gui gets its data
+
+        :param root: The root folder of the experiments. The directory tree must conform a specific structure that
+        is specified in the fpi_config.json
+        """
+        self.root = root            # The root folder
+        self._exp_paths = set()     # A set that contains the paths of the datastores
+        self._experiments = {}      # A mapping between the name of an experiment and its path
+        self.filtered = []          # A list that contains the filtered names of the experiments
+
         self.scan()
 
         pub.subscribe(self.filterAll, CHOICES_CHANGED)
@@ -261,8 +272,16 @@ class ExperimentManager:
                 name = extract_name(os.path.basename(experiment))
                 self._experiments[name] = experiment
         self.filtered = list(self._experiments.keys())
+        pub.sendMessage(EXPERIMENT_LIST_CHANGED, choices = self.to_tuple())
+        print('Sending message ', self.to_tuple())
 
-    def get_experiment(self, name):
+    def get_experiment(self, name: str) -> object:
+        """
+        This function takes a name of an experiment as it was extracted from its path. It uses it to get the path
+        of the experiment datastore file, and then use this path to create an FPIExperiment object
+        :param name: The name of the experiment as it was extracted from its path
+        :return: An FPIExperiment object
+        """
         experiment = self[name]
         animal_line, stimulus, treatment, genotype, filename =  experiment.split(os.sep)[-5:]
         return FPIExperiment(name = name, path = experiment, animal_line=animal_line, stimulation=stimulus, treatment=treatment, genotype=genotype)
