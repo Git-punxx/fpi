@@ -151,7 +151,6 @@ class HD5Parser(FPIParser):
     def response(self):
         with h5py.File(self._path, 'r') as datastore:
             # here we need to see if we will use 'response' or 'resp_map'
-            print(f'Reading {self._path} file for response')
             try:
                 return datastore['df']['avg_df'][()]
             except Exception as e:
@@ -218,7 +217,6 @@ def fpiparser(path):
     '''
     # Check if there is only one file and that it ends with h5. Then we return an HD%Parser
     if os.path.basename(path).endswith('h5'):
-        print('Setting HDF%Parser for ', path)
         return HD5Parser(extract_name(path), path)
     # timecourse and all_pixels. This should be enforced in the analysis step
     else:

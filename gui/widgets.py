@@ -94,7 +94,6 @@ class MainFrame(wx.Frame):
 
     def OnMenu(self, event):
         evt_id = event.GetId()
-        print(evt_id)
 
 
     def OnLineChange(self, args):
@@ -246,20 +245,17 @@ class FPIExperimentList(wx.Panel):
         item = self.list.GetItem(event.GetIndex())
         text = item.GetText()
         self.current_selection.append(text)
-        print(self.current_selection)
 
     def OnDeselect(self, event):
         item = self.list.GetItem(event.GetIndex())
         text = item.GetText()
         self.current_selection.remove(text)
-        print(self.current_selection)
 
     def clear(self):
         self.list.DeleteAllItems()
 
     def update(self, choices):
         print('Received message')
-        print(choices)
         self.clear()
         self.add_rows(choices)
 

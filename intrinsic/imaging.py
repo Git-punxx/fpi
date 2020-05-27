@@ -641,10 +641,8 @@ def do_analysis(h5file):
 
 
 def check_datastore(path):
-    print(f'Checking {path}')
     with h5py.File(path, 'r+') as datastore:
         if not is_complete(datastore):
-            print(f'Analyszing {datastore}')
             do_analysis(path)
 
 

@@ -23,13 +23,11 @@ class FPIPlotter:
 
 
     def plot(self, plot_type):
-        print(self.experiments)
         plot_registry[plot_type](self, self.experiments)
 
 
     @register('response')
     def plot_response(self, experiments):
-        print(experiments)
         data = [exp.response for exp in experiments]
         for d in data:
             self.axes.plot(d)
