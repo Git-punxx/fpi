@@ -30,7 +30,7 @@ class MainFrame(wx.Frame):
         self.setup()
         self.exp_list = FPIExperimentList(self)
         self.exp_list.add_columns(app_config.categories)
-        self.exp_list.add_rows(self.gatherer.experiment_list())
+        self.exp_list.add_rows(self.gatherer.to_tuple())
 
         self.filter = FilterPanel(self)
         self.plotter = PlotNotebook(self)
@@ -77,10 +77,9 @@ class MainFrame(wx.Frame):
         if not os.path.exists(app_config.base_dir):
             SetDataPath(self)
 
-        self.gatherer = FPIGatherer()
         # here we should pop a
         try:
-            self.gatherer.gather()
+            self.gatherer = ExperimentManager(app_config.base_dir)
         except Exception as e:
             with wx.MessageDialog(self, 'Something is wrong with the FPI configuration file', 'Configuration error',
                                   wx.OK | wx.ICON_ERROR) as dlg:
@@ -110,22 +109,23 @@ class MainFrame(wx.Frame):
 
     def OnTimecourse(self, event):
         selected = self.exp_list.GetSelection()
-        exp = self.gatherer.filter_selected(selected)
+        exp = self.gatherer.filterSelected(selected)
         canvas = self.plotter.add(exp, 'Timecourse')
 
     def OnResponse(self, event):
         selected = self.exp_list.GetSelection()
-        exp = self.gatherer.filter_selected(selected)
+        print(f'Selected items in ListCtrl: {selected}')
+        exp = self.gatherer.filterSelected(selected)
+        print(f'Selected items in Experiment Manager: {exp}')
         self.plotter.add(exp, 'Response')
 
     def OnLatency(self, event):
         selected = self.exp_list.GetSelection()
-        exp = self.gatherer.filter_selected(selected)
+        exp = self.gatherer.filterSelected(selected)
         self.plotter.add(exp, 'Latency')
 
     def OnClear(self, args=None):
-        self.gatherer.clear()
-        res = self.gatherer.experiment_list()
+        res = self.gatherer.clear_filters()
         self.exp_list.update(res)
 
 
@@ -206,13 +206,25 @@ class FPIExperimentList(wx.Panel):
 
         self.current_selection = []
 
-        self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnSelect, self.list)
-        self.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.OnDeselect, self.list)
+        self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnSelect)
+        self.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.OnDeselect)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.list, 1, wx.EXPAND)
         self.SetSizer(sizer)
         self.Fit()
+
+    def OnSelect(self, event):
+        item = self.list.GetItem(event.GetIndex())
+        text = item.GetText()
+        self.current_selection.append(text)
+        print(self.current_selection)
+
+    def OnDeselect(self, event):
+        item = self.list.GetItem(event.GetIndex())
+        text = item.GetText()
+        self.current_selection.remove(text)
+        print(self.current_selection)
 
     def clear(self):
         self.list.DeleteAllItems()
@@ -230,20 +242,13 @@ class FPIExperimentList(wx.Panel):
         for row in data:
             self.list.Append(row)
 
-    def OnSelect(self, event):
-        self.current_selection.append(event.GetText())
-
-    def OnDeselect(self, event):
-        self.current_selection.remove(event.GetText())
-
     def GetSelection(self):
         return self.current_selection
 
 
 class Plot(wx.Panel):
-    def __init__(self, parent, id=wx.ID_ANY, dpi=None, fpi_list=None, **kwargs):
+    def __init__(self, parent, id=wx.ID_ANY, dpi=None, experiment=None, **kwargs):
         wx.Panel.__init__(self, parent, id)
-        self.fpi_list = fpi_list
         self.figure = mpl.figure.Figure(dpi=dpi, figsize=(5, 8))
         self.canvas = FigureCanvas(self, -1, self.figure)
         self.toolbar = NavigationToolbar(self.canvas)
@@ -266,21 +271,24 @@ class Plot(wx.Panel):
         :param event:
         :return:
         """
-        if self.fpi_list is None or self.fpi_list.empty():
+        gatherer = self.GetTopLevelParent().gatherer
+        experiment_list = gatherer.to_tuple()
+        if experiment_list is None:
             with wx.MessageDialog(self, 'Please select an fpi experiment before plotting', 'No experiment(s) provided',
                                   wx.OK | wx.ICON_ERROR) as dlg:
                 dlg.ShowModal()
             return
         else:
             ax = self.figure.gca()
-            [exp.plot(ax) for exp in self.fpi_list]
+            [gatherer.get_experiment(exp).plot(ax) for exp in experiment_list]
             self.canvas.draw()
 
     def plot(self, plot_type=None):
         ax = self.figure.gca()
         ax.grid(True, color = 'grey', linewidth = 0.5)
-        print(f'In widget: Plotting {plot_type} for ', self.fpi_list)
-        [exp.plot(ax, plot_type) for exp in self.fpi_list]
+        gatherer = self.GetTopLevelParent().gatherer
+        experiment_list = gatherer.to_tuple()
+        [gatherer.get_experiment(exp.name).plot(ax, plot_type) for exp in experiment_list]
         self.canvas.draw()
 
     def OnClick(self, event):
@@ -291,15 +299,15 @@ class PlotNotebook(wx.Panel):
     def __init__(self, parent, id=-1):
         wx.Panel.__init__(self, parent, id)
         self.nb = aui.AuiNotebook(self)
-
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.nb, 1, wx.EXPAND)
         self.SetSizer(sizer)
 
-    def add(self, fpi_list, title):
-        page = Plot(self.nb, fpi_list=fpi_list)
+    def add(self, exp, title):
+        page = Plot(self.nb, experiment=exp)
         self.nb.AddPage(page, caption=title)
         page.plot(title.lower())
+        self.nb.AdvanceSelection(True)
         return page
 
 

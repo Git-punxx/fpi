@@ -208,11 +208,8 @@ def fpiparser(path):
     :return: A FPIParser object
     '''
     # Check if there is only one file and that it ends with h5. Then we return an HD%Parser
-    print(f'In fpiparser: {path}')
-    if len(path) == 1 and os.path.basename(path[0]).endswith('h5'):
-        print(f'Setting HD5Parser for {extract_name(path[0])}')
-        return HD5Parser(extract_name(path[0]), path[0])
-    # else if there are more files with the same experiment name, assume there are three csv files, one for response,
+    if os.path.basename(path).endswith('h5'):
+        return HD5Parser(extract_name(path), path)
     # timecourse and all_pixels. This should be enforced in the analysis step
     else:
         #raise ValueError(f'{path} could not be matched against a parser')
@@ -498,6 +495,67 @@ class Genotype:
         return f'Genotype {os.path.basename(str(self.path))}'
 
 
+class ExperimentManager:
+    def __init__(self, root):
+        self.root = root
+        self._exp_paths = set()
+        self._experiments = {}
+        self.filtered = []
+        self._exp_list = []
+        self.scan()
+
+    def scan(self):
+        for path, dirs, files in os.walk(self.root):
+            file_paths = [os.path.join(path, file) for file in files if file.endswith('h5')]
+            [self._exp_paths.add(file) for file in file_paths]
+            for experiment in self._exp_paths:
+                name = extract_name(os.path.basename(experiment))
+                self._experiments[name] = experiment
+        self.filtered = list(self._experiments.keys())
+
+    def get_experiment(self, name):
+        experiment = self[name]
+        animal_line, stimulus, treatment, genotype, filename =  experiment.split(os.sep)[-5:]
+        return FPIExperiment(name = name, path = experiment, animal_line=animal_line, stimulation=stimulus, treatment=treatment, genotype=genotype)
+
+    def filterLine(self, line):
+        self.filtered = [experiment for experiment in self.filtered if self.get_experiment(experiment).animal_line == line]
+        return self.to_tuple()
+
+    def filterTreatment(self, treatment):
+        self.filtered = [experiment for experiment in self.filtered if self.get_experiment(experiment).treatment == treatment]
+        return self.to_tuple()
+
+    def filterStimulus(self, stim):
+        self.filtered = [experiment for experiment in self.filtered if self.get_experiment(experiment).stimulation == stim]
+        return self.to_tuple()
+
+    def filterGenotype(self, gen):
+        self.filtered = [experiment for experiment in self.filtered if self.get_experiment(experiment).genotype == gen]
+        return self.to_tuple()
+
+    def filterSelected(self, selected):
+        self.filtered = list(self._experiments.keys())
+        self.filtered = [filtered for filtered in self.filtered if filtered in selected]
+        return self.to_tuple()
+
+    def clear_filters(self):
+        self.filtered = list(self._experiments.keys())
+        return self.to_tuple()
+
+    def to_tuple(self):
+        res = []
+        for exp in self.filtered:
+            live = self.get_experiment(exp)
+            res.append(fpi_meta._make((live.name, live.animal_line, live.stimulation, live.treatment, live.genotype )))
+        return res
+
+    def __getitem__(self, name):
+        return self._experiments[name]
+
+    def __iter__(self):
+        return iter(self._experiments.keys())
+
 class FPIExperiment:
     '''
     This class represents the results of an FPI experiment.
@@ -509,40 +567,19 @@ class FPIExperiment:
     By providing the name of the experiment we could build the path using the config options
     '''
 
-    def __init__(self, name, animal_line, stimulation, treatment, genotype):
+    def __init__(self, name, path, animal_line, stimulation, treatment, genotype):
         self.animal_line = animal_line
         self.stimulation = stimulation
         self.treatment = treatment
         self.genotype = genotype
         self.name = name
+        self._path = path
 
-        self._path = None
-        self._parser = None
+        self._parser = fpiparser(self._path)
         self._all_pixel = None
         self._response = None
         self._timecourse = None
 
-        self.materialize()
-
-    def materialize(self):
-        '''
-        Create the appropriate parser for the specific file (csv, h5 etc) and read the dataframes we need
-        :return:
-        '''
-        self.build_path()
-        self._parser = fpiparser(self._path)
-        print(f'Parser set to {self._parser}')
-        if self._parser:
-            print(f'Materializing {self.name}')
-            self._all_pixel = self._parser.all_pixel()
-            self._response = self._parser.response()
-            self._timecourse = self._parser.timecourse()
-
-    def build_path(self):
-        base_dir = app_config.base_dir
-        base_path = os.path.join(base_dir, self.animal_line, self.stimulation, self.treatment, self.genotype)
-        data_paths = [os.path.join(base_path, f) for f in os.listdir(base_path) if self.name in f]
-        self._path = data_paths
 
     def gather(self):
         pass
@@ -603,7 +640,6 @@ class FPIExperiment:
 
     def plot_response(self, ax):
         data = self._parser.response()
-        print(data)
         x = range(len(data))
         ax.set_title(f'Response: {self.name}')
         ax.plot(x, data)
@@ -642,10 +678,11 @@ class FPIExperiment:
         return result
 
 
-if __name__ == '__main__':
-    gatherer = FPIGatherer()
-    gatherer.gather()
-    all_exp = gatherer.get_experiments()
 
-    l = gatherer.experiment_list()
-    print(l)
+if __name__ == '__main__':
+    root = app_config.base_dir
+    manager = ExperimentManager(root)
+    manager.filterLine('PTEN')
+    manager.clear_filters()
+    for item in manager.to_tuple():
+        print(item)

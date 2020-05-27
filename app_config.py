@@ -100,7 +100,8 @@ class JSONConfigManager(ConfigManager):
         return paths
 
     def create_folders(self):
-        raise NotImplementedError
+        folders = self.folder_structure()
+        [os.makedirs(path, exist_ok=True) for path in folders]
 
 config_manager = JSONConfigManager(FPI_CONFIG_JSON)
 
