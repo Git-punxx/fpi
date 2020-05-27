@@ -197,7 +197,11 @@ def extract_name(path):
     :return: the name of the experiment as a string
     '''
     name = re.search(app_config.name_pattern, str(path))
-    return name.group(0)[1:]
+    try:
+        res =  name.group(0)[1:]
+    except Exception as e:
+        res = 'Default name'
+    return res
 
 
 def fpiparser(path):
@@ -276,7 +280,7 @@ class ExperimentManager:
         return self.to_tuple()
 
     def filterAll(self, selections):
-        print(selections)
+        pass
 
     def filterSelected(self, selected):
         self.filtered = list(self._experiments.keys())
