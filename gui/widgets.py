@@ -1,4 +1,5 @@
 import wx
+import time
 import wx.lib.agw.aui as aui
 import matplotlib as mpl
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
@@ -8,6 +9,8 @@ from pubsub import pub
 from gui.menus import *
 from gui.dialogs import *
 from fpi_plotter import FPIPlotter
+from gui.fpi_image import ImagePanel
+from gui.popups import PopupMenuMixin
 
 CHOICES_CHANGED = 'choices.changed'
 LINE_CHANGED = 'line.changed'
@@ -29,8 +32,9 @@ class MainFrame(wx.Frame):
         self.SetMenuBar(self.menubar)
 
         self.CreateStatusBar()
-
-        self.setup()
+        with wx.BusyInfo('FPIPlotter\nPlease wait. Initializing...'):
+            self.setup()
+            time.sleep(5)
         self.exp_list = FPIExperimentList(self)
         self.exp_list.add_columns(app_config.categories)
         self.exp_list.add_rows(self.gatherer.to_tuple())
@@ -225,21 +229,31 @@ class FilterPanel(wx.Panel):
 
 
 
-class FPIExperimentList(wx.Panel):
+class FPIExperimentList(wx.Panel, PopupMenuMixin):
     def __init__(self, parent, *args, **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
+        PopupMenuMixin.__init__(self)
         self.list = wx.ListCtrl(self, -1, style=wx.LC_REPORT)
 
         self.current_selection = []
 
         self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnSelect)
         self.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.OnDeselect)
+        self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnActivate)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.list, 1, wx.EXPAND)
         self.SetSizer(sizer)
         self.Fit()
         pub.subscribe(self.update, EXPERIMENT_LIST_CHANGED)
+
+    def OnActivate(self, event):
+        item = self.list.GetItem(event.GetIndex())
+        exp_name = item.GetText()
+
+        path = self.GetTopLevelParent().gatherer.get_experiment(exp_name)._path
+        exp_dialog = ImagePanel(self, path)
+        exp_dialog.ShowModal()
 
     def OnSelect(self, event):
         item = self.list.GetItem(event.GetIndex())
@@ -271,6 +285,10 @@ class FPIExperimentList(wx.Panel):
     def GetSelection(self):
         return self.current_selection
 
+    def CreateContextMenu(self, menu):
+        menu.Append(wx.ID_COPY)
+        menu.Append(wx.ID_CUT)
+        menu.Append(wx.ID_PASTE)
 
 class Plot(wx.Panel):
     def __init__(self, parent, id=wx.ID_ANY, dpi=None, experiment=None, **kwargs):
