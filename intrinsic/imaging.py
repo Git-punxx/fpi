@@ -642,8 +642,13 @@ def do_analysis(h5file):
 
 def check_datastore(path):
     with h5py.File(path, 'r+') as datastore:
+        if 'anat' not in list(datastore.keys()):
+            return False
         if not is_complete(datastore):
             do_analysis(path)
+            return True
+        else:
+            return True
 
 
 def clean_response(resp):

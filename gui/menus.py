@@ -85,8 +85,6 @@ def SetDataPath(parent):
         # if not we should offer to create it
         app_config.base_dir = path
         top = parent.GetTopLevelParent()
-        gatherer = top.gatherer
-        gatherer.scan()
         status = top.GetStatusBar()
         status.SetStatusText(f'Path set to {path}')
     else:

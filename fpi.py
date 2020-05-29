@@ -1,5 +1,5 @@
 from typing import Type
-
+from concurrent.futures import ProcessPoolExecutor, as_completed
 import numpy as np
 import os
 import h5py
@@ -32,7 +32,70 @@ fpi_meta = namedtuple('fpi_meta', 'name line stimulus treatment genotype')
 
 CHOICES_CHANGED = 'choices.changed'
 EXPERIMENT_LIST_CHANGED = 'experiments.list.changed'
+EXPERIMENT_SCANNING = 'experiment.scanning'
 
+
+#### Utility functions #######
+def debug(func):
+    print(f'in {func.__name__}')
+
+    def wrapper(*args, **kwargs):
+        res = func(*args, **kwargs)
+        return res
+
+    return wrapper
+
+
+def extract_name(path):
+    '''
+    Given a pathm, this function returns the name of the experiment which is the numeric value contained in
+    the basename of the path. This name will be used to instantiate FPIExperiment instances that are able to reconstruct
+    their path.
+    :return: the name of the experiment as a string
+    '''
+    name = re.search(app_config.name_pattern, str(path))
+    try:
+        res = name.group(0)[1:]
+    except Exception as e:
+        res = 'Default name'
+    return res
+
+
+def fpiparser(path):
+    '''
+    A factory method that tries to understand if we are dealing with a list of csv files or a single datastore file
+    :param path: A list of filenames
+    :return: A FPIParser object
+    '''
+    # Check if there is only one file and that it ends with h5. Then we return an HD%Parser
+    if os.path.basename(path).endswith('h5'):
+        return HD5Parser(extract_name(path), path)
+    # timecourse and all_pixels. This should be enforced in the analysis step
+    else:
+        # raise ValueError(f'{path} could not be matched against a parser')
+        print('No parser for ', path)
+        pass
+
+
+def normalize_stack(stack, n_baseline=30):
+    # Global average
+    y = np.nanmean(stack, (0, 1))[1:n_baseline]
+    y_min, y_max = y.min(), y.max()
+    # Exponential fit during baseline
+    t = np.arange(1, n_baseline)
+    z = 1 + (y - y_min) / (y_max - y_min)
+    p = np.polyfit(t, np.log(z), 1)
+    # Modeled decay
+    full_t = np.arange(stack.shape[2])
+    decay = np.exp(p[1]) * np.exp(full_t * p[0])
+    # Renormalized
+    decay = (decay - 1) * (y_max - y_min) + y_min
+    norm_stack = stack - decay
+
+    return norm_stack
+
+
+#
 ###### Parsers ######
 class FPIParser:
     '''
@@ -143,18 +206,19 @@ class CSVParser(FPIParser):
 class HD5Parser(FPIParser):
     def __init__(self, experiment, path):
         FPIParser.__init__(self, experiment, path)
-        check_datastore(self._path)
 
     def parser_type(self):
         return 'hdf5'
 
+    @debug
     def response(self):
         with h5py.File(self._path, 'r') as datastore:
             # here we need to see if we will use 'response' or 'resp_map'
             try:
                 return datastore['df']['avg_df'][()]
             except Exception as e:
-                return
+                print(e)
+                return None
 
     def timecourse(self):
         with h5py.File(self._path, 'r') as datastore:
@@ -167,8 +231,8 @@ class HD5Parser(FPIParser):
                 avg_stack = datastore['df']['stack']
                 df = normalize_stack(avg_stack)
                 # Compute the mean
-                df_avg = df.std((0,1))
-                df_std = df.mean((0,1))
+                df_avg = df.std((0, 1))
+                df_std = df.mean((0, 1))
                 # Compute the average
                 timecourse = np.vstack((np.arange(1, df_avg.shape[0] + 1, dtype=np.intp), df_avg, df_std)).T
                 return timecourse
@@ -185,64 +249,7 @@ class HD5Parser(FPIParser):
                 return
 
 
-#### Utility functions #######
-def debug(func):
-    def wrapper(*args, **kwargs):
-        res = func(*args, **kwargs)
-        return res
-
-    return wrapper
-
-
-def extract_name(path):
-    '''
-    Given a pathm, this function returns the name of the experiment which is the numeric value contained in
-    the basename of the path. This name will be used to instantiate FPIExperiment instances that are able to reconstruct
-    their path.
-    :return: the name of the experiment as a string
-    '''
-    name = re.search(app_config.name_pattern, str(path))
-    try:
-        res =  name.group(0)[1:]
-    except Exception as e:
-        res = 'Default name'
-    return res
-
-
-def fpiparser(path):
-    '''
-    A factory method that tries to understand if we are dealing with a list of csv files or a single datastore file
-    :param path: A list of filenames
-    :return: A FPIParser object
-    '''
-    # Check if there is only one file and that it ends with h5. Then we return an HD%Parser
-    if os.path.basename(path).endswith('h5'):
-        return HD5Parser(extract_name(path), path)
-    # timecourse and all_pixels. This should be enforced in the analysis step
-    else:
-        #raise ValueError(f'{path} could not be matched against a parser')
-        print('No parser for ', path)
-        pass
-
-def normalize_stack(stack, n_baseline=30):
-    # Global average
-    y = np.nanmean(stack, (0, 1))[1:n_baseline]
-    y_min, y_max = y.min(), y.max()
-    # Exponential fit during baseline
-    t = np.arange(1, n_baseline)
-    z = 1 + (y - y_min) / (y_max - y_min)
-    p = np.polyfit(t, np.log(z), 1)
-    # Modeled decay
-    full_t = np.arange(stack.shape[2])
-    decay = np.exp(p[1]) * np.exp(full_t * p[0])
-    # Renormalized
-    decay = (decay - 1) * (y_max - y_min) + y_min
-    norm_stack = stack - decay
-
-    return norm_stack
-
-
-#### Model #####
+### Model #####
 
 class ExperimentManager:
     def __init__(self, root):
@@ -253,10 +260,10 @@ class ExperimentManager:
         :param root: The root folder of the experiments. The directory tree must conform a specific structure that
         is specified in the fpi_config.json
         """
-        self.root = root            # The root folder
-        self._exp_paths = set()     # A set that contains the paths of the datastores
-        self._experiments = {}      # A mapping between the name of an experiment and its path
-        self.filtered = []          # A list that contains the filtered names of the experiments
+        self.root = root  # The root folder
+        self._exp_paths = set()  # A set that contains the paths of the datastores
+        self._experiments = {}  # A mapping between the name of an experiment and its path
+        self.filtered = []  # A list that contains the filtered names of the experiments
 
         self.scan()
 
@@ -266,12 +273,28 @@ class ExperimentManager:
         for path, dirs, files in os.walk(self.root):
             file_paths = [os.path.join(path, file) for file in files if file.endswith('h5')]
             [self._exp_paths.add(file) for file in file_paths]
-            for experiment in self._exp_paths:
-                name = extract_name(os.path.basename(experiment))
-                self._experiments[name] = experiment
+
+        futures = []
+        with ProcessPoolExecutor() as executor:
+            for exp in self._exp_paths:
+                res = executor.submit(self.check_if_valid, exp)
+                futures.append(res)
+        for fut in as_completed(futures):
+            if fut.result() is not None:
+                name = extract_name(os.path.basename(exp))
+                self._experiments[name] = fut.result()
+
         self.filtered = list(self._experiments.keys())
-        pub.sendMessage(EXPERIMENT_LIST_CHANGED, choices = self.to_tuple())
-        print('Sending message ', self.to_tuple())
+        pub.sendMessage(EXPERIMENT_LIST_CHANGED, choices=self.to_tuple())
+
+    def check_if_valid(self, experiment_path):
+        print(f'Checking {experiment_path}')
+        if check_datastore(experiment_path):
+            print('Adding experiment')
+            return experiment_path
+        else:
+            print(f'{experiment_path} is not a valid datstore')
+            return None
 
     def get_experiment(self, name: str) -> object:
         """
@@ -281,19 +304,23 @@ class ExperimentManager:
         :return: An FPIExperiment object
         """
         experiment = self[name]
-        animal_line, stimulus, treatment, genotype, filename =  experiment.split(os.sep)[-5:]
-        return FPIExperiment(name = name, path = experiment, animal_line=animal_line, stimulation=stimulus, treatment=treatment, genotype=genotype)
+        animal_line, stimulus, treatment, genotype, filename = experiment.split(os.sep)[-5:]
+        return FPIExperiment(name=name, path=experiment, animal_line=animal_line, stimulation=stimulus,
+                             treatment=treatment, genotype=genotype)
 
     def filterLine(self, line):
-        self.filtered = [experiment for experiment in self.filtered if self.get_experiment(experiment).animal_line == line]
+        self.filtered = [experiment for experiment in self.filtered if
+                         self.get_experiment(experiment).animal_line == line]
         return self.to_tuple()
 
     def filterTreatment(self, treatment):
-        self.filtered = [experiment for experiment in self.filtered if self.get_experiment(experiment).treatment == treatment]
+        self.filtered = [experiment for experiment in self.filtered if
+                         self.get_experiment(experiment).treatment == treatment]
         return self.to_tuple()
 
     def filterStimulus(self, stim):
-        self.filtered = [experiment for experiment in self.filtered if self.get_experiment(experiment).stimulation == stim]
+        self.filtered = [experiment for experiment in self.filtered if
+                         self.get_experiment(experiment).stimulation == stim]
         return self.to_tuple()
 
     def filterGenotype(self, gen):
@@ -316,7 +343,7 @@ class ExperimentManager:
         res = []
         for exp in self.filtered:
             live = self.get_experiment(exp)
-            res.append(fpi_meta._make((live.name, live.animal_line, live.stimulation, live.treatment, live.genotype )))
+            res.append(fpi_meta._make((live.name, live.animal_line, live.stimulation, live.treatment, live.genotype)))
         return res
 
     def __getitem__(self, name):
@@ -324,6 +351,7 @@ class ExperimentManager:
 
     def __iter__(self):
         return iter(self._experiments.keys())
+
 
 class FPIExperiment:
     '''
@@ -348,7 +376,6 @@ class FPIExperiment:
         self._all_pixel = None
         self._response = None
         self._timecourse = None
-
 
     @property
     def all_pixel(self):
@@ -441,7 +468,6 @@ class FPIExperiment:
         else:
             result.append('No all_pixelsj')
         return result
-
 
 
 if __name__ == '__main__':

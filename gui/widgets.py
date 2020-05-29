@@ -34,7 +34,6 @@ class MainFrame(wx.Frame):
         self.CreateStatusBar()
         with wx.BusyInfo('FPIPlotter\nPlease wait. Initializing...'):
             self.setup()
-            time.sleep(5)
         self.exp_list = FPIExperimentList(self)
         self.exp_list.add_columns(app_config.categories)
         self.exp_list.add_rows(self.gatherer.to_tuple())
@@ -85,7 +84,7 @@ class MainFrame(wx.Frame):
 
     def setup(self):
         if not os.path.exists(app_config.base_dir):
-            SetDataPath(self)
+            path = SetDataPath(self)
         # here we should pop a
         try:
             self.gatherer = ExperimentManager(app_config.base_dir)
