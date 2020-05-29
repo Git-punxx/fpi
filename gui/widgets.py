@@ -81,6 +81,7 @@ class MainFrame(wx.Frame):
         pub.subscribe(self.OnTreatChange, TREATMENT_CHANGED)
         pub.subscribe(self.OnStimChange, STIMULUS_CHANGED)
         pub.subscribe(self.OnClear, CLEAR_FILTERS)
+        pub.subscribe(self.OnChoicesChanged, CHOICES_CHANGED)
 
     def setup(self):
         if not os.path.exists(app_config.base_dir):
@@ -114,6 +115,11 @@ class MainFrame(wx.Frame):
     def OnTreatChange(self, args):
         res = self.gatherer.filterTreatment(args)
         self.exp_list.update(res)
+
+    def OnChoicesChanged(self, selections):
+        res = self.gatherer.filterAll(selections)
+        self.exp_list.update(res)
+
 
     def OnBaseline(self, event):
         selected = self.exp_list.GetSelection()
@@ -199,25 +205,25 @@ class FilterPanel(wx.Panel):
     def OnLineChoice(self, choices):
         selection = self.animal_line_choice.GetStringSelection()
         all = self.GetChoices()
-        pub.sendMessage(LINE_CHANGED, args=selection)
+        #pub.sendMessage(LINE_CHANGED, args=selection)
         pub.sendMessage(CHOICES_CHANGED, selections=all)
 
     def OnStimChoice(self, event):
         all = self.GetChoices()
         selection = self.stim_choice.GetStringSelection()
-        pub.sendMessage(STIMULUS_CHANGED, args=selection)
+        #pub.sendMessage(STIMULUS_CHANGED, args=selection)
         pub.sendMessage(CHOICES_CHANGED, selections=all)
 
     def OnTreatChoice(self, event):
         all = self.GetChoices()
         selection = self.treat_choice.GetStringSelection()
-        pub.sendMessage(TREATMENT_CHANGED, args=selection)
+        #pub.sendMessage(TREATMENT_CHANGED, args=selection)
         pub.sendMessage(CHOICES_CHANGED, selections=all)
 
     def OnGenChoice(self, event):
         all = self.GetChoices()
         selection = self.gen_choice.GetStringSelection()
-        pub.sendMessage(GENOTYPE_CHANGED, args=selection)
+        #pub.sendMessage(GENOTYPE_CHANGED, args=selection)
         pub.sendMessage(CHOICES_CHANGED, selections=all)
 
     def OnClear(self, event):
@@ -244,6 +250,7 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         sizer.Add(self.list, 1, wx.EXPAND)
         self.SetSizer(sizer)
         self.Fit()
+
         pub.subscribe(self.update, EXPERIMENT_LIST_CHANGED)
 
     def OnActivate(self, event):

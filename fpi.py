@@ -8,7 +8,9 @@ from abc import abstractmethod
 from app_config import config_manager as app_config
 import re
 from pubsub import pub
+from pub_messages import ANALYSIS_UPDATE
 from intrinsic.imaging import check_datastore
+
 
 '''
 The point here is that we design a class hirearchy that will be able to handle different types
@@ -37,9 +39,8 @@ EXPERIMENT_SCANNING = 'experiment.scanning'
 
 #### Utility functions #######
 def debug(func):
-    print(f'in {func.__name__}')
-
     def wrapper(*args, **kwargs):
+        print(f'In {func.__name__}')
         res = func(*args, **kwargs)
         return res
 
@@ -210,7 +211,6 @@ class HD5Parser(FPIParser):
     def parser_type(self):
         return 'hdf5'
 
-    @debug
     def response(self):
         with h5py.File(self._path, 'r') as datastore:
             # here we need to see if we will use 'response' or 'resp_map'
@@ -265,15 +265,19 @@ class ExperimentManager:
         self._experiments = {}  # A mapping between the name of an experiment and its path
         self.filtered = []  # A list that contains the filtered names of the experiments
 
+        self._filters = []
+
         self.scan()
 
         pub.subscribe(self.filterAll, CHOICES_CHANGED)
+
 
     def scan(self):
         for path, dirs, files in os.walk(self.root):
             file_paths = [os.path.join(path, file) for file in files if file.endswith('h5')]
             [self._exp_paths.add(file) for file in file_paths]
 
+        total = len(self._exp_paths)
         futures = []
         with ProcessPoolExecutor() as executor:
             for exp in self._exp_paths:
@@ -282,18 +286,18 @@ class ExperimentManager:
         for fut in as_completed(futures):
             if fut.result() is not None:
                 name = extract_name(os.path.basename(exp))
+
                 self._experiments[name] = fut.result()
+                val = 100 * (1 / total)
+                pub.sendMessage(ANALYSIS_UPDATE, val = val)
 
         self.filtered = list(self._experiments.keys())
         pub.sendMessage(EXPERIMENT_LIST_CHANGED, choices=self.to_tuple())
 
     def check_if_valid(self, experiment_path):
-        print(f'Checking {experiment_path}')
         if check_datastore(experiment_path):
-            print('Adding experiment')
             return experiment_path
         else:
-            print(f'{experiment_path} is not a valid datstore')
             return None
 
     def get_experiment(self, name: str) -> object:
@@ -309,26 +313,34 @@ class ExperimentManager:
                              treatment=treatment, genotype=genotype)
 
     def filterLine(self, line):
-        self.filtered = [experiment for experiment in self.filtered if
-                         self.get_experiment(experiment).animal_line == line]
-        return self.to_tuple()
+        if line != '':
+            self.filtered = [experiment for experiment in self.filtered if
+                             self.get_experiment(experiment).animal_line == line]
 
     def filterTreatment(self, treatment):
-        self.filtered = [experiment for experiment in self.filtered if
-                         self.get_experiment(experiment).treatment == treatment]
-        return self.to_tuple()
+        if treatment != '':
+            self.filtered = [experiment for experiment in self.filtered if
+                             self.get_experiment(experiment).treatment == treatment]
 
     def filterStimulus(self, stim):
-        self.filtered = [experiment for experiment in self.filtered if
-                         self.get_experiment(experiment).stimulation == stim]
-        return self.to_tuple()
+        if stim != '':
+            self.filtered = [experiment for experiment in self.filtered if
+                             self.get_experiment(experiment).stimulation == stim]
 
     def filterGenotype(self, gen):
-        self.filtered = [experiment for experiment in self.filtered if self.get_experiment(experiment).genotype == gen]
-        return self.to_tuple()
+        if gen != '':
+            self.filtered = [experiment for experiment in self.filtered if self.get_experiment(experiment).genotype == gen]
 
     def filterAll(self, selections):
-        pass
+        self.clear_filters()
+        line, stimulation, treatment, genotype = selections
+        self.filterLine(line)
+        self.filterStimulus(stimulation)
+        self.filterTreatment(treatment)
+        self.filterGenotype(genotype)
+        return self.to_tuple()
+
+
 
     def filterSelected(self, selected):
         self.filtered = list(self._experiments.keys())
@@ -343,7 +355,9 @@ class ExperimentManager:
         res = []
         for exp in self.filtered:
             live = self.get_experiment(exp)
+            print(live)
             res.append(fpi_meta._make((live.name, live.animal_line, live.stimulation, live.treatment, live.genotype)))
+            print(res)
         return res
 
     def __getitem__(self, name):
@@ -451,7 +465,7 @@ class FPIExperiment:
         ax.plot(x, data, 'k-')
 
     def __str__(self):
-        return f'{self.name}: {self.stimulation} -> {self.genotype}'
+        return f'{self.name}: {self.animal_line} {self.stimulation} {self.treatment} {self.genotype}'
 
     def check(self):
         result = []
