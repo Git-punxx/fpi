@@ -45,6 +45,7 @@ class MainFrame(wx.Frame):
         self.baseline_btn = wx.Button(self, label='Plot mean baseline')
         self.latency_button = wx.Button(self, label='Plot Response Latency')
         self.peak_button = wx.Button(self, label='Plot Peak Latency')
+        self.anat_button = wx.Button(self, label='Plot Anat')
 
 
         # Bindings
@@ -52,6 +53,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnResponse, self.response_btn)
         self.Bind(wx.EVT_BUTTON, self.OnResponseLatency, self.latency_button)
         self.Bind(wx.EVT_BUTTON, self.OnPeakLatency, self.peak_button)
+        self.Bind(wx.EVT_BUTTON, self.OnAnat, self.anat_button)
         self.Bind(wx.EVT_MENU, self.OnMenu)
 
         # Layout
@@ -67,6 +69,7 @@ class MainFrame(wx.Frame):
         footer_sizer.Add(self.baseline_btn, 0)
         footer_sizer.Add(self.latency_button)
         footer_sizer.Add(self.peak_button)
+        footer_sizer.Add(self.anat_button)
 
         main_sizer = wx.BoxSizer(wx.VERTICAL)
         main_sizer.Add(header_sizer, 0, wx.EXPAND)
@@ -140,6 +143,12 @@ class MainFrame(wx.Frame):
         selected = self.exp_list.GetSelection()
         exp = self.gatherer.filterSelected(selected)
         self.plotter.add(exp, 'Peak_Latency')
+
+    def OnAnat(self, event):
+        selected = self.exp_list.GetSelection()
+        exp = self.gatherer.filterSelected(selected)
+        self.plotter.add(exp, 'anat')
+
 
     def OnClear(self, args=None):
         res = self.gatherer.clear_filters()
