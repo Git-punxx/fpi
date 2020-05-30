@@ -34,12 +34,12 @@ class FPIPlotter:
 
     @register('baseline')
     def plot_baseline(self, experiments):
-        data = [exp.mean_baseline() for exp in experiments]
+        data = [exp.mean_baseline for exp in experiments]
         self.axes.boxplot(data)
 
     @register('peak_latency')
     def plot_peak_latency(self, experiments):
-        pairs = [exp.peak_latency() for exp in experiments]
+        pairs = [exp.peak_latency for exp in experiments]
         data = [pair[1] for pair in pairs]
         self.axes.boxplot(data)
 

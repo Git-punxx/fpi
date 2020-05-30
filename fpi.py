@@ -480,9 +480,8 @@ class FPIExperiment:
         data = self.response
         if data is None:
             return
-        mean_baseline = self.mean_baseline(n_baseline)
-        latency = [(index, val) for index, val in enumerate(data[31:], n_baseline + 1) if
-                   val > abs(1 + ratio) * mean_baseline]
+        latency = [(index, val) for index, val in enumerate(data[31:], self.no_baseline + 1) if
+                   val > abs(1 + ratio) * self.mean_baseline]
         return latency
 
     @property
