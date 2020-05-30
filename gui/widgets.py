@@ -9,7 +9,7 @@ from pubsub import pub
 from gui.menus import *
 from gui.dialogs import *
 from fpi_plotter import FPIPlotter
-from gui.fpi_image import ImagePanel
+from gui.fpi_image import DetailsPanel
 from gui.popups import PopupMenuMixin
 
 CHOICES_CHANGED = 'choices.changed'
@@ -257,9 +257,9 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         item = self.list.GetItem(event.GetIndex())
         exp_name = item.GetText()
 
-        path = self.GetTopLevelParent().gatherer.get_experiment(exp_name)._path
-        exp_dialog = ImagePanel(self, path)
-        exp_dialog.ShowModal()
+        path = self.GetTopLevelParent().gatherer.get_experiment(exp_name)
+        with DetailsPanel(parent = None, name = path) as exp_dialog:
+            exp_dialog.ShowModal()
 
     def OnSelect(self, event):
         item = self.list.GetItem(event.GetIndex())
@@ -367,8 +367,9 @@ class PlotNotebook(wx.Panel):
 
 class FPI(wx.App):
     def OnInit(self):
-        frame = MainFrame(None, -1, 'FPI Plotter')
-        frame.Show()
+        self.frame = MainFrame(None, -1, 'FPI Plotter')
+        self.SetTopWindow(self.frame)
+        self.frame.Show()
         return True
 
 

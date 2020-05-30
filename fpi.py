@@ -188,7 +188,7 @@ class CSVParser(FPIParser):
             candidates = [os.path.join(os.path.dirname(self._path), f) for f in os.scandir(self._path[0])]
         except Exception:
             return
-        fname = [f for f in candidates if 'all_pixel' in f and name in f]
+        fname = [f for f in candidates if 'response_area' in f and name in f]
         data = []
         if not fname:
             return
@@ -247,6 +247,44 @@ class HD5Parser(FPIParser):
             except Exception as e:
                 print(e)
                 return
+
+    def max_df(self):
+        with h5py.File(self._path, 'r') as datastore:
+            try:
+                data = datastore['df']['max_df'][()]
+                print(f'{data} is the max df ---------------------')
+                return data
+            except Exception as e:
+                print(e)
+                return None
+
+
+    def avg_df(self):
+        with h5py.File(self._path, 'r') as datastore:
+            try:
+                avg_df = datastore['df']['avg_df'][()]
+                return avg_df
+            except Exception as e:
+                print(e)
+                return None
+
+    def no_baseline(self):
+        with h5py.File(self._path, 'r') as datastore:
+            try:
+                no_baseline = datastore['n_baseline'][()]
+                return no_baseline
+            except Exception as e:
+                print(e)
+                return None
+
+    def no_trials(self):
+        with h5py.File(self._path, 'r') as datastore:
+            try:
+                no_trials = len(list(datastore['trials'].keys()))
+                return no_trials
+            except Exception as e:
+                print(e)
+                return None
 
 
 ### Model #####
@@ -372,7 +410,7 @@ class FPIExperiment:
     This class represents the results of an FPI experiment.
     It holds the dataframes of the result of the experiment we need to analyze
     The dataframes are read from a file produced by the imaging module. It could be an .h5 file or it could be
-    3 csv files, each for each dataframe (resonse, timecourse, all_pixel)
+    3 csv files, each for each dataframe (resonse, timecourse, response_area)
     We should pass the name of the experiment only, NOT THE PATH, because if we need to read from three files, this
     operations should be handled by the parser.
     By providing the name of the experiment we could build the path using the config options
@@ -387,15 +425,23 @@ class FPIExperiment:
         self._path = path
 
         self._parser = fpiparser(self._path)
-        self._all_pixel = None
+
         self._response = None
         self._timecourse = None
 
+        self._no_trials = None
+        self._no_baseline = None
+        self._response_area = None
+        self._max_df = None
+        self._avg_df = None
+        self._mean_baseline = None
+        self._peak_latency = None
+
     @property
-    def all_pixel(self):
-        if self._all_pixel is None:
-            self._all_pixel = self._parser.all_pixel()
-        return self._all_pixel
+    def response_area(self):
+        if self._response_area is None:
+            self._response_area = self._parser.all_pixel()
+        return self._response_area
 
     @property
     def response(self):
@@ -409,60 +455,96 @@ class FPIExperiment:
             self._timecourse = self._parser.timecourse()
         return self._timecourse
 
-    def baseline_mean(self, n_baseline=30):
-        data = self.response
-        # Compute the mean of the baseline
-        baseline = np.array(data[:n_baseline])
-        baseline_mean = np.mean(baseline)
-        return baseline_mean
+    @property
+    def mean_baseline(self, n_baseline=30):
+        if self._mean_baseline is None:
+            data = self.response
+            # Compute the mean of the baseline
+            baseline = np.array(data[:n_baseline])
+            self._mean_baseline = np.mean(baseline)
+        return self._mean_baseline
 
+    @property
     def peak_latency(self):
-        data = self.response
-        if data is None:
-            return
-        response_region = data[:]
-        peak = np.argmax(response_region)
-        peak_value = np.max(response_region)
-        return (peak, peak_value)
+        if self._peak_latency is None:
+            data = self.response
+            if data is None:
+                return
+            response_region = data[:]
+            peak = np.argmax(response_region)
+            peak_value = np.max(response_region)
+            self._peak_latency = (peak, peak_value)
+        return self._peak_latency
 
     def response_latency(self, ratio=0.3, n_baseline=30):
         data = self.response
         if data is None:
             return
-        mean_baseline = self.baseline_mean(n_baseline)
+        mean_baseline = self.mean_baseline(n_baseline)
         latency = [(index, val) for index, val in enumerate(data[31:], n_baseline + 1) if
                    val > abs(1 + ratio) * mean_baseline]
         return latency
 
-    def plot(self, ax, type):
-        if type == 'response':
-            self.plot_response(ax)
-        elif type == 'latency':
-            self.plot_response_latency(ax)
-        elif type == 'timecourse':
-            self.plot_timecourse(ax)
-        else:
-            raise ValueError('Unsupported plot type')
+    @property
+    def no_trials(self):
+        if self._no_trials is None:
+            self._no_trials = self._parser.no_trials()
+        return self._no_trials
 
-    def plot_response(self, ax):
-        data = self._parser.response()
-        x = range(len(data))
-        ax.set_title(f'Response: {self.name}')
-        ax.plot(x, data)
+    @property
+    def no_baseline(self):
+        if self._no_baseline is None:
+            self._no_baseline = self._parser.no_baseline()
+        return self._no_baseline
 
-    def plot_response_latency(self, ax):
-        data = self.response_latency()
-        if data is None:
-            return
-        x = range(len(data))
-        ax.plot(x, data, 'k-')
+    @property
+    def max_df(self):
+        if self._max_df is None:
+            self._max_df = self._parser.max_df()
+        return self._max_df
 
-    def plot_timecourse(self, ax):
-        data = self.timecourse
-        if data is None:
-            return
-        x = range(len(data))
-        ax.plot(x, data, 'k-')
+    @property
+    def avg_df(self):
+        if self._avg_df is None:
+            self._avg_df = self._parser.avg_df()
+        return self._avg_df
+
+    @property
+    def max_df(self):
+        if self._max_df is None:
+            self._max_df = self._parser.max_df()
+        return self._max_df
+
+
+    # def plot(self, ax, type):
+    #     if type == 'response':
+    #         self.plot_response(ax)
+    #     elif type == 'latency':
+    #         self.plot_response_latency(ax)
+    #     elif type == 'timecourse':
+    #         self.plot_timecourse(ax)
+    #     else:
+    #         raise ValueError('Unsupported plot type')
+
+    # def plot_response(self, ax):
+    #     data = self._parser.response()
+    #     x = range(len(data))
+    #     ax.set_title(f'Response: {self.name}')
+    #     ax.plot(x, data)
+    #
+    # def plot_response_latency(self, ax):
+    #     data = self.response_latency()
+    #     if data is None:
+    #         return
+    #     x = range(len(data))
+    #     ax.plot(x, data, 'k-')
+    #
+    # def plot_timecourse(self, ax):
+    #     data = self.timecourse
+    #     if data is None:
+    #         return
+    #     x = range(len(data))
+    #     ax.plot(x, data, 'k-')
 
     def __str__(self):
         return f'{self.name}: {self.animal_line} {self.stimulation} {self.treatment} {self.genotype}'
@@ -477,8 +559,8 @@ class FPIExperiment:
             result.append('timecourse')
         else:
             result.append('No timecourse')
-        if self.all_pixel is not None:
-            result.append('all_pixel')
+        if self.response_area is not None:
+            result.append('response_area')
         else:
             result.append('No all_pixelsj')
         return result
