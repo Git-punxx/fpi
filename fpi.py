@@ -286,6 +286,14 @@ class HD5Parser(FPIParser):
                 print(e)
                 return None
 
+    def anat(self):
+        with h5py.File(self._path, 'r') as datastore:
+            try:
+                anat = datastore['anat'][()]
+                return anat
+            except Exception as e:
+                print(e)
+                return None
 
 ### Model #####
 
@@ -436,6 +444,7 @@ class FPIExperiment:
         self._avg_df = None
         self._mean_baseline = None
         self._peak_latency = None
+        self._anat = None
 
     @property
     def response_area(self):
@@ -514,6 +523,11 @@ class FPIExperiment:
             self._max_df = self._parser.max_df()
         return self._max_df
 
+    @property
+    def anat(self):
+        if self._anat is None:
+            self._anat = self._parser.anat()
+        return self._anat
 
     # def plot(self, ax, type):
     #     if type == 'response':

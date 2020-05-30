@@ -50,3 +50,8 @@ class FPIPlotter:
         for item in data:
             d = [p[1] for p in item]
             self.axes.plot(d)
+
+    @register('anat')
+    def plot_anat(self, experiment):
+        data = experiment[0].anat
+        self.axes.pcolor(data)
