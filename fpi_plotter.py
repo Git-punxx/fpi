@@ -39,9 +39,14 @@ class FPIPlotter:
 
     @register('peak_latency')
     def plot_peak_latency(self, experiments):
-        pairs = [exp.peak_latency for exp in experiments]
-        data = [pair[1] for pair in pairs]
-        self.axes.boxplot(data)
+        self.axes.set_axisbelow(True)
+        self.axes.set_title('Peak latency')
+        self.axes.set_xlabel('Distribution')
+        self.axes.set_ylabel('Latency ()')
+        data_dict = {exp.genotype: exp.peak_latency[1] for exp in experiments}
+        labels = data_dict.keys()
+        data = data_dict.values()
+        self.axes.boxplot(data, labels = labels)
 
 
     @register('response_latency')
