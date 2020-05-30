@@ -55,3 +55,4 @@ class FPIPlotter:
     def plot_anat(self, experiment):
         data = experiment[0].anat
         self.axes.pcolor(data)
+

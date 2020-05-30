@@ -446,6 +446,7 @@ class FPIExperiment:
         self._peak_latency = None
         self._anat = None
 
+
     @property
     def response_area(self):
         if self._response_area is None:

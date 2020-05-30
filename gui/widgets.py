@@ -32,7 +32,7 @@ class MainFrame(wx.Frame):
         self.SetMenuBar(self.menubar)
 
         self.CreateStatusBar()
-        with wx.BusyInfo('FPIPlotter\nPlease wait. Initializing...'):
+        with wx.BusyInfo('FPIPlotter initializing...'):
             self.setup()
         self.exp_list = FPIExperimentList(self)
         self.exp_list.add_columns(app_config.categories)
@@ -54,6 +54,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnResponseLatency, self.latency_button)
         self.Bind(wx.EVT_BUTTON, self.OnPeakLatency, self.peak_button)
         self.Bind(wx.EVT_BUTTON, self.OnAnat, self.anat_button)
+
         self.Bind(wx.EVT_MENU, self.OnMenu)
 
         # Layout
@@ -125,29 +126,47 @@ class MainFrame(wx.Frame):
 
 
     def OnBaseline(self, event):
-        selected = self.exp_list.GetSelection()
-        exp = self.gatherer.filterSelected(selected)
-        self.plotter.add(exp, 'Baseline')
+        with wx.BusyInfo('Plotting baseline...'):
+            # Get the selected items from the list ctrl
+            selected = self.exp_list.GetSelection()
+            if not selected:
+                return
+            # Return the experiments that correspond to the selected items
+            exp = self.gatherer.filterSelected(selected)
+            # Create a new tab to our notebook to hold the plots and plot them using the FPIPlotter
+            self.plotter.add(exp, 'Baseline')
 
     def OnResponse(self, event):
-        selected = self.exp_list.GetSelection()
-        exp = self.gatherer.filterSelected(selected)
-        self.plotter.add(exp, 'Response')
+        with wx.BusyInfo('Plotting response'):
+            selected = self.exp_list.GetSelection()
+            if not selected:
+                return
+            exp = self.gatherer.filterSelected(selected)
+            self.plotter.add(exp, 'Response')
 
     def OnResponseLatency(self, event):
-        selected = self.exp_list.GetSelection()
-        exp = self.gatherer.filterSelected(selected)
-        self.plotter.add(exp, 'Response_Latency')
+        with wx.BusyInfo('Plotting response latency'):
+            selected = self.exp_list.GetSelection()
+            if not selected:
+                return
+            exp = self.gatherer.filterSelected(selected)
+            self.plotter.add(exp, 'Response_Latency')
 
     def OnPeakLatency(self, event):
-        selected = self.exp_list.GetSelection()
-        exp = self.gatherer.filterSelected(selected)
-        self.plotter.add(exp, 'Peak_Latency')
+        with wx.BusyInfo('Plotting peak latency'):
+            selected = self.exp_list.GetSelection()
+            if not selected:
+                return
+            exp = self.gatherer.filterSelected(selected)
+            self.plotter.add(exp, 'Peak_Latency')
 
     def OnAnat(self, event):
-        selected = self.exp_list.GetSelection()
-        exp = self.gatherer.filterSelected(selected)
-        self.plotter.add(exp, 'anat')
+        with wx.BusyInfo('Plotting anat image'):
+            selected = self.exp_list.GetSelection()
+            if not selected:
+                return
+            exp = self.gatherer.filterSelected(selected)
+            self.plotter.add(exp, 'anat')
 
 
     def OnClear(self, args=None):
@@ -342,13 +361,11 @@ class Plot(wx.Panel):
             [gatherer.get_experiment(exp).plot(ax) for exp in experiment_list]
             self.canvas.draw()
 
-    def plot(self, plot_type=None):
+    def plot(self, plot_type = None, experiment_list = None):
         ax = self.figure.gca()
         ax.grid(True, color = 'grey', linewidth = 0.5)
         gatherer = self.GetTopLevelParent().gatherer
-        experiment_list = gatherer.to_tuple()
         experiment_data = [gatherer.get_experiment(exp.name) for exp in experiment_list]
-
         plotter = FPIPlotter(ax, experiment_data)
         plotter.plot(plot_type)
 
@@ -369,7 +386,7 @@ class PlotNotebook(wx.Panel):
     def add(self, exp, title):
         page = Plot(self.nb, experiment=exp)
         self.nb.AddPage(page, caption=title)
-        page.plot(title.lower())
+        page.plot(title.lower(), exp)
         self.nb.AdvanceSelection(True)
         return page
 
