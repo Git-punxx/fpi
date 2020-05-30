@@ -636,6 +636,7 @@ def is_complete(h5file):
 
 
 def do_analysis(h5file):
+    print('Performing analysis to ', h5file)
     session = Session(h5file)
     session.resp_mapping()
 
