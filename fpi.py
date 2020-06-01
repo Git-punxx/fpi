@@ -325,20 +325,18 @@ class ExperimentManager:
 
         total = len(self._exp_paths)
         futures = []
-        with ProcessPoolExecutor() as executor:
-            for exp in self._exp_paths:
-                res = executor.submit(self.check_if_valid, exp)
-                futures.append(res)
-        for fut in as_completed(futures):
-            if fut.result() is not None:
-                name = extract_name(os.path.basename(exp))
 
-                self._experiments[name] = fut.result()
+        for exp in self._exp_paths:
+            if self.check_if_valid(exp) is not None:
+                name = extract_name(os.path.basename(exp))
+                self._experiments[name] = exp
+                print(f'{self._experiments[name]}: {exp}')
                 val = 100 * (1 / total)
                 pub.sendMessage(ANALYSIS_UPDATE, val = val)
 
         self.filtered = list(self._experiments.keys())
         pub.sendMessage(EXPERIMENT_LIST_CHANGED, choices=self.to_tuple())
+        print(self.to_tuple())
 
     def check_if_valid(self, experiment_path):
         if check_datastore(experiment_path):

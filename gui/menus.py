@@ -84,9 +84,9 @@ def SetDataPath(parent):
         # here we should check if the directory contains the proper data structure
         # if not we should offer to create it
         app_config.base_dir = path
-        top = parent.GetTopLevelParent()
-        status = top.GetStatusBar()
-        status.SetStatusText(f'Path set to {path}')
+
+
+
     else:
         ErrorDialog('Could not set requested path')
 
