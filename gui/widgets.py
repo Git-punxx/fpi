@@ -191,14 +191,22 @@ class FilterPanel(wx.Panel):
         treat_lbl = wx.StaticText(self, label='Treatment')
         gen_lbl = wx.StaticText(self, label='Genotype')
 
-        self.animal_line_choice = wx.Choice(self, choices=app_config.animal_lines)
-        self.stim_choice = wx.Choice(self, choices=app_config.stimulations)
-        self.treat_choice = wx.Choice(self, choices=app_config.treatments)
-        self.gen_choice = wx.Choice(self, choices=app_config.genotypes)
+        self.animal_line_choice = wx.Choice(self, choices=app_config.animal_lines + [''])
+        self.animal_line_choice.SetSelection(-1)
+
+        self.stim_choice = wx.Choice(self, choices=app_config.stimulations + [''])
+        self.stim_choice.SetSelection(-1)
+
+        self.treat_choice = wx.Choice(self, choices=app_config.treatments + [''])
+        self.treat_choice.SetSelection(-1)
+
+        self.gen_choice = wx.Choice(self, choices=app_config.genotypes + [''])
+        self.gen_choice.SetSelection(-1)
 
         self.choices = [self.animal_line_choice, self.stim_choice, self.treat_choice, self.gen_choice]
 
         self.clear_btn = wx.Button(self, label='Clear')
+
 
         # Bindings
         self.animal_line_choice.Bind(wx.EVT_CHOICE, self.OnLineChoice)
@@ -206,7 +214,6 @@ class FilterPanel(wx.Panel):
         self.gen_choice.Bind(wx.EVT_CHOICE, self.OnGenChoice)
         self.treat_choice.Bind(wx.EVT_CHOICE, self.OnTreatChoice)
         self.clear_btn.Bind(wx.EVT_BUTTON, self.OnClear)
-
 
 
         # Layout
@@ -262,6 +269,11 @@ class FilterPanel(wx.Panel):
         pub.sendMessage(CHOICES_CHANGED, selections=all)
 
     def OnClear(self, event):
+        self.animal_line_choice.SetSelection(-1)
+        self.treat_choice.SetSelection(-1)
+        self.stim_choice.SetSelection(-1)
+        self.gen_choice.SetSelection(-1)
+
         pub.sendMessage(CLEAR_FILTERS, args=None)
 
     def GetChoices(self):
