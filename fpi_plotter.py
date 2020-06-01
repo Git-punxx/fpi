@@ -50,8 +50,13 @@ class FPIPlotter:
 
 
         for index, filter in enumerate(data.keys(), 1):
-            for genotypes in data[filter].values():
-                self.axes.boxplot(genotypes, positions = [index], widths = 0.6)
+            for gen_index, (genotype, d) in enumerate(data[filter].items(), 1):
+                print(filter)
+                print(genotype)
+                print(d)
+                p = [index * item * gen_index for item in  range(1, len(d)+1)]
+                print(p)
+                self.axes.boxplot(d, positions = [index], widths = 0.6)
 
         self.axes.set_xticklabels(genotypes)
         self.axes.set_xticks([1.5, 4.5, 7.5])
