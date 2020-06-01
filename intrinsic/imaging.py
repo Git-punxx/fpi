@@ -642,14 +642,17 @@ def do_analysis(h5file):
 
 
 def check_datastore(path):
-    with h5py.File(path, 'r+') as datastore:
-        if 'anat' not in list(datastore.keys()):
-            return False
-        if not is_complete(datastore):
-            do_analysis(path)
-            return True
-        else:
-            return True
+    try:
+        with h5py.File(path, 'r+') as datastore:
+            if 'anat' not in list(datastore.keys()):
+                return False
+            if not is_complete(datastore):
+                do_analysis(path)
+                return True
+            else:
+                return True
+    except Exception as e:
+        print(f'{path} is not a valid datastore file')
 
 
 def clean_response(resp):

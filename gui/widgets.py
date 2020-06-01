@@ -11,6 +11,7 @@ from gui.dialogs import *
 from fpi_plotter import FPIPlotter
 from gui.fpi_image import DetailsPanel
 from gui.popups import PopupMenuMixin
+from gui.util import BoxPlotChoices
 
 CHOICES_CHANGED = 'choices.changed'
 LINE_CHANGED = 'line.changed'
@@ -31,7 +32,6 @@ class MainFrame(wx.Frame):
         self.menubar = FPIMenuBar()
         self.SetMenuBar(self.menubar)
 
-        self.CreateStatusBar()
         with wx.BusyInfo('FPIPlotter initializing...'):
             self.setup()
         self.exp_list = FPIExperimentList(self)
@@ -40,6 +40,9 @@ class MainFrame(wx.Frame):
 
         self.filter = FilterPanel(self)
         self.plotter = PlotNotebook(self)
+
+        self.boxplot_choices = BoxPlotChoices(self)
+
 
         self.response_btn = wx.Button(self, label='Plot response')
         self.baseline_btn = wx.Button(self, label='Plot mean baseline')
@@ -66,6 +69,7 @@ class MainFrame(wx.Frame):
         plot_sizer.Add(self.plotter, 1, wx.EXPAND)
 
         footer_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        footer_sizer.Add(self.boxplot_choices, 0)
         footer_sizer.Add(self.response_btn, 0)
         footer_sizer.Add(self.baseline_btn, 0)
         footer_sizer.Add(self.latency_button)
@@ -128,13 +132,14 @@ class MainFrame(wx.Frame):
     def OnBaseline(self, event):
         with wx.BusyInfo('Plotting baseline...'):
             # Get the selected items from the list ctrl
+            choice = self.boxplot_choices.GetSelection()
             selected = self.exp_list.GetSelection()
             if not selected:
                 return
             # Return the experiments that correspond to the selected items
             exp = self.gatherer.filterSelected(selected)
             # Create a new tab to our notebook to hold the plots and plot them using the FPIPlotter
-            self.plotter.add(exp, 'Baseline')
+            self.plotter.add(exp, 'Baseline', choice)
 
     def OnResponse(self, event):
         with wx.BusyInfo('Plotting response'):
@@ -146,19 +151,21 @@ class MainFrame(wx.Frame):
 
     def OnResponseLatency(self, event):
         with wx.BusyInfo('Plotting response latency'):
+            choice = self.boxplot_choices.GetSelection()
             selected = self.exp_list.GetSelection()
             if not selected:
                 return
             exp = self.gatherer.filterSelected(selected)
-            self.plotter.add(exp, 'Response_Latency')
+            self.plotter.add(exp, 'Response_Latency', choice)
 
     def OnPeakLatency(self, event):
         with wx.BusyInfo('Plotting peak latency'):
+            choice = self.boxplot_choices.GetSelection()
             selected = self.exp_list.GetSelection()
             if not selected:
                 return
             exp = self.gatherer.filterSelected(selected)
-            self.plotter.add(exp, 'Peak_Latency')
+            self.plotter.add(exp, 'Peak_Latency', choice)
 
     def OnAnat(self, event):
         with wx.BusyInfo('Plotting anat image'):
@@ -361,13 +368,13 @@ class Plot(wx.Panel):
             [gatherer.get_experiment(exp).plot(ax) for exp in experiment_list]
             self.canvas.draw()
 
-    def plot(self, plot_type = None, experiment_list = None):
+    def plot(self, plot_type = None, experiment_list = None, choice = None):
         ax = self.figure.gca()
         ax.grid(True, color = 'grey', linewidth = 0.5)
         gatherer = self.GetTopLevelParent().gatherer
         experiment_data = [gatherer.get_experiment(exp.name) for exp in experiment_list]
         plotter = FPIPlotter(ax, experiment_data)
-        plotter.plot(plot_type)
+        plotter.plot(plot_type, choice)
 
         self.canvas.draw()
 
@@ -383,10 +390,10 @@ class PlotNotebook(wx.Panel):
         sizer.Add(self.nb, 1, wx.EXPAND)
         self.SetSizer(sizer)
 
-    def add(self, exp, title):
+    def add(self, exp, title, choice = None):
         page = Plot(self.nb, experiment=exp)
         self.nb.AddPage(page, caption=title)
-        page.plot(title.lower(), exp)
+        page.plot(title.lower(), exp, choice)
         self.nb.AdvanceSelection(True)
         return page
 
