@@ -11,7 +11,7 @@ def categorize(experiment_list, filter = 'AnimalLines'):
     :return:
     """
     genotypes = config_manager.genotypes
-    if filter == 'AnimalLines' or filter == '':
+    if filter == 'mouselines'.lower() or filter == '':
         lines = config_manager.animal_lines
         c = dict.fromkeys([l.lower() for l in lines])
         for line in c:
@@ -20,8 +20,8 @@ def categorize(experiment_list, filter = 'AnimalLines'):
                 c[line][genotype] = []
         for exp in experiment_list:
             c[exp.animal_line.lower()][exp.genotype.lower()].append(exp)
-
-    elif filter == 'Stimulus':
+        return c
+    elif filter == 'stimulations'.lower():
         stim = config_manager.stimulations
         c = dict.fromkeys([s.lower() for s in stim])
         for stim in c:
@@ -30,7 +30,8 @@ def categorize(experiment_list, filter = 'AnimalLines'):
                 c[stim][genotype] = []
         for exp in experiment_list:
             c[exp.stimulation.lower()][exp.genotype.lower()].append(exp)
-    elif filter == 'Treatment':
+        return c
+    elif filter == 'treatment'.lower():
         treatments = config_manager.treatments
         c = dict.fromkeys([t.lower() for t in treatments])
         for treatment in c:
@@ -39,7 +40,7 @@ def categorize(experiment_list, filter = 'AnimalLines'):
                 c[treatment][genotype] = []
         for exp in experiment_list:
             c[exp.treatment.lower()][exp.genotype.lower()].append(exp)
-    return c
+        return c
 
 
 def genotype_split(exp_list):

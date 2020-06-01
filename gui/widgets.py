@@ -344,9 +344,9 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         menu.Append(wx.ID_PASTE)
 
 class Plot(wx.Panel):
-    def __init__(self, parent, id=wx.ID_ANY, dpi=None, experiment=None, **kwargs):
+    def __init__(self, parent, id=wx.ID_ANY, dpi = 100, experiment=None, **kwargs):
         wx.Panel.__init__(self, parent, id)
-        self.figure = mpl.figure.Figure(dpi=dpi, figsize=(5, 8))
+        self.figure = mpl.figure.Figure(dpi=dpi, figsize=(10, 5))
         self.canvas = FigureCanvas(self, -1, self.figure)
         self.toolbar = NavigationToolbar(self.canvas)
         self.toolbar.Realize()

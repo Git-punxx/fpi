@@ -42,16 +42,16 @@ class FPIPlotter:
     @register('baseline')
     def plot_baseline(self, experiments, choice):
         # Get the options for the current category
-
+        genotypes = config_manager.genotypes
         data = fpi_util.categorize(experiments, choice)
         for base_filter, genotypes in data.items():
             for genotype, exp_list in genotypes.items():
                 data[base_filter][genotype] = [exp.mean_baseline for exp in exp_list]
 
 
-        for index, line in enumerate(data.keys()):
-            for genotype, exps in data[line].items():
-                self.axes.boxplot(exps, positions = [index], widths = 0.6)
+        for index, filter in enumerate(data.keys(), 1):
+            for genotypes in data[filter].values():
+                self.axes.boxplot(genotypes, positions = [index], widths = 0.6)
 
         self.axes.set_xticklabels(genotypes)
         self.axes.set_xticks([1.5, 4.5, 7.5])
@@ -63,13 +63,14 @@ class FPIPlotter:
         self.axes.set_xlabel('Distribution')
         self.axes.set_ylabel('Latency ()')
 
+        genotypes = config_manager.genotypes
         data = fpi_util.categorize(experiments, choice)
         for base_filter, genotypes in data.items():
             for genotype, exp_list in genotypes.items():
                 data[base_filter][genotype] = [exp.peak_latency[1] for exp in exp_list]
 
 
-        for index, line in enumerate(data.keys()):
+        for index, line in enumerate(data.keys(), 1):
             for genotype, exps in data[line].items():
                 self.axes.boxplot(exps, positions = [index], widths = 0.6)
 
