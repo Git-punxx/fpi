@@ -12,10 +12,14 @@ def categorize(experiment_list, filter = 'AnimalLines'):
     """
     genotypes = config_manager.genotypes
     if filter == 'mouselines'.lower() or filter == '':
+        # get the animal lines from the configuration
         lines = config_manager.animal_lines
+        # build a dictionary using the animal lines as keys
+        # in every animal line we will create a dict that will have as keys the genotypes
         c = dict.fromkeys([l.lower() for l in lines])
         for line in c:
             c[line] = dict.fromkeys([gen.lower() for gen in genotypes])
+            # and then we will create a list as the value of each genotype keyt
             for genotype in c[line]:
                 c[line][genotype] = []
         for exp in experiment_list:
