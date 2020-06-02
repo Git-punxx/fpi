@@ -1,7 +1,8 @@
-import matplotlib as mpl
 from app_config import config_manager
-from collections import Counter, defaultdict
 import fpi_util
+from gui.dialogs import DataPathDialog
+import pickle
+import os
 '''
 experiment_data = [gatherer.get_experiment(exp.name) for exp in experiment_list]
 plotter = FPIPlotter(ax, experiment_data)
@@ -41,20 +42,30 @@ class FPIPlotter:
 
     @register('baseline')
     def plot_baseline(self, experiments, choice):
+
         # Get the options for the current category
         genotypes = config_manager.genotypes
         data = fpi_util.categorize(experiments, choice)
+
+        # Get the actual data from the fpiexperiment
         for base_filter, genotypes in data.items():
             for genotype, exp_list in genotypes.items():
                 data[base_filter][genotype] = [exp.mean_baseline for exp in exp_list]
 
+        # Compute the positions of the boxplots
+        no_genotypes = len(genotypes)
+        no_filters = len(data.keys())
 
-        for index, filter in enumerate(data.keys(), 1):
-            for genotypes in data[filter].values():
-                self.axes.boxplot(genotypes, positions = [index], widths = 0.6)
+        positions = [list(range(i*no_genotypes, i*no_genotypes + no_genotypes)) for i in range(no_filters)]
+        for (filter, genotypes_list), position in zip(data.items(), positions):
+            gen_data = [data[filter][gen] for gen in genotypes_list]
+            print(f'Data for {filter}')
+            print(gen_data)
+            print(f'Plotting to positions {position}')
+            self.axes.boxplot(gen_data, positions = position, widths = 0.6)
 
         self.axes.set_xticklabels(genotypes)
-        self.axes.set_xticks([1.5, 4.5, 7.5])
+        self.axes.set_xticks([1, 4, 7])
 
     @register('peak_latency')
     def plot_peak_latency(self, experiments, choice):

@@ -252,7 +252,6 @@ class HD5Parser(FPIParser):
         with h5py.File(self._path, 'r') as datastore:
             try:
                 data = datastore['df']['max_df'][()]
-                print(f'{data} is the max df ---------------------')
                 return data
             except Exception as e:
                 print(e)
@@ -327,17 +326,19 @@ class ExperimentManager:
         futures = []
         with ProcessPoolExecutor() as executor:
             for exp in self._exp_paths:
+                name = extract_name(os.path.basename(exp))
                 res = executor.submit(self.check_if_valid, exp)
                 futures.append(res)
         for fut in as_completed(futures):
             if fut.result() is not None:
-                name = extract_name(os.path.basename(exp))
+                name = extract_name(os.path.basename(fut.result()))
 
                 self._experiments[name] = fut.result()
                 val = 100 * (1 / total)
                 pub.sendMessage(ANALYSIS_UPDATE, val = val)
 
         self.filtered = list(self._experiments.keys())
+        print(f'Sending message: {self.to_tuple()}')
         pub.sendMessage(EXPERIMENT_LIST_CHANGED, choices=self.to_tuple())
 
     def check_if_valid(self, experiment_path):
@@ -401,9 +402,7 @@ class ExperimentManager:
         res = []
         for exp in self.filtered:
             live = self.get_experiment(exp)
-            print(live)
             res.append(fpi_meta._make((live.name, live.animal_line, live.stimulation, live.treatment, live.genotype)))
-            print(res)
         return res
 
     def __getitem__(self, name):
