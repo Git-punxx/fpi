@@ -1,5 +1,5 @@
 from typing import Type
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 import numpy as np
 import os
 import h5py
@@ -10,6 +10,7 @@ import re
 from pubsub import pub
 from pub_messages import ANALYSIS_UPDATE
 from intrinsic.imaging import check_datastore
+from app_config import AnimalLine, Treatment, Stimulation, Genotype
 
 
 '''
@@ -324,7 +325,7 @@ class ExperimentManager:
 
         total = len(self._exp_paths)
         futures = []
-        with ProcessPoolExecutor() as executor:
+        with ThreadPoolExecutor() as executor:
             for exp in self._exp_paths:
                 name = extract_name(os.path.basename(exp))
                 res = executor.submit(self.check_if_valid, exp)
@@ -356,8 +357,10 @@ class ExperimentManager:
         """
         experiment = self[name]
         animal_line, stimulus, treatment, genotype, filename = experiment.split(os.sep)[-5:]
-        return FPIExperiment(name=name, path=experiment, animal_line=animal_line, stimulation=stimulus,
-                             treatment=treatment, genotype=genotype)
+        return FPIExperiment(name=name, path=experiment, animal_line=getattr(AnimalLine, animal_line.upper()),
+                                                         stimulation= getattr(Stimulation, stimulus.upper()),
+                                                         treatment = getattr(Treatment, treatment.upper()),
+                                                         genotype = getattr(Genotype, genotype.upper()))
 
     def filterLine(self, line):
         if line != '':
@@ -402,7 +405,7 @@ class ExperimentManager:
         res = []
         for exp in self.filtered:
             live = self.get_experiment(exp)
-            res.append(fpi_meta._make((live.name, live.animal_line, live.stimulation, live.treatment, live.genotype)))
+            res.append(fpi_meta._make((live.name, live.animal_line.name, live.stimulation.name, live.treatment.name, live.genotype.name)))
         return res
 
     def __getitem__(self, name):
@@ -518,17 +521,10 @@ class FPIExperiment:
         return self._avg_df
 
     @property
-    def max_df(self):
-        if self._max_df is None:
-            self._max_df = self._parser.max_df()
-        return self._max_df
-
-    @property
     def anat(self):
         if self._anat is None:
             self._anat = self._parser.anat()
         return self._anat
-
     # def plot(self, ax, type):
     #     if type == 'response':
     #         self.plot_response(ax)
@@ -560,7 +556,7 @@ class FPIExperiment:
     #     ax.plot(x, data, 'k-')
 
     def __str__(self):
-        return f'{self.name}: {self.animal_line} {self.stimulation} {self.treatment} {self.genotype}'
+        return f'{self.name}: {self.animal_line.name} {self.stimulation.name} {self.treatment.name} {self.genotype.name}'
 
     def check(self):
         result = []

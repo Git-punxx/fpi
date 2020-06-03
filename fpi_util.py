@@ -1,6 +1,7 @@
-from app_config import config_manager
+from app_config import config_manager, AnimalLine, Treatment, Stimulation, Genotype
 
-def categorize(experiment_list, filter = 'AnimalLines'):
+
+def categorize(experiment_list, filter = AnimalLine.__name__.lower()):
     """
     Experiments is what?
     Here we take the list of categories from the configuration and depending on the choice of the filter we split
@@ -10,49 +11,36 @@ def categorize(experiment_list, filter = 'AnimalLines'):
     :param choice:
     :return:
     """
-    genotypes = config_manager.genotypes
-    if filter == 'mouselines'.lower() or filter == '':
-        # get the animal lines from the configuration
-        lines = config_manager.animal_lines
-        # build a dictionary using the animal lines as keys
-        # in every animal line we will create a dict that will have as keys the genotypes
-        c = dict.fromkeys([l.lower() for l in lines])
-        for line in c:
-            c[line] = dict.fromkeys([gen.lower() for gen in genotypes])
-            # and then we will create a list as the value of each genotype keyt
-            for genotype in c[line]:
-                c[line][genotype] = []
-        for exp in experiment_list:
-            c[exp.animal_line.lower()][exp.genotype.lower()].append(exp)
-        return c
-    elif filter == 'stimulations'.lower():
-        stim = config_manager.stimulations
-        c = dict.fromkeys([s.lower() for s in stim])
-        for stim in c:
-            c[stim] = dict.fromkeys([gen.lower() for gen in genotypes])
-            for genotype in c[stim]:
-                c[stim][genotype] = []
-        for exp in experiment_list:
-            c[exp.stimulation.lower()][exp.genotype.lower()].append(exp)
-        return c
-    elif filter == 'treatment'.lower():
-        treatments = config_manager.treatments
-        c = dict.fromkeys([t.lower() for t in treatments])
-        for treatment in c:
-            c[treatment] = dict.fromkeys([gen.lower() for gen in genotypes])
-            for genotype in c[treatment]:
-                c[treatment][genotype] = []
-        for exp in experiment_list:
-            c[exp.treatment.lower()][exp.genotype.lower()].append(exp)
-        return c
+    if filter == AnimalLine.__name__.lower() or filter == '':
+        # get the animal filter enum from the configuration
+        applied_filter = AnimalLine
+    elif filter == Stimulation.__name__.lower():
+        applied_filter = Stimulation
+    elif filter == Treatment.__name__.lower():
+        applied_filter = Treatment
+    else:
+        raise ValueError(f'Unknown filter {filter}.')
+
+    # build a dictionary using the animal filter as keys
+    # in every animal line we will create a dict that will have as keys the genotypes
+    filter_dict = dict.fromkeys([l for l in applied_filter])
+    for f in filter_dict:
+        filter_dict[f] = dict.fromkeys([gen for gen in Genotype])
+        # and then we will create a list as the value of each genotype keyt
+        for genotype in filter_dict[f]:
+            filter_dict[f][genotype] = []
+
+    # Finally add the experiments based on their attribues (enum values)
+    for exp in experiment_list:
+        filter_dict[exp.animal_line][exp.genotype].append(exp)
+    return filter_dict
+
+def clear_data(genotype_dict):
+    for gen_key, filter in genotype_dict.copy().items():
+        for key, item in filter.copy().items():
+            if not any(item):
+                del filter[key]
 
 
-def genotype_split(exp_list):
-    genotypes = config_manager.genotypes
-    geno_dict = dict.fromkeys(genotypes)
-    for item in geno_dict:
-        geno_dict[item] = []
-    for exp in exp_list:
-        geno_dict[exp.genotype].append(exp)
-
-    return geno_dict
+if __name__ == '__main__':
+    print(categorize([1, 2, 3], 'treatment'))

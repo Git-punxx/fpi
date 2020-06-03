@@ -1,6 +1,8 @@
-from app_config import config_manager
+from app_config import config_manager, Genotype, AnimalLine, Stimulation, Treatment
 import fpi_util
 from numpy import arange
+from collections import defaultdict
+
 from gui.dialogs import DataPathDialog
 import pickle
 import os
@@ -43,35 +45,39 @@ class FPIPlotter:
 
     @register('baseline')
     def plot_baseline(self, experiments, choice):
+        """
+
+        :param experiments: FPIExperiment object list
+        :param choice: A string returned from the util.BoxPlotChoices panel
+        :return:
+        """
         self.axes.set_axisbelow(True)
         self.axes.set_title('Mean Baseline')
         self.axes.set_xlabel('Distribution')
         self.axes.set_ylabel('.... ()')
 
         # Get the options for the current category
-        genotypes = config_manager.genotypes
-        data = fpi_util.categorize(experiments, choice)
+        filter_dict = fpi_util.categorize(experiments, choice)
 
-        # Get the actual data from the fpiexperiment
-        for base_filter, genotypes in data.items():
+        # Get the actual data from the fpiexperiment and assign them to the genotype categories
+        genotype_dict = defaultdict(dict)
+        genotype_dict.update((k, {}) for k in [item for item in Genotype])
+        print(genotype_dict)
+        for base_filter, genotypes in filter_dict.items():
             for genotype, exp_list in genotypes.items():
-                data[base_filter][genotype] = [exp.mean_baseline for exp in exp_list]
+                genotype_dict[genotype][base_filter] = []
+                genotype_dict[genotype][base_filter].append([exp.mean_baseline for exp in exp_list if exp.mean_baseline is not None])
 
+        fpi_util.clear_data(genotype_dict)
         # Compute the positions of the boxplots
-        no_genotypes = len(genotypes)
-        no_filters = len(data.keys())
-        filter_positions = {val.lower(): key for key, val in dict(enumerate(data.keys(), 1)).items()}
-        genotype_positions = {val.lower(): key for key, val in dict(enumerate(genotypes, 1)).items()}
+        for gen, filter_list in genotype_dict.items():
+            for key, val in filter_list.items():
+                print(f'Plotting {key} with label {key.name}')
+                bp = self.axes.boxplot(val, labels = [key.name], patch_artist = True)
 
-        positions = arange(no_filters * no_genotypes).reshape(no_genotypes, no_filters).T
-        colors = ['pink', 'lightblue', 'lightgreen', 'khaki']
-        for (filter, genotypes_list), position in zip(data.items(), positions):
-            for gen in genotypes_list:
-                d = data[filter][gen]
-                plot = self.axes.boxplot(d, positions = [filter_positions[filter] * genotype_positions[gen] + genotype_positions[gen]], widths = 0.5, patch_artist = True)
-                plot['boxes'][0].set(facecolor= colors[filter_positions[filter]])
+        self.axes.legend()
 
-        self.axes.set_xticklabels(genotypes)
+        self.axes.set_xticklabels([item.name for item in Genotype])
         self.axes.set_xticks([1, 4, 7])
 
 
