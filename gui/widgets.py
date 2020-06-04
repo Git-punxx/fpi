@@ -11,6 +11,7 @@ from gui.dialogs import *
 from fpi_plotter import FPIPlotter
 from gui.fpi_image import DetailsPanel
 from gui.popups import PopupMenuMixin
+from gui.util import BoxPlotChoices
 
 CHOICES_CHANGED = 'choices.changed'
 LINE_CHANGED = 'line.changed'
@@ -31,7 +32,6 @@ class MainFrame(wx.Frame):
         self.menubar = FPIMenuBar()
         self.SetMenuBar(self.menubar)
 
-        self.CreateStatusBar()
         with wx.BusyInfo('FPIPlotter initializing...'):
             self.setup()
         self.exp_list = FPIExperimentList(self)
@@ -41,9 +41,12 @@ class MainFrame(wx.Frame):
         self.filter = FilterPanel(self)
         self.plotter = PlotNotebook(self)
 
-        self.response_btn = wx.Button(self, label='Plot response')
-        self.baseline_btn = wx.Button(self, label='Plot mean baseline')
-        self.latency_button = wx.Button(self, label='Plot Response Latency')
+        self.boxplot_choices = BoxPlotChoices(self)
+
+
+        self.response_btn = wx.Button(self, label='Plot Response')
+        self.baseline_btn = wx.Button(self, label='Plot Mean Baseline')
+        self.latency_button = wx.Button(self, label='Plot Onset Latency')
         self.peak_button = wx.Button(self, label='Plot Peak Latency')
         self.anat_button = wx.Button(self, label='Plot Anat')
 
@@ -66,6 +69,7 @@ class MainFrame(wx.Frame):
         plot_sizer.Add(self.plotter, 1, wx.EXPAND)
 
         footer_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        footer_sizer.Add(self.boxplot_choices, 0)
         footer_sizer.Add(self.response_btn, 0)
         footer_sizer.Add(self.baseline_btn, 0)
         footer_sizer.Add(self.latency_button)
@@ -128,13 +132,14 @@ class MainFrame(wx.Frame):
     def OnBaseline(self, event):
         with wx.BusyInfo('Plotting baseline...'):
             # Get the selected items from the list ctrl
+            choice = self.boxplot_choices.GetSelection()
             selected = self.exp_list.GetSelection()
             if not selected:
                 return
             # Return the experiments that correspond to the selected items
             exp = self.gatherer.filterSelected(selected)
             # Create a new tab to our notebook to hold the plots and plot them using the FPIPlotter
-            self.plotter.add(exp, 'Baseline')
+            self.plotter.add(exp, 'Baseline', choice)
 
     def OnResponse(self, event):
         with wx.BusyInfo('Plotting response'):
@@ -145,20 +150,22 @@ class MainFrame(wx.Frame):
             self.plotter.add(exp, 'Response')
 
     def OnResponseLatency(self, event):
-        with wx.BusyInfo('Plotting response latency'):
+        with wx.BusyInfo('Plotting OnSet latency'):
+            choice = self.boxplot_choices.GetSelection()
             selected = self.exp_list.GetSelection()
             if not selected:
                 return
             exp = self.gatherer.filterSelected(selected)
-            self.plotter.add(exp, 'Response_Latency')
+            self.plotter.add(exp, 'Onset_latency', choice)
 
     def OnPeakLatency(self, event):
         with wx.BusyInfo('Plotting peak latency'):
+            choice = self.boxplot_choices.GetSelection()
             selected = self.exp_list.GetSelection()
             if not selected:
                 return
             exp = self.gatherer.filterSelected(selected)
-            self.plotter.add(exp, 'Peak_Latency')
+            self.plotter.add(exp, 'Peak_Latency', choice)
 
     def OnAnat(self, event):
         with wx.BusyInfo('Plotting anat image'):
@@ -184,14 +191,22 @@ class FilterPanel(wx.Panel):
         treat_lbl = wx.StaticText(self, label='Treatment')
         gen_lbl = wx.StaticText(self, label='Genotype')
 
-        self.animal_line_choice = wx.Choice(self, choices=app_config.animal_lines)
-        self.stim_choice = wx.Choice(self, choices=app_config.stimulations)
-        self.treat_choice = wx.Choice(self, choices=app_config.treatments)
-        self.gen_choice = wx.Choice(self, choices=app_config.genotypes)
+        self.animal_line_choice = wx.Choice(self, choices=app_config.animal_lines + [''])
+        self.animal_line_choice.SetSelection(-1)
+
+        self.stim_choice = wx.Choice(self, choices=app_config.stimulations + [''])
+        self.stim_choice.SetSelection(-1)
+
+        self.treat_choice = wx.Choice(self, choices=app_config.treatments + [''])
+        self.treat_choice.SetSelection(-1)
+
+        self.gen_choice = wx.Choice(self, choices=app_config.genotypes + [''])
+        self.gen_choice.SetSelection(-1)
 
         self.choices = [self.animal_line_choice, self.stim_choice, self.treat_choice, self.gen_choice]
 
         self.clear_btn = wx.Button(self, label='Clear')
+
 
         # Bindings
         self.animal_line_choice.Bind(wx.EVT_CHOICE, self.OnLineChoice)
@@ -199,7 +214,6 @@ class FilterPanel(wx.Panel):
         self.gen_choice.Bind(wx.EVT_CHOICE, self.OnGenChoice)
         self.treat_choice.Bind(wx.EVT_CHOICE, self.OnTreatChoice)
         self.clear_btn.Bind(wx.EVT_BUTTON, self.OnClear)
-
 
 
         # Layout
@@ -255,6 +269,11 @@ class FilterPanel(wx.Panel):
         pub.sendMessage(CHOICES_CHANGED, selections=all)
 
     def OnClear(self, event):
+        self.animal_line_choice.SetSelection(-1)
+        self.treat_choice.SetSelection(-1)
+        self.stim_choice.SetSelection(-1)
+        self.gen_choice.SetSelection(-1)
+
         pub.sendMessage(CLEAR_FILTERS, args=None)
 
     def GetChoices(self):
@@ -325,9 +344,9 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         menu.Append(wx.ID_PASTE)
 
 class Plot(wx.Panel):
-    def __init__(self, parent, id=wx.ID_ANY, dpi=None, experiment=None, **kwargs):
+    def __init__(self, parent, id=wx.ID_ANY, dpi = 100, experiment=None, **kwargs):
         wx.Panel.__init__(self, parent, id)
-        self.figure = mpl.figure.Figure(dpi=dpi, figsize=(5, 8))
+        self.figure = mpl.figure.Figure(dpi=dpi, figsize=(10, 5))
         self.canvas = FigureCanvas(self, -1, self.figure)
         self.toolbar = NavigationToolbar(self.canvas)
         self.toolbar.Realize()
@@ -361,13 +380,11 @@ class Plot(wx.Panel):
             [gatherer.get_experiment(exp).plot(ax) for exp in experiment_list]
             self.canvas.draw()
 
-    def plot(self, plot_type = None, experiment_list = None):
+    def plot(self, plot_type = None, experiment_list = None, choice = None):
         gatherer = self.GetTopLevelParent().gatherer
-
-        # Load the experiment objects and pass them to the plotter
-        experiments = [gatherer.get_experiment(exp) for exp in experiment_list]
-        plotter = FPIPlotter(self.figure, experiments)
-        plotter.plot(plot_type)
+        experiment_data = [gatherer.get_experiment(exp.name) for exp in experiment_list]
+        plotter = FPIPlotter(self.figure, experiment_data)
+        plotter.plot(plot_type, choice)
 
         self.canvas.draw()
 
@@ -383,10 +400,10 @@ class PlotNotebook(wx.Panel):
         sizer.Add(self.nb, 1, wx.EXPAND)
         self.SetSizer(sizer)
 
-    def add(self, exp, title):
+    def add(self, exp, title, choice = None):
         page = Plot(self.nb, experiment=exp)
         self.nb.AddPage(page, caption=title)
-        page.plot(title.lower(), exp)
+        page.plot(title.lower(), exp, choice)
         self.nb.AdvanceSelection(True)
         return page
 

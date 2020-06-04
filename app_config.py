@@ -3,6 +3,7 @@ import os
 from itertools import product
 from pathlib import Path
 import json
+from enum import Enum
 
 CONFIG_FILE = 'config.ini'
 FPI_CONFIG_JSON = os.path.join(os.path.dirname(__file__), 'fpi_config.json')
@@ -69,11 +70,11 @@ class JSONConfigManager(ConfigManager):
 
     @property
     def animal_lines(self):
-        return self._json['categories']['mouselines']
+        return self._json['categories']['animalline']
 
     @property
     def genotypes(self):
-        return self._json['categories']['genotypes']
+        return self._json['categories']['genotype']
 
     @property
     def treatments(self):
@@ -81,7 +82,7 @@ class JSONConfigManager(ConfigManager):
 
     @property
     def stimulations(self):
-        return self._json['categories']['stimulations']
+        return self._json['categories']['stimulation']
 
     @property
     def name_pattern(self):
@@ -107,6 +108,14 @@ config_manager = JSONConfigManager(FPI_CONFIG_JSON)
 
 config = configparser.ConfigParser()
 config.read(os.path.join(os.path.dirname(__file__), CONFIG_FILE))
+
+
+AnimalLine = Enum('AnimalLine', list(map(lambda x: x.upper(), config_manager.animal_lines)))
+Treatment = Enum('Treatment', list(map(lambda x: x.upper(), config_manager.treatments)))
+Stimulation = Enum('Stimulation', list(map(lambda x: x.upper(), config_manager.stimulations)))
+Genotype = Enum('Genotype', list(map(lambda x: x.upper(), config_manager.genotypes)))
+
+
 
 def base_dir():
     return config['Paths']['DataBaseDir']
@@ -176,6 +185,9 @@ def test_json():
     print(cfg_manager.base_dir)
     print(cfg_manager.categories)
     print(cfg_manager.folder_structure())
+    print(AnimalLine)
+    for line in AnimalLine:
+        print(f'{line.name}: {line.value}')
 
 
 if __name__ == '__main__':

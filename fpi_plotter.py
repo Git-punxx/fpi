@@ -1,12 +1,17 @@
-from collections import namedtuple
+from app_config import config_manager, Genotype, AnimalLine, Stimulation, Treatment
+import fpi_util
+from numpy import arange
+from collections import defaultdict
+
+from gui.dialogs import DataPathDialog
+import pickle
+import os
 from pandas import DataFrame
-import seaborn as sns
 '''
 experiment_data = [gatherer.get_experiment(exp.name) for exp in experiment_list]
 plotter = FPIPlotter(ax, experiment_data)
 plotter.plot(plot_type)
 '''
-df_tuple = namedtuple('df_tuple', 'name path animal_line stimulation treatment genotype filter')
 plot_registry = {}
 
 def register(plot_type):
@@ -24,42 +29,95 @@ class FPIPlotter:
         self.experiments = experiments
 
 
-    def plot(self, plot_type):
-        plot_registry[plot_type](self, self.experiments)
+    def sanitize(self, data):
+        for key, val in data.items():
+            if val is None:
+                del data[key]
+
+    def plot(self, plot_type, choice = None):
+        plot_registry[plot_type](self, self.experiments, choice)
 
 
     @register('response')
-    def plot_response(self, experiments):
-        data = [df_tuple._make((exp.name, exp._path, exp.animal_line, exp.stimulation, exp.treatment, exp.genotype, exp.response)) for exp in experiments]
-        df = DataFrame(data)
+    def plot_response(self, experiments, choice):
         ax = self.figure.subplots()
-        for resp in df['filter']:
-            ax.plot(resp)
-
+        ax.grid(True, alpha = 0.5)
+        values = [exp.response for exp in experiments]
+        for d in values:
+            ax.plot(d)
 
     @register('baseline')
-    def plot_baseline(self, experiments):
-        data = [df_tuple._make((exp.name, exp._path, exp.animal_line, exp.stimulation, exp.treatment, exp.genotype, exp.mean_baseline)) for exp in experiments]
-        df = DataFrame(data)
-        ax = self.figure.subplots()
-        print(df['filter'])
-        sns.boxplot('filter', len(df['filter']), ax = ax, data = df)
+    def plot_baseline(self, experiments, choice):
+        """
+
+        :param experiments: FPIExperiment object list
+        :param choice: A string returned from the util.BoxPlotChoices panel
+        :return:
+        """
+        # Get the options for the current category
+        filter_dict = fpi_util.categorize(experiments, choice)
+
+        # Get the actual data from the fpiexperiment and assign them to the genotype categories
+        genotype_dict = defaultdict(dict)
+        genotype_dict.update((k, {}) for k in [item for item in Genotype])
+        print(genotype_dict)
+        for base_filter, genotypes in filter_dict.items():
+            for genotype, exp_list in genotypes.items():
+                genotype_dict[genotype][base_filter] = []
+                genotype_dict[genotype][base_filter] = [exp.mean_baseline for exp in exp_list if exp.mean_baseline is not None]
+
+        fpi_util.clear_data(genotype_dict)
+        # Compute the positions of the boxplots
+        axes = self.figure.subplots(1, len(genotype_dict.keys()), sharey = True)
+
+        for ax, gen in zip(axes, genotype_dict.keys()):
+            if len(genotype_dict[gen].values()) == 0:
+                continue
+            ax.boxplot(genotype_dict[gen].values(), labels = [gen.name for gen in genotype_dict[gen].keys()], patch_artist = True)
+            ax.set_xlabel(gen.name)
+            ax.grid(True, alpha = 0.5)
+
+
+
 
     @register('peak_latency')
-    def plot_peak_latency(self, experiments):
-        data = [df_tuple._make((exp.name, exp._path, exp.animal_line, exp.stimulation, exp.treatment, exp.genotype, exp.peak_latency)) for exp in experiments]
-        df = DataFrame(data)
-        print(df)
+    def plot_peak_latency(self, experiments, choice):
+        filter_dict = fpi_util.categorize(experiments, choice)
+
+        # Get the actual data from the fpiexperiment and assign them to the genotype categories
+        genotype_dict = defaultdict(dict)
+        genotype_dict.update((k, {}) for k in [item for item in Genotype])
+        print(genotype_dict)
+        for base_filter, genotypes in filter_dict.items():
+            for genotype, exp_list in genotypes.items():
+                genotype_dict[genotype][base_filter] = []
+                genotype_dict[genotype][base_filter] = [exp.peak_latency[1] for exp in exp_list if exp.peak_latency is not None]
+
+        fpi_util.clear_data(genotype_dict)
+        # Compute the positions of the boxplots
+        axes = self.figure.subplots(1, len(genotype_dict.keys()), sharey = True)
+
+        for ax, gen in zip(axes, genotype_dict.keys()):
+            if len(genotype_dict[gen].values()) == 0:
+                continue
+            ax.boxplot(genotype_dict[gen].values(), labels = [gen.name for gen in genotype_dict[gen].keys()], patch_artist = True)
+            ax.set_xlabel(gen.name)
+            ax.grid(True, alpha = 0.5)
 
 
-    @register('response_latency')
-    def plot_response_latency(self, experiments):
-        data = [df_tuple._make((exp.name, exp._path, exp.animal_line, exp.stimulation, exp.treatment, exp.genotype, exp.response_latency)) for exp in experiments]
-        df = DataFrame(data)
-        print(df)
+
+    @register('onset_latency')
+    def plot_onset_latency(self, experiments, choice):
+        data = [exp.response_latency() for exp in experiments]
+        ax = self.figure.subplots()
+        for item in data:
+            d = [p[1] for p in item]
+            ax.plot(d)
+            ax.grid(True, alpha = 0.5)
 
     @register('anat')
-    def plot_anat(self, experiment):
+    def plot_anat(self, experiment, choice):
+        ax = self.figure.subplots()
         data = experiment[0].anat
-        self.axes.pcolor(data)
+        ax.pcolor(data)
 

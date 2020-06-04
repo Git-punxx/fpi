@@ -1,5 +1,5 @@
 from typing import Type
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 import numpy as np
 import os
 import h5py
@@ -10,13 +10,14 @@ import re
 from pubsub import pub
 from pub_messages import ANALYSIS_UPDATE
 from intrinsic.imaging import check_datastore
-from pandas import DataFrame
+from app_config import AnimalLine, Treatment, Stimulation, Genotype
+
 
 '''
 The point here is that we design a class hirearchy that will be able to handle different types
 of files (csv, h5py) providing a united interface.
 The data files we want to analyze are categorized based on:
-1. Type of animal_line (Shank, PTEN etc)
+1. Type of animalline (Shank, PTEN etc)
 2. Type of animal? (ko, wt)
 3. Type of file (h5, csv)
 4. Type of metadata they contain (response, timecourse, all_pixels)
@@ -252,7 +253,6 @@ class HD5Parser(FPIParser):
         with h5py.File(self._path, 'r') as datastore:
             try:
                 data = datastore['df']['max_df'][()]
-                print(f'{data} is the max df ---------------------')
                 return data
             except Exception as e:
                 print(e)
@@ -325,8 +325,9 @@ class ExperimentManager:
 
         total = len(self._exp_paths)
         futures = []
-        with ProcessPoolExecutor() as executor:
+        with ThreadPoolExecutor() as executor:
             for exp in self._exp_paths:
+                name = extract_name(os.path.basename(exp))
                 res = executor.submit(self.check_if_valid, exp)
                 futures.append(res)
         for fut in as_completed(futures):
@@ -338,6 +339,7 @@ class ExperimentManager:
                 pub.sendMessage(ANALYSIS_UPDATE, val = val)
 
         self.filtered = list(self._experiments.keys())
+        print(f'Sending message: {self.to_tuple()}')
         pub.sendMessage(EXPERIMENT_LIST_CHANGED, choices=self.to_tuple())
 
     def check_if_valid(self, experiment_path):
@@ -355,8 +357,10 @@ class ExperimentManager:
         """
         experiment = self[name]
         animal_line, stimulus, treatment, genotype, filename = experiment.split(os.sep)[-5:]
-        return FPIExperiment(name=name, path=experiment, animal_line=animal_line, stimulation=stimulus,
-                             treatment=treatment, genotype=genotype)
+        return FPIExperiment(name=name, path=experiment, animal_line=getattr(AnimalLine, animal_line.upper()),
+                                                         stimulation= getattr(Stimulation, stimulus.upper()),
+                                                         treatment = getattr(Treatment, treatment.upper()),
+                                                         genotype = getattr(Genotype, genotype.upper()))
 
     def filterLine(self, line):
         if line != '':
@@ -391,7 +395,7 @@ class ExperimentManager:
     def filterSelected(self, selected):
         self.filtered = list(self._experiments.keys())
         self.filtered = [filtered for filtered in self.filtered if filtered in selected]
-        return self.filtered
+        return self.to_tuple()
 
     def clear_filters(self):
         self.filtered = list(self._experiments.keys())
@@ -401,8 +405,7 @@ class ExperimentManager:
         res = []
         for exp in self.filtered:
             live = self.get_experiment(exp)
-            res.append(live.to_tuple())
-            print(res)
+            res.append(fpi_meta._make((live.name, live.animalline.name, live.stimulation.name, live.treatment.name, live.genotype.name)))
         return res
 
     def __getitem__(self, name):
@@ -424,7 +427,7 @@ class FPIExperiment:
     '''
 
     def __init__(self, name, path, animal_line, stimulation, treatment, genotype):
-        self.animal_line = animal_line
+        self.animalline = animal_line
         self.stimulation = stimulation
         self.treatment = treatment
         self.genotype = genotype
@@ -518,21 +521,10 @@ class FPIExperiment:
         return self._avg_df
 
     @property
-    def max_df(self):
-        if self._max_df is None:
-            self._max_df = self._parser.max_df()
-        return self._max_df
-
-    @property
     def anat(self):
         if self._anat is None:
             self._anat = self._parser.anat()
         return self._anat
-
-    def to_tuple(self):
-        res = (fpi_meta._make((self.name, self.animal_line, self.stimulation, self.treatment, self.genotype)))
-        return res
-
     # def plot(self, ax, type):
     #     if type == 'response':
     #         self.plot_response(ax)
@@ -564,7 +556,7 @@ class FPIExperiment:
     #     ax.plot(x, data, 'k-')
 
     def __str__(self):
-        return f'{self.name}: {self.animal_line} {self.stimulation} {self.treatment} {self.genotype}'
+        return f'{self.name}: {self.animalline.name} {self.stimulation.name} {self.treatment.name} {self.genotype.name}'
 
     def check(self):
         result = []
