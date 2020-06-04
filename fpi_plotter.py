@@ -6,6 +6,7 @@ from collections import defaultdict
 from gui.dialogs import DataPathDialog
 import pickle
 import os
+from pandas import DataFrame
 '''
 experiment_data = [gatherer.get_experiment(exp.name) for exp in experiment_list]
 plotter = FPIPlotter(ax, experiment_data)
@@ -23,8 +24,8 @@ def register(plot_type):
 
 
 class FPIPlotter:
-    def __init__(self, axes, experiments):
-        self.axes = axes
+    def __init__(self, figure, experiments):
+        self.figure = figure
         self.experiments = experiments
 
 
@@ -51,11 +52,6 @@ class FPIPlotter:
         :param choice: A string returned from the util.BoxPlotChoices panel
         :return:
         """
-        self.axes.set_axisbelow(True)
-        self.axes.set_title('Mean Baseline')
-        self.axes.set_xlabel('Distribution')
-        self.axes.set_ylabel('.... ()')
-
         # Get the options for the current category
         filter_dict = fpi_util.categorize(experiments, choice)
 
@@ -66,19 +62,18 @@ class FPIPlotter:
         for base_filter, genotypes in filter_dict.items():
             for genotype, exp_list in genotypes.items():
                 genotype_dict[genotype][base_filter] = []
-                genotype_dict[genotype][base_filter].append([exp.mean_baseline for exp in exp_list if exp.mean_baseline is not None])
+                genotype_dict[genotype][base_filter] = [exp.mean_baseline for exp in exp_list if exp.mean_baseline is not None]
 
         fpi_util.clear_data(genotype_dict)
         # Compute the positions of the boxplots
-        for gen, filter_list in genotype_dict.items():
-            for key, val in filter_list.items():
-                print(f'Plotting {key} with label {key.name}')
-                bp = self.axes.boxplot(val, labels = [key.name], patch_artist = True)
+        axes = self.figure.subplots(1, len(genotype_dict.keys()), sharey = True)
 
-        self.axes.legend()
+        for ax, gen in zip(axes, genotype_dict.keys()):
+            if len(genotype_dict[gen].values()) == 0:
+                continue
+            ax.boxplot(genotype_dict[gen].values(), labels = [gen.name for gen in genotype_dict[gen].keys()], patch_artist = True)
+            ax.set_xlabel(gen.name)
 
-        self.axes.set_xticklabels([item.name for item in Genotype])
-        self.axes.set_xticks([1, 4, 7])
 
 
 

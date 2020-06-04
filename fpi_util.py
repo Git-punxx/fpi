@@ -37,9 +37,14 @@ def categorize(experiment_list, filter = AnimalLine.__name__.lower()):
 
 def clear_data(genotype_dict):
     for gen_key, filter in genotype_dict.copy().items():
-        for key, item in filter.copy().items():
-            if not any(item):
-                del filter[key]
+        if not any(genotype_dict[gen_key].values()):
+            del genotype_dict[gen_key]
+            continue
+        else:
+            for key, item in filter.copy().items():
+                if not any(item):
+                    del genotype_dict[gen_key][key]
+
 
 
 if __name__ == '__main__':
