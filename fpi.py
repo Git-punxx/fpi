@@ -17,7 +17,7 @@ from app_config import AnimalLine, Treatment, Stimulation, Genotype
 The point here is that we design a class hirearchy that will be able to handle different types
 of files (csv, h5py) providing a united interface.
 The data files we want to analyze are categorized based on:
-1. Type of animal_line (Shank, PTEN etc)
+1. Type of animalline (Shank, PTEN etc)
 2. Type of animal? (ko, wt)
 3. Type of file (h5, csv)
 4. Type of metadata they contain (response, timecourse, all_pixels)
@@ -405,7 +405,7 @@ class ExperimentManager:
         res = []
         for exp in self.filtered:
             live = self.get_experiment(exp)
-            res.append(fpi_meta._make((live.name, live.animal_line.name, live.stimulation.name, live.treatment.name, live.genotype.name)))
+            res.append(fpi_meta._make((live.name, live.animalline.name, live.stimulation.name, live.treatment.name, live.genotype.name)))
         return res
 
     def __getitem__(self, name):
@@ -427,7 +427,7 @@ class FPIExperiment:
     '''
 
     def __init__(self, name, path, animal_line, stimulation, treatment, genotype):
-        self.animal_line = animal_line
+        self.animalline = animal_line
         self.stimulation = stimulation
         self.treatment = treatment
         self.genotype = genotype
@@ -556,7 +556,7 @@ class FPIExperiment:
     #     ax.plot(x, data, 'k-')
 
     def __str__(self):
-        return f'{self.name}: {self.animal_line.name} {self.stimulation.name} {self.treatment.name} {self.genotype.name}'
+        return f'{self.name}: {self.animalline.name} {self.stimulation.name} {self.treatment.name} {self.genotype.name}'
 
     def check(self):
         result = []

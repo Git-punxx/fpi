@@ -27,7 +27,7 @@ class DetailsPanel(wx.Dialog):
         self._file_size_lbl = wx.StaticText(self, label = 'File size')
 
         self._line_lbl = wx.StaticText(self, label = 'Animal Line')
-        self._line_txt = wx.StaticText(self, label = self._experiment.animal_line)
+        self._line_txt = wx.StaticText(self, label = self._experiment.animalline)
 
         self._stim_lbl = wx.StaticText(self, label = 'Stimulus')
         self._stim_txt = wx.StaticText(self, label = self._experiment.stimulation)

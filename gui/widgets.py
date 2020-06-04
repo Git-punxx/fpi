@@ -44,9 +44,9 @@ class MainFrame(wx.Frame):
         self.boxplot_choices = BoxPlotChoices(self)
 
 
-        self.response_btn = wx.Button(self, label='Plot response')
-        self.baseline_btn = wx.Button(self, label='Plot mean baseline')
-        self.latency_button = wx.Button(self, label='Plot Response Latency')
+        self.response_btn = wx.Button(self, label='Plot Response')
+        self.baseline_btn = wx.Button(self, label='Plot Mean Baseline')
+        self.latency_button = wx.Button(self, label='Plot Onset Latency')
         self.peak_button = wx.Button(self, label='Plot Peak Latency')
         self.anat_button = wx.Button(self, label='Plot Anat')
 
@@ -150,13 +150,13 @@ class MainFrame(wx.Frame):
             self.plotter.add(exp, 'Response')
 
     def OnResponseLatency(self, event):
-        with wx.BusyInfo('Plotting response latency'):
+        with wx.BusyInfo('Plotting OnSet latency'):
             choice = self.boxplot_choices.GetSelection()
             selected = self.exp_list.GetSelection()
             if not selected:
                 return
             exp = self.gatherer.filterSelected(selected)
-            self.plotter.add(exp, 'Response_Latency', choice)
+            self.plotter.add(exp, 'Onset_latency', choice)
 
     def OnPeakLatency(self, event):
         with wx.BusyInfo('Plotting peak latency'):
