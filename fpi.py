@@ -10,7 +10,7 @@ import re
 from pubsub import pub
 from pub_messages import ANALYSIS_UPDATE
 from intrinsic.imaging import check_datastore
-
+from pandas import DataFrame
 
 '''
 The point here is that we design a class hirearchy that will be able to handle different types
@@ -331,7 +331,7 @@ class ExperimentManager:
                 futures.append(res)
         for fut in as_completed(futures):
             if fut.result() is not None:
-                name = extract_name(os.path.basename(exp))
+                name = extract_name(os.path.basename(fut.result()))
 
                 self._experiments[name] = fut.result()
                 val = 100 * (1 / total)
@@ -391,7 +391,7 @@ class ExperimentManager:
     def filterSelected(self, selected):
         self.filtered = list(self._experiments.keys())
         self.filtered = [filtered for filtered in self.filtered if filtered in selected]
-        return self.to_tuple()
+        return self.filtered
 
     def clear_filters(self):
         self.filtered = list(self._experiments.keys())
@@ -401,8 +401,7 @@ class ExperimentManager:
         res = []
         for exp in self.filtered:
             live = self.get_experiment(exp)
-            print(live)
-            res.append(fpi_meta._make((live.name, live.animal_line, live.stimulation, live.treatment, live.genotype)))
+            res.append(live.to_tuple())
             print(res)
         return res
 
@@ -529,6 +528,10 @@ class FPIExperiment:
         if self._anat is None:
             self._anat = self._parser.anat()
         return self._anat
+
+    def to_tuple(self):
+        res = (fpi_meta._make((self.name, self.animal_line, self.stimulation, self.treatment, self.genotype)))
+        return res
 
     # def plot(self, ax, type):
     #     if type == 'response':

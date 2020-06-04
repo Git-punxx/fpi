@@ -362,11 +362,11 @@ class Plot(wx.Panel):
             self.canvas.draw()
 
     def plot(self, plot_type = None, experiment_list = None):
-        ax = self.figure.gca()
-        ax.grid(True, color = 'grey', linewidth = 0.5)
         gatherer = self.GetTopLevelParent().gatherer
-        experiment_data = [gatherer.get_experiment(exp.name) for exp in experiment_list]
-        plotter = FPIPlotter(ax, experiment_data)
+
+        # Load the experiment objects and pass them to the plotter
+        experiments = [gatherer.get_experiment(exp) for exp in experiment_list]
+        plotter = FPIPlotter(self.figure, experiments)
         plotter.plot(plot_type)
 
         self.canvas.draw()

@@ -1,10 +1,12 @@
-import matplotlib as mpl
-
+from collections import namedtuple
+from pandas import DataFrame
+import seaborn as sns
 '''
 experiment_data = [gatherer.get_experiment(exp.name) for exp in experiment_list]
 plotter = FPIPlotter(ax, experiment_data)
 plotter.plot(plot_type)
 '''
+df_tuple = namedtuple('df_tuple', 'name path animal_line stimulation treatment genotype filter')
 plot_registry = {}
 
 def register(plot_type):
@@ -17,8 +19,8 @@ def register(plot_type):
 
 
 class FPIPlotter:
-    def __init__(self, axes, experiments):
-        self.axes = axes
+    def __init__(self, figure, experiments):
+        self.figure = figure
         self.experiments = experiments
 
 
@@ -28,33 +30,30 @@ class FPIPlotter:
 
     @register('response')
     def plot_response(self, experiments):
-        data = [exp.response for exp in experiments]
-        for d in data:
-            self.axes.plot(d)
+        data = [df_tuple._make((exp.name, exp._path, exp.animal_line, exp.stimulation, exp.treatment, exp.genotype, exp.response)) for exp in experiments]
+        df = DataFrame(data)
+        ax = self.figure.subplot(1, 1, 1)
+        sns.plot(df['filter'], ax = ax)
+
 
     @register('baseline')
     def plot_baseline(self, experiments):
-        data = [exp.mean_baseline for exp in experiments]
-        self.axes.boxplot(data)
+        data = [df_tuple._make((exp.name, exp._path, exp.animal_line, exp.stimulation, exp.treatment, exp.genotype, exp.mean_baseline)) for exp in experiments]
+        df = DataFrame(data)
+        print(df)
 
     @register('peak_latency')
     def plot_peak_latency(self, experiments):
-        self.axes.set_axisbelow(True)
-        self.axes.set_title('Peak latency')
-        self.axes.set_xlabel('Distribution')
-        self.axes.set_ylabel('Latency ()')
-        data_dict = {exp.genotype: exp.peak_latency[1] for exp in experiments}
-        labels = data_dict.keys()
-        data = data_dict.values()
-        self.axes.boxplot(data, labels = labels)
+        data = [df_tuple._make((exp.name, exp._path, exp.animal_line, exp.stimulation, exp.treatment, exp.genotype, exp.peak_latency)) for exp in experiments]
+        df = DataFrame(data)
+        print(df)
 
 
     @register('response_latency')
     def plot_response_latency(self, experiments):
-        data = [exp.response_latency() for exp in experiments]
-        for item in data:
-            d = [p[1] for p in item]
-            self.axes.plot(d)
+        data = [df_tuple._make((exp.name, exp._path, exp.animal_line, exp.stimulation, exp.treatment, exp.genotype, exp.response_latency)) for exp in experiments]
+        df = DataFrame(data)
+        print(df)
 
     @register('anat')
     def plot_anat(self, experiment):
