@@ -32,15 +32,18 @@ class FPIPlotter:
     def plot_response(self, experiments):
         data = [df_tuple._make((exp.name, exp._path, exp.animal_line, exp.stimulation, exp.treatment, exp.genotype, exp.response)) for exp in experiments]
         df = DataFrame(data)
-        ax = self.figure.subplot(1, 1, 1)
-        sns.plot(df['filter'], ax = ax)
+        ax = self.figure.subplots()
+        for resp in df['filter']:
+            ax.plot(resp)
 
 
     @register('baseline')
     def plot_baseline(self, experiments):
         data = [df_tuple._make((exp.name, exp._path, exp.animal_line, exp.stimulation, exp.treatment, exp.genotype, exp.mean_baseline)) for exp in experiments]
         df = DataFrame(data)
-        print(df)
+        ax = self.figure.subplots()
+        print(df['filter'])
+        sns.boxplot('filter', len(df['filter']), ax = ax, data = df)
 
     @register('peak_latency')
     def plot_peak_latency(self, experiments):
