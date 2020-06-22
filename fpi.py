@@ -365,7 +365,7 @@ class ExperimentManager:
     def filterLine(self, line):
         if line != '':
             self.filtered = [experiment for experiment in self.filtered if
-                             self.get_experiment(experiment).animal_line == line]
+                             self.get_experiment(experiment).animalline == line]
 
     def filterTreatment(self, treatment):
         if treatment != '':

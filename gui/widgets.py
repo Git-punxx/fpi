@@ -204,7 +204,7 @@ class FilterPanel(wx.Panel):
         self.gen_choice.SetSelection(-1)
 
         self.choices = [self.animal_line_choice, self.stim_choice, self.treat_choice, self.gen_choice]
-
+        print(self.choices)
         self.clear_btn = wx.Button(self, label='Clear')
 
 
@@ -277,9 +277,9 @@ class FilterPanel(wx.Panel):
         pub.sendMessage(CLEAR_FILTERS, args=None)
 
     def GetChoices(self):
-        return [choice.GetStringSelection() for choice in self.choices]
-
-
+        strings = [choice.GetStringSelection() for choice in self.choices]
+        print(strings)
+        return strings
 
 class FPIExperimentList(wx.Panel, PopupMenuMixin):
     def __init__(self, parent, *args, **kwargs):
@@ -323,6 +323,7 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
 
     def update(self, choices):
         print('Received message')
+        print(choices)
         self.clear()
         self.add_rows(choices)
 
