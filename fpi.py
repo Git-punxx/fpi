@@ -339,13 +339,13 @@ class ExperimentManager:
                 pub.sendMessage(ANALYSIS_UPDATE, val = val)
 
         self.filtered = list(self._experiments.keys())
-        print(f'Sending message: {self.to_tuple()}')
         pub.sendMessage(EXPERIMENT_LIST_CHANGED, choices=self.to_tuple())
 
     def check_if_valid(self, experiment_path):
         if check_datastore(experiment_path):
             return experiment_path
         else:
+            print(f'{experiment_path} is not a valid hd5 file')
             return None
 
     def get_experiment(self, name: str) -> object:
@@ -357,29 +357,30 @@ class ExperimentManager:
         """
         experiment = self[name]
         animal_line, stimulus, treatment, genotype, filename = experiment.split(os.sep)[-5:]
-        return FPIExperiment(name=name, path=experiment, animal_line=getattr(AnimalLine, animal_line.upper()),
+        exp = FPIExperiment(name=name, path=experiment, animal_line=getattr(AnimalLine, animal_line.upper()),
                                                          stimulation= getattr(Stimulation, stimulus.upper()),
                                                          treatment = getattr(Treatment, treatment.upper()),
                                                          genotype = getattr(Genotype, genotype.upper()))
+        return exp
 
     def filterLine(self, line):
         if line != '':
             self.filtered = [experiment for experiment in self.filtered if
-                             self.get_experiment(experiment).animal_line == line]
+                             self.get_experiment(experiment).animalline.name == line.upper()]
 
     def filterTreatment(self, treatment):
         if treatment != '':
             self.filtered = [experiment for experiment in self.filtered if
-                             self.get_experiment(experiment).treatment == treatment]
+                             self.get_experiment(experiment).treatment.name == treatment.upper()]
 
     def filterStimulus(self, stim):
         if stim != '':
             self.filtered = [experiment for experiment in self.filtered if
-                             self.get_experiment(experiment).stimulation == stim]
+                             self.get_experiment(experiment).stimulation.name == stim.upper()]
 
     def filterGenotype(self, gen):
         if gen != '':
-            self.filtered = [experiment for experiment in self.filtered if self.get_experiment(experiment).genotype == gen]
+            self.filtered = [experiment for experiment in self.filtered if self.get_experiment(experiment).genotype.name == gen.upper()]
 
     def filterAll(self, selections):
         self.clear_filters()
