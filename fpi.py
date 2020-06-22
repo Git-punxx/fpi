@@ -489,6 +489,43 @@ class FPIExperiment:
             self._peak_latency = (peak, peak_value)
         return self._peak_latency
 
+
+
+    '''
+    apo normalized stack
+        onset latency = 3 * mean_baseline
+        4 frames sth seira
+        boxplot
+        export se csv
+        sun button
+    '''
+
+    '''
+    apo nomralized stack
+    peak latency = peak value meta to onset latency (4 frames sth seira)
+    boxplot 
+    button 
+    csv
+    '''
+
+    '''
+    peak value apo normalized stackj
+    4 frames sth seira
+    boxplot
+    csv
+    button
+    '''
+
+    '''
+    response area etoimo apo normalized stack
+    boxplot
+    csv 
+    button
+    '''
+
+
+
+
     def response_latency(self, ratio=0.3, n_baseline=30):
         data = self.response
         if data is None:
