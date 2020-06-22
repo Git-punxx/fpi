@@ -45,18 +45,20 @@ class MainFrame(wx.Frame):
 
 
         self.response_btn = wx.Button(self, label='Plot Response')
-        self.baseline_btn = wx.Button(self, label='Plot Mean Baseline')
+        self.peak_value_btn = wx.Button(self, label='Plot Peak Value')
         self.latency_button = wx.Button(self, label='Plot Onset Latency')
         self.peak_button = wx.Button(self, label='Plot Peak Latency')
         self.anat_button = wx.Button(self, label='Plot Anat')
+        self.area_button = wx.Button(self, label='Plot Area')
 
 
         # Bindings
-        self.Bind(wx.EVT_BUTTON, self.OnBaseline, self.baseline_btn)
+        self.Bind(wx.EVT_BUTTON, self.OnPeakValue, self.peak_value_btn)
         self.Bind(wx.EVT_BUTTON, self.OnResponse, self.response_btn)
         self.Bind(wx.EVT_BUTTON, self.OnResponseLatency, self.latency_button)
         self.Bind(wx.EVT_BUTTON, self.OnPeakLatency, self.peak_button)
         self.Bind(wx.EVT_BUTTON, self.OnAnat, self.anat_button)
+        self.Bind(wx.EVT_BUTTON, self.OnArea, self.area_button)
 
         self.Bind(wx.EVT_MENU, self.OnMenu)
 
@@ -71,10 +73,11 @@ class MainFrame(wx.Frame):
         footer_sizer = wx.BoxSizer(wx.HORIZONTAL)
         footer_sizer.Add(self.boxplot_choices, 0)
         footer_sizer.Add(self.response_btn, 0)
-        footer_sizer.Add(self.baseline_btn, 0)
+        footer_sizer.Add(self.peak_value_btn, 0)
         footer_sizer.Add(self.latency_button)
         footer_sizer.Add(self.peak_button)
         footer_sizer.Add(self.anat_button)
+        footer_sizer.Add(self.area_button)
 
         main_sizer = wx.BoxSizer(wx.VERTICAL)
         main_sizer.Add(header_sizer, 0, wx.EXPAND)
@@ -167,6 +170,15 @@ class MainFrame(wx.Frame):
             exp = self.gatherer.filterSelected(selected)
             self.plotter.add(exp, 'Peak_Latency', choice)
 
+    def OnPeakValue(self, event):
+        with wx.BusyInfo('Plotting peak value'):
+            choice = self.boxplot_choices.GetSelection()
+            selected = self.exp_list.GetSelection()
+            if not selected:
+                return
+            exp = self.gatherer.filterSelected(selected)
+            self.plotter.add(exp, 'Peak_Value', choice)
+
     def OnAnat(self, event):
         with wx.BusyInfo('Plotting anat image'):
             selected = self.exp_list.GetSelection()
@@ -175,6 +187,14 @@ class MainFrame(wx.Frame):
             exp = self.gatherer.filterSelected(selected)
             self.plotter.add(exp, 'anat')
 
+
+    def OnArea(self, event):
+        with wx.BusyInfo('Plotting pixel area'):
+            selected = self.exp_list.GetSelection()
+            if not selected:
+                return
+            exp = self.gatherer.filterSelected(selected)
+            self.plotter.add(exp, 'area')
 
     def OnClear(self, args=None):
         res = self.gatherer.clear_filters()

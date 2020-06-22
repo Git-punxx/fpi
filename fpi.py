@@ -11,6 +11,7 @@ from pubsub import pub
 from pub_messages import ANALYSIS_UPDATE
 from intrinsic.imaging import check_datastore
 from app_config import AnimalLine, Treatment, Stimulation, Genotype
+from itertools import takewhile
 
 
 '''
@@ -95,6 +96,9 @@ def normalize_stack(stack, n_baseline=30):
     norm_stack = stack - decay
 
     return norm_stack
+
+def consecutive(data, number = 4, step = 1):
+    return takewhile(lambda d: len(d) >= number, np.split(data, np.where(np.diff(data) != step)[0] + 1))
 
 
 #
@@ -447,6 +451,7 @@ class FPIExperiment:
         self._avg_df = None
         self._mean_baseline = None
         self._peak_latency = None
+        self._peak_value = None
         self._anat = None
 
 
@@ -478,43 +483,54 @@ class FPIExperiment:
         return self._mean_baseline
 
     @property
+    def std_baseline(self, n_baseline= 30):
+        return np.std(self.response[:n_baseline])
+
+    @property
     def peak_latency(self):
+        '''
+        apo nomralized stack
+        peak latency = peak value meta to onset latency (4 frames sth seira)
+        boxplot
+        button
+        csv
+        '''
         if self._peak_latency is None:
             data = self.response
             if data is None:
                 return
-            response_region = data[:]
+            onset = self.onset_latency
+            response_region = data[onset:]
             peak = np.argmax(response_region)
             peak_value = np.max(response_region)
             self._peak_latency = (peak, peak_value)
         return self._peak_latency
 
-
-
-    '''
-    apo normalized stack
+    @property
+    def onset_latency(self):
+        '''
+        apo normalized stack
         onset latency = 3 * mean_baseline
         4 frames sth seira
         boxplot
         export se csv
         sun button
-    '''
+        '''
+        limit = 3 * self.std_baseline
 
-    '''
-    apo nomralized stack
-    peak latency = peak value meta to onset latency (4 frames sth seira)
-    boxplot 
-    button 
-    csv
-    '''
+        # we check values after the end of the baseline
+        valid_response = self.response[31: -1]
+        latency_indices = np.where(valid_response >= limit)
+        con = consecutive(latency_indices)
+        try:
+            res = next(con)[0]
+        except Exception as e:
+            res = latency_indices[0][0]
+        return res
 
-    '''
-    peak value apo normalized stackj
-    4 frames sth seira
-    boxplot
-    csv
-    button
-    '''
+
+
+
 
     '''
     response area etoimo apo normalized stack

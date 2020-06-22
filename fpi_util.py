@@ -11,6 +11,7 @@ def categorize(experiment_list, filter = AnimalLine.__name__.lower()):
     :param choice:
     :return:
     """
+    print(f'categorizing abased on {filter}')
     if filter == AnimalLine.__name__.lower() or filter == '':
         # get the animal filter enum from the configuration
         applied_filter = AnimalLine
@@ -19,6 +20,7 @@ def categorize(experiment_list, filter = AnimalLine.__name__.lower()):
     elif filter == Treatment.__name__.lower():
         applied_filter = Treatment
     else:
+        print(filter)
         raise ValueError(f'Unknown filter {filter}.')
 
     # build a dictionary using the animal filter as keys
