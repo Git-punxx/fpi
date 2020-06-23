@@ -147,10 +147,11 @@ class MainFrame(wx.Frame):
     def OnResponse(self, event):
         with wx.BusyInfo('Plotting response'):
             selected = self.exp_list.GetSelection()
+            choice = self.boxplot_choices.GetSelection()
             if not selected:
                 return
             exp = self.gatherer.filterSelected(selected)
-            self.plotter.add(exp, 'Response')
+            self.plotter.add(exp, 'Response', choice)
 
     def OnResponseLatency(self, event):
         with wx.BusyInfo('Plotting OnSet latency'):

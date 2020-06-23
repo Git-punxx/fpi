@@ -1,2 +1,3 @@
 ,Genotype.KO,Genotype.WT
-AnimalLine.FMKO,[47421],[177740]
+AnimalLine.PTEN,[177740],
+AnimalLine.FMKO,,[47421]
