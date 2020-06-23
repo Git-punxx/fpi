@@ -1,4 +1,4 @@
-from typing import Type
+from dataclasses import dataclass, make_dataclass, asdict, astuple
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 import numpy as np
 import os
@@ -48,7 +48,6 @@ def debug(func):
 
     return wrapper
 
-
 def extract_name(path):
     '''
     Given a pathm, this function returns the name of the experiment which is the numeric value contained in
@@ -62,7 +61,6 @@ def extract_name(path):
     except Exception as e:
         res = 'Default name'
     return res
-
 
 def fpiparser(path):
     '''
@@ -79,7 +77,6 @@ def fpiparser(path):
         print('No parser for ', path)
         pass
 
-
 def normalize_stack(stack, n_baseline=30):
     # Global average
     y = np.nanmean(stack, (0, 1))[1:n_baseline]
@@ -94,14 +91,17 @@ def normalize_stack(stack, n_baseline=30):
     # Renormalized
     decay = (decay - 1) * (y_max - y_min) + y_min
     norm_stack = stack - decay
-
     return norm_stack
 
 def consecutive(data, number = 4, step = 1):
+    '''
+    :param data: A numpy ndarray
+    :param number: The number of consecutive elements
+    :param step: The difference between consecutive elements
+    :return: A generator containing clusters of consecutive elements
+    '''
     return takewhile(lambda d: len(d) >= number, np.split(data, np.where(np.diff(data) != step)[0] + 1))
 
-
-#
 ###### Parsers ######
 class FPIParser:
     '''
@@ -134,7 +134,6 @@ class FPIParser:
     @abstractmethod
     def parse(self):
         raise NotImplementedError
-
 
 class CSVParser(FPIParser):
     def __init__(self, experiment, path):
@@ -207,7 +206,6 @@ class CSVParser(FPIParser):
                 else:
                     data.append(float(line.split(',')[1]))
         return np.array(data)
-
 
 class HD5Parser(FPIParser):
     def __init__(self, experiment, path):
@@ -301,124 +299,14 @@ class HD5Parser(FPIParser):
 
 ### Model #####
 
-class ExperimentManager:
-    def __init__(self, root):
-        """
-        This is where we manage our experiments.
-        It is also the interface through which the gui gets its data
-
-        :param root: The root folder of the experiments. The directory tree must conform a specific structure that
-        is specified in the fpi_config.json
-        """
-        self.root = root  # The root folder
-        self._exp_paths = set()  # A set that contains the paths of the datastores
-        self._experiments = {}  # A mapping between the name of an experiment and its path
-        self.filtered = []  # A list that contains the filtered names of the experiments
-
-        self._filters = []
-
-        self.scan()
-
-        pub.subscribe(self.filterAll, CHOICES_CHANGED)
-
-
-    def scan(self):
-        for path, dirs, files in os.walk(self.root):
-            file_paths = [os.path.join(path, file) for file in files if file.endswith('h5')]
-            [self._exp_paths.add(file) for file in file_paths]
-        print(self._exp_paths)
-
-        total = len(self._exp_paths)
-        futures = []
-        with ThreadPoolExecutor() as executor:
-            for exp in self._exp_paths:
-                name = extract_name(os.path.basename(exp))
-                res = executor.submit(self.check_if_valid, exp)
-                futures.append(res)
-        for fut in as_completed(futures):
-            if fut.result() is not None:
-                name = extract_name(os.path.basename(fut.result()))
-
-                self._experiments[name] = fut.result()
-                val = 100 * (1 / total)
-                pub.sendMessage(ANALYSIS_UPDATE, val = val)
-
-        self.filtered = list(self._experiments.keys())
-        pub.sendMessage(EXPERIMENT_LIST_CHANGED, choices=self.to_tuple())
-
-    def check_if_valid(self, experiment_path):
-        if check_datastore(experiment_path):
-            return experiment_path
-        else:
-            print(f'{experiment_path} is not a valid hd5 file')
-            return None
-
-    def get_experiment(self, name: str) -> object:
-        """
-        This function takes a name of an experiment as it was extracted from its path. It uses it to get the path
-        of the experiment datastore file, and then use this path to create an FPIExperiment object
-        :param name: The name of the experiment as it was extracted from its path
-        :return: An FPIExperiment object
-        """
-        experiment = self[name]
-        animal_line, stimulus, treatment, genotype, filename = experiment.split(os.sep)[-5:]
-        exp = FPIExperiment(name=name, path=experiment, animal_line=getattr(AnimalLine, animal_line.upper()),
-                                                         stimulation= getattr(Stimulation, stimulus.upper()),
-                                                         treatment = getattr(Treatment, treatment.upper()),
-                                                         genotype = getattr(Genotype, genotype.upper()))
-        return exp
-
-    def filterLine(self, line):
-        if line != '':
-            self.filtered = [experiment for experiment in self.filtered if
-                             self.get_experiment(experiment).animalline.name == line.upper()]
-
-    def filterTreatment(self, treatment):
-        if treatment != '':
-            self.filtered = [experiment for experiment in self.filtered if
-                             self.get_experiment(experiment).treatment.name == treatment.upper()]
-
-    def filterStimulus(self, stim):
-        if stim != '':
-            self.filtered = [experiment for experiment in self.filtered if
-                             self.get_experiment(experiment).stimulation.name == stim.upper()]
-
-    def filterGenotype(self, gen):
-        if gen != '':
-            self.filtered = [experiment for experiment in self.filtered if self.get_experiment(experiment).genotype.name == gen.upper()]
-
-    def filterAll(self, selections):
-        self.clear_filters()
-        line, stimulation, treatment, genotype = selections
-        self.filterLine(line)
-        self.filterStimulus(stimulation)
-        self.filterTreatment(treatment)
-        self.filterGenotype(genotype)
-        return self.to_tuple()
-
-
-
-    def filterSelected(self, selected):
-        self.filtered = list(self._experiments.keys())
-        self.filtered = [filtered for filtered in self.filtered if filtered in selected]
-        return self.to_tuple()
-
-    def clear_filters(self):
-        self.filtered = list(self._experiments.keys())
-        return self.to_tuple()
-
-    def to_tuple(self):
-        res = []
-        for exp in self.filtered:
-            live = self.get_experiment(exp)
-            res.append(fpi_meta._make((live.name, live.animalline.name, live.stimulation.name, live.treatment.name, live.genotype.name)))
-        return res
-
-    def __getitem__(self, name):
-        return self._experiments[name]
-
-    def __iter__(self):
-        return iter(self._experiments.keys())
+@dataclass
+class FPIMeta:
+    name: str
+    path: str
+    animalline: AnimalLine
+    stimulation: Stimulation
+    treatment: Treatment
+    genotype: Genotype
 
 
 class FPIExperiment:
@@ -588,6 +476,129 @@ class FPIExperiment:
             result.append('No all_pixelsj')
         return result
 
+class ExperimentManager:
+    def __init__(self, root):
+        """
+        This is where we manage our experiments.
+        It is also the interface through which the gui gets its data
+
+        :param root: The root folder of the experiments. The directory tree must conform a specific structure that
+        is specified in the fpi_config.json
+        """
+        self.root = root  # The root folder
+        self._exp_paths = set()  # A set that contains the paths of the datastores
+        self._experiments = {}  # A mapping between the name of an experiment and its path
+        self.filtered = []  # A list that contains the filtered names of the experiments
+
+        self._filters = []
+
+        self.scan()
+
+        pub.subscribe(self.filterAll, CHOICES_CHANGED)
+
+
+    def scan(self) -> None:
+        '''
+        Scan the subdirectories from the root and create FPIExperiment objects.
+        :return: None
+        '''
+        for path, dirs, files in os.walk(self.root):
+            file_paths = [os.path.join(path, file) for file in files if file.endswith('h5')]
+            for file in file_paths:
+                print(f'Basename: {os.path.basename(file)}')
+                print(f'Dirname: {os.path.dirname(file)}')
+                print(f'Split: {file.split(os.sep)[-5:]}')
+            [self._exp_paths.add(file) for file in file_paths]
+
+        total = len(self._exp_paths)
+        futures = []
+        with ThreadPoolExecutor() as executor:
+            for exp in self._exp_paths:
+                res = executor.submit(self.check_if_valid, exp)
+                futures.append(res)
+        for fut in as_completed(futures):
+            if fut.result() is not None:
+                name = extract_name(os.path.basename(fut.result()))
+                self._experiments[name] = fut.result()
+                val = 100 * (1 / total)
+                pub.sendMessage(ANALYSIS_UPDATE, val = val)
+
+        self.filtered = list(self._experiments.keys())
+        pub.sendMessage(EXPERIMENT_LIST_CHANGED, choices=self.to_tuple())
+
+    def check_if_valid(self, experiment_path) -> str:
+        if check_datastore(experiment_path):
+            return experiment_path
+        else:
+            print(f'{experiment_path} is not a valid hd5 file')
+            return None
+
+    def get_experiment(self, name: str) -> FPIExperiment:
+        """
+        This function takes a name of an experiment as it was extracted from its path. It uses it to get the path
+        of the experiment datastore file, and then use this path to create an FPIExperiment object
+        :param name: The name of the experiment as it was extracted from its path
+        :return: An FPIExperiment object
+        """
+        experiment = self[name]
+        animal_line, stimulus, treatment, genotype, filename = experiment.split(os.sep)[-5:]
+        exp = FPIExperiment(name=name, path=experiment, animal_line=getattr(AnimalLine, animal_line.upper()),
+                                                         stimulation= getattr(Stimulation, stimulus.upper()),
+                                                         treatment = getattr(Treatment, treatment.upper()),
+                                                         genotype = getattr(Genotype, genotype.upper()))
+        return exp
+
+    def filterLine(self, line):
+        if line != '':
+            self.filtered = [experiment for experiment in self.filtered if
+                             self.get_experiment(experiment).animalline.name == line.upper()]
+
+    def filterTreatment(self, treatment):
+        if treatment != '':
+            self.filtered = [experiment for experiment in self.filtered if
+                             self.get_experiment(experiment).treatment.name == treatment.upper()]
+
+    def filterStimulus(self, stim):
+        if stim != '':
+            self.filtered = [experiment for experiment in self.filtered if
+                             self.get_experiment(experiment).stimulation.name == stim.upper()]
+
+    def filterGenotype(self, gen):
+        if gen != '':
+            self.filtered = [experiment for experiment in self.filtered if self.get_experiment(experiment).genotype.name == gen.upper()]
+
+    def filterAll(self, selections):
+        self.clear_filters()
+        line, stimulation, treatment, genotype = selections
+        self.filterLine(line)
+        self.filterStimulus(stimulation)
+        self.filterTreatment(treatment)
+        self.filterGenotype(genotype)
+        return self.to_tuple()
+
+
+
+    def filterSelected(self, selected):
+        self.filtered = list(self._experiments.keys())
+        self.filtered = [filtered for filtered in self.filtered if filtered in selected]
+        return self.to_tuple()
+
+    def clear_filters(self):
+        self.filtered = list(self._experiments.keys())
+        return self.to_tuple()
+
+    def to_tuple(self):
+        res = []
+        for exp in self.filtered:
+            live = self.get_experiment(exp)
+            res.append(fpi_meta._make((live.name, live.animalline.name, live.stimulation.name, live.treatment.name, live.genotype.name)))
+        return res
+
+    def __getitem__(self, name):
+        return self._experiments[name]
+
+    def __iter__(self):
+        return iter(self._experiments.keys())
 
 if __name__ == '__main__':
     root = app_config.base_dir
