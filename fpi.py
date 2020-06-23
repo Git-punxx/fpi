@@ -11,6 +11,7 @@ from pubsub import pub
 from pub_messages import ANALYSIS_UPDATE
 from intrinsic.imaging import check_datastore
 from app_config import AnimalLine, Treatment, Stimulation, Genotype
+from itertools import takewhile
 
 
 '''
@@ -95,6 +96,9 @@ def normalize_stack(stack, n_baseline=30):
     norm_stack = stack - decay
 
     return norm_stack
+
+def consecutive(data, number = 4, step = 1):
+    return takewhile(lambda d: len(d) >= number, np.split(data, np.where(np.diff(data) != step)[0] + 1))
 
 
 #
@@ -322,6 +326,7 @@ class ExperimentManager:
         for path, dirs, files in os.walk(self.root):
             file_paths = [os.path.join(path, file) for file in files if file.endswith('h5')]
             [self._exp_paths.add(file) for file in file_paths]
+        print(self._exp_paths)
 
         total = len(self._exp_paths)
         futures = []
@@ -339,13 +344,13 @@ class ExperimentManager:
                 pub.sendMessage(ANALYSIS_UPDATE, val = val)
 
         self.filtered = list(self._experiments.keys())
-        print(f'Sending message: {self.to_tuple()}')
         pub.sendMessage(EXPERIMENT_LIST_CHANGED, choices=self.to_tuple())
 
     def check_if_valid(self, experiment_path):
         if check_datastore(experiment_path):
             return experiment_path
         else:
+            print(f'{experiment_path} is not a valid hd5 file')
             return None
 
     def get_experiment(self, name: str) -> object:
@@ -357,29 +362,30 @@ class ExperimentManager:
         """
         experiment = self[name]
         animal_line, stimulus, treatment, genotype, filename = experiment.split(os.sep)[-5:]
-        return FPIExperiment(name=name, path=experiment, animal_line=getattr(AnimalLine, animal_line.upper()),
+        exp = FPIExperiment(name=name, path=experiment, animal_line=getattr(AnimalLine, animal_line.upper()),
                                                          stimulation= getattr(Stimulation, stimulus.upper()),
                                                          treatment = getattr(Treatment, treatment.upper()),
                                                          genotype = getattr(Genotype, genotype.upper()))
+        return exp
 
     def filterLine(self, line):
         if line != '':
             self.filtered = [experiment for experiment in self.filtered if
-                             self.get_experiment(experiment).animalline == line]
+                             self.get_experiment(experiment).animalline.name == line.upper()]
 
     def filterTreatment(self, treatment):
         if treatment != '':
             self.filtered = [experiment for experiment in self.filtered if
-                             self.get_experiment(experiment).treatment == treatment]
+                             self.get_experiment(experiment).treatment.name == treatment.upper()]
 
     def filterStimulus(self, stim):
         if stim != '':
             self.filtered = [experiment for experiment in self.filtered if
-                             self.get_experiment(experiment).stimulation == stim]
+                             self.get_experiment(experiment).stimulation.name == stim.upper()]
 
     def filterGenotype(self, gen):
         if gen != '':
-            self.filtered = [experiment for experiment in self.filtered if self.get_experiment(experiment).genotype == gen]
+            self.filtered = [experiment for experiment in self.filtered if self.get_experiment(experiment).genotype.name == gen.upper()]
 
     def filterAll(self, selections):
         self.clear_filters()
@@ -446,6 +452,7 @@ class FPIExperiment:
         self._avg_df = None
         self._mean_baseline = None
         self._peak_latency = None
+        self._peak_value = None
         self._anat = None
 
 
@@ -477,16 +484,64 @@ class FPIExperiment:
         return self._mean_baseline
 
     @property
+    def std_baseline(self, n_baseline= 30):
+        return np.std(self.response[:n_baseline])
+
+    @property
     def peak_latency(self):
+        '''
+        apo nomralized stack
+        peak latency = peak value meta to onset latency (4 frames sth seira)
+        boxplot
+        button
+        csv
+        '''
         if self._peak_latency is None:
             data = self.response
             if data is None:
                 return
-            response_region = data[:]
+            onset = self.onset_latency
+            response_region = data[onset:]
             peak = np.argmax(response_region)
             peak_value = np.max(response_region)
             self._peak_latency = (peak, peak_value)
         return self._peak_latency
+
+    @property
+    def onset_latency(self):
+        '''
+        apo normalized stack
+        onset latency = 3 * mean_baseline
+        4 frames sth seira
+        boxplot
+        export se csv
+        sun button
+        '''
+        limit = 3 * self.std_baseline
+
+        # we check values after the end of the baseline
+        valid_response = self.response[31: -1]
+        latency_indices = np.where(valid_response >= limit)
+        con = consecutive(latency_indices)
+        try:
+            res = next(con)[0]
+        except Exception as e:
+            res = latency_indices[0][0]
+        return res
+
+
+
+
+
+    '''
+    response area etoimo apo normalized stack
+    boxplot
+    csv 
+    button
+    '''
+
+
+
 
     def response_latency(self, ratio=0.3, n_baseline=30):
         data = self.response
