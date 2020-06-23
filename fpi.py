@@ -11,7 +11,7 @@ from pubsub import pub
 from pub_messages import ANALYSIS_UPDATE
 from intrinsic.imaging import check_datastore
 from app_config import AnimalLine, Treatment, Stimulation, Genotype
-from itertools import takewhile
+from itertools import takewhile, chain
 
 
 '''
@@ -501,6 +501,7 @@ class FPIExperiment:
             if data is None:
                 return
             onset = self.onset_latency
+            print(f'Onset.....{onset}')
             response_region = data[onset:]
             peak = np.argmax(response_region)
             peak_value = np.max(response_region)
@@ -520,24 +521,17 @@ class FPIExperiment:
         limit = 3 * self.std_baseline
 
         # we check values after the end of the baseline
-        valid_response = self.response[31: -1]
+        valid_response = self.response[self.no_baseline + 1: -1]
         latency_indices = np.where(valid_response >= limit)
-        con = consecutive(latency_indices)
-        try:
-            res = next(con)[0]
-        except Exception as e:
-            res = latency_indices[0]
-            if type(res) == list:
-                res = latency_indices[0][0]
+        res = latency_indices[0][0] + self.no_baseline
         return res
-
 
 
     def response_latency(self, ratio=0.3, n_baseline=30):
         data = self.response
         if data is None:
             return
-        latency = [(index, val) for index, val in enumerate(data[31:], self.no_baseline + 1) if
+        latency = [(index, val) for index, val in enumerate(data[self.no_baseline + 1:], self.no_baseline + 1) if
                    val > abs(1 + ratio) * self.mean_baseline]
         return latency
 

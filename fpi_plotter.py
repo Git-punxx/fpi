@@ -2,6 +2,7 @@ from app_config import config_manager, Genotype, AnimalLine, Stimulation, Treatm
 import fpi_util
 from numpy import arange
 from collections import defaultdict
+from itertools import cycle
 from pandas import DataFrame
 
 from gui.dialogs import DataPathDialog
@@ -14,6 +15,7 @@ plotter = FPIPlotter(ax, experiment_data)
 plotter.plot(plot_type)
 '''
 plot_registry = {}
+boxoplot_colors = cycle(['cyan', 'khakki'])
 
 def register(plot_type):
     def deco(func):

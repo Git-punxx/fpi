@@ -46,6 +46,7 @@ def clear_data(genotype_dict):
             continue
         else:
             for key, item in filter.copy().items():
+                print(f'Item {item}')
                 if not any(item):
                     del genotype_dict[gen_key][key]
 
