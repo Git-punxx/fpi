@@ -531,18 +531,6 @@ class FPIExperiment:
 
 
 
-
-
-    '''
-    response area etoimo apo normalized stack
-    boxplot
-    csv 
-    button
-    '''
-
-
-
-
     def response_latency(self, ratio=0.3, n_baseline=30):
         data = self.response
         if data is None:
@@ -580,35 +568,6 @@ class FPIExperiment:
         if self._anat is None:
             self._anat = self._parser.anat()
         return self._anat
-    # def plot(self, ax, type):
-    #     if type == 'response':
-    #         self.plot_response(ax)
-    #     elif type == 'latency':
-    #         self.plot_response_latency(ax)
-    #     elif type == 'timecourse':
-    #         self.plot_timecourse(ax)
-    #     else:
-    #         raise ValueError('Unsupported plot type')
-
-    # def plot_response(self, ax):
-    #     data = self._parser.response()
-    #     x = range(len(data))
-    #     ax.set_title(f'Response: {self.name}')
-    #     ax.plot(x, data)
-    #
-    # def plot_response_latency(self, ax):
-    #     data = self.response_latency()
-    #     if data is None:
-    #         return
-    #     x = range(len(data))
-    #     ax.plot(x, data, 'k-')
-    #
-    # def plot_timecourse(self, ax):
-    #     data = self.timecourse
-    #     if data is None:
-    #         return
-    #     x = range(len(data))
-    #     ax.plot(x, data, 'k-')
 
     def __str__(self):
         return f'{self.name}: {self.animalline.name} {self.stimulation.name} {self.treatment.name} {self.genotype.name}'
