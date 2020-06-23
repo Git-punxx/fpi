@@ -62,10 +62,13 @@ class FPIPlotter:
     @register('response')
     def plot_response(self, experiments, choice):
         ax = self.figure.subplots()
-        ax.grid(True, alpha = 0.5)
-        values = [exp.response[:-1] for exp in experiments]
-        for d in values:
-            ax.plot(d)
+        ax.grid(True, alpha = 0.1)
+        ax.set_xlabel('Frame')
+        ax.set_ylabel('Response')
+        values = [(exp.response[2:-1], exp.name) for exp in experiments]
+        for data, name in values:
+            ax.plot(range(3, 81), data, label = name)
+        ax.legend()
 
     @register('baseline')
     def plot_baseline(self, experiments, choice):

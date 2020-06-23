@@ -399,9 +399,8 @@ class ExperimentManager:
 
 
     def filterSelected(self, selected):
-        self.filtered = list(self._experiments.keys())
-        self.filtered = [filtered for filtered in self.filtered if filtered in selected]
-        return self.to_tuple()
+        selected = [filtered for filtered in self.filtered if filtered in selected]
+        return [self.get_experiment(s).to_tuple() for s in selected]
 
     def clear_filters(self):
         self.filtered = list(self._experiments.keys())
@@ -413,6 +412,12 @@ class ExperimentManager:
             live = self.get_experiment(exp)
             res.append(fpi_meta._make((live.name, live.animalline.name, live.stimulation.name, live.treatment.name, live.genotype.name)))
         return res
+
+    def experiment_list(self):
+        for exp in self:
+            exp = self.get_experiment(exp)
+            yield f'{exp.name}, {exp.animalline.name}, {exp.stimulation.name}, {exp.treatment.name}, {exp.genotype.name}, {exp.response_area}, {exp.peak_latency[1]}, {exp.onset_latency}'
+
 
     def __getitem__(self, name):
         return self._experiments[name]
@@ -501,7 +506,6 @@ class FPIExperiment:
             if data is None:
                 return
             onset = self.onset_latency
-            print(f'Onset.....{onset}')
             response_region = data[onset:]
             peak = np.argmax(response_region)
             peak_value = np.max(response_region)
@@ -523,6 +527,8 @@ class FPIExperiment:
         # we check values after the end of the baseline
         valid_response = self.response[self.no_baseline + 1: -1]
         latency_indices = np.where(valid_response >= limit)
+        if len(latency_indices[0]) == 0:
+            return
         res = latency_indices[0][0] + self.no_baseline
         return res
 
@@ -584,11 +590,20 @@ class FPIExperiment:
             result.append('No all_pixelsj')
         return result
 
+    def to_tuple(self):
+        return fpi_meta._make((self.name, self.animalline.name, self.stimulation.name, self.treatment.name, self.genotype.name))
+
+def write_csv(fname, manager):
+    headers = 'name, animal_line, stimulation, treatment, genotype, response_area, peak_latency, onset_latency\n'
+    with open(fname, 'w') as f:
+        f.write(headers)
+        for exp in manager.experiment_list():
+            f.write(exp)
+            f.write('\n')
 
 if __name__ == '__main__':
     root = app_config.base_dir
     manager = ExperimentManager(root)
     manager.filterLine('PTEN')
     manager.clear_filters()
-    for item in manager.to_tuple():
-        print(item)
+    write_csv('test.csv', manager)
