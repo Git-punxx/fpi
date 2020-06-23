@@ -526,10 +526,9 @@ class FPIExperiment:
         try:
             res = next(con)[0]
         except Exception as e:
-            try:
+            res = latency_indices[0]
+            if type(res) == list:
                 res = latency_indices[0][0]
-            except Exception as e:
-                res = latency_indices[0]
         return res
 
 
