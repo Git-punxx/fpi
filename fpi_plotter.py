@@ -39,6 +39,24 @@ class FPIPlotter:
         plot_registry[plot_type](self, self.experiments, choice)
 
 
+    def _plot_dict(self, genotype_dict):
+        no_subplots = len(genotype_dict.keys())
+        print(f'Creating {no_subplots} subplots')
+        axes = self.figure.subplots(1, len(genotype_dict.keys()), sharey = True)
+        if no_subplots > 1:
+            for ax, gen in zip(axes, genotype_dict.keys()):
+                if len(genotype_dict[gen].values()) == 0:
+                    continue
+                ax.boxplot(genotype_dict[gen].values(), labels = [gen.name for gen in genotype_dict[gen].keys()], patch_artist = True)
+                ax.set_xlabel(gen.name)
+                ax.grid(True, alpha = 0.1)
+        else:
+            for gen in genotype_dict.keys():
+                axes.boxplot(genotype_dict[gen].values(), labels=[gen.name for gen in genotype_dict[gen].keys()],
+                             patch_artist=True)
+                axes.set_xlabel(gen.name)
+                axes.grid(True, alpha=0.1)
+
     @register('response')
     def plot_response(self, experiments, choice):
         ax = self.figure.subplots()
@@ -68,15 +86,8 @@ class FPIPlotter:
 
         fpi_util.clear_data(genotype_dict)
         # Compute the positions of the boxplots
-        axes = self.figure.subplots(1, len(genotype_dict.keys()), sharey = True)
-
-        for ax, gen in zip(axes, genotype_dict.keys()):
-            if len(genotype_dict[gen].values()) == 0:
-                continue
-            ax.boxplot(genotype_dict[gen].values(), labels = [gen.name for gen in genotype_dict[gen].keys()], patch_artist = True)
-            ax.set_xlabel(gen.name)
-            ax.grid(True, alpha = 0.5)
-        DataFrame(genotype_dict).to_csv('../csv/baseline.csv')
+        self._plot_dict(genotype_dict)
+        [DataFrame(item).to_csv(f'../csv/{key}_baseline.csv') for key, item in genotype_dict.items()]
 
 
 
@@ -94,15 +105,8 @@ class FPIPlotter:
                 genotype_dict[genotype][base_filter] = [exp.peak_latency[1] for exp in exp_list if exp.peak_latency is not None]
 
         fpi_util.clear_data(genotype_dict)
-        axes = self.figure.subplots(1, len(genotype_dict.keys()), sharey = True)
-
-        for ax, gen in zip(axes, genotype_dict.keys()):
-            if len(genotype_dict[gen].values()) == 0:
-                continue
-            ax.boxplot(genotype_dict[gen].values(), labels = [gen.name for gen in genotype_dict[gen].keys()], patch_artist = True)
-            ax.set_xlabel(gen.name)
-            ax.grid(True, alpha = 0.5)
-        DataFrame(genotype_dict).to_csv('../csv/peak_latency.csv')
+        self._plot_dict(genotype_dict)
+        [DataFrame(item).to_csv(f'../csv/{key}_peak_latency.csv') for key, item in genotype_dict.items()]
 
 
 
@@ -120,15 +124,8 @@ class FPIPlotter:
 
         fpi_util.clear_data(genotype_dict)
         # Compute the positions of the boxplots
-        axes = self.figure.subplots(1, len(genotype_dict.keys()), sharey = True)
-
-        for ax, gen in zip(axes, genotype_dict.keys()):
-            if len(genotype_dict[gen].values()) == 0:
-                continue
-            ax.boxplot(genotype_dict[gen].values(), labels = [gen.name for gen in genotype_dict[gen].keys()], patch_artist = True)
-            ax.set_xlabel(gen.name)
-            ax.grid(True, alpha = 0.5)
-        DataFrame(genotype_dict).to_csv('../csv/onset_latency.csv')
+        self._plot_dict(genotype_dict)
+        [DataFrame(item).to_csv(f'../csv/{key}_onset_latency.csv') for key, item in genotype_dict.items()]
 
     @register('peak_value')
     def plot_peak_value(self, experiments, choice):
@@ -150,21 +147,8 @@ class FPIPlotter:
                 genotype_dict[genotype][base_filter] = [exp.peak_latency[0] for exp in exp_list if exp.peak_latency is not None]
         print(f'Before clearing: {genotype_dict}')
         fpi_util.clear_data(genotype_dict)
-        print(f'Resulted loaded dictionary: {genotype_dict}')
-
-        # Compute the positions of the boxplots
-        print(f'We will need {len(genotype_dict.keys())} subplots')
-        print(f'Dictionary keys: {list(genotype_dict.keys())}')
-        # Compute the positions of the boxplots
-        axes = self.figure.subplots(1, len(genotype_dict.keys()), sharey = True)
-        print(axes)
-        for ax, gen in zip(axes, genotype_dict.keys()):
-            if len(genotype_dict[gen].values()) == 0:
-                continue
-            ax.boxplot(genotype_dict[gen].values(), labels = [gen.name for gen in genotype_dict[gen].keys()], patch_artist = True)
-            ax.set_xlabel(gen.name)
-            ax.grid(True, alpha = 0.5)
-        DataFrame(genotype_dict).to_csv('../csv/peak_value.csv')
+        self._plot_dict(genotype_dict)
+        [DataFrame(item).to_csv(f'../csv/{key}_peak_value.csv') for key, item in genotype_dict.items()]
 
     @register('anat')
     def plot_anat(self, experiment, choice):
@@ -185,12 +169,5 @@ class FPIPlotter:
                 genotype_dict[genotype][base_filter] = [exp.response_area for exp in exp_list if exp.response_area is not None]
         fpi_util.clear_data(genotype_dict)
         # Compute the positions of the boxplots
-        axes = self.figure.subplots(1, len(genotype_dict.keys()), sharey = True)
-
-        for ax, gen in zip(axes, genotype_dict.keys()):
-            if len(genotype_dict[gen].values()) == 0:
-                continue
-            ax.boxplot(genotype_dict[gen].values(), labels = [gen.name for gen in genotype_dict[gen].keys()], patch_artist = True)
-            ax.set_xlabel(gen.name)
-            ax.grid(True, alpha = 0.5)
-        DataFrame(genotype_dict).to_csv('../csv/area.csv')
+        self._plot_dict(genotype_dict)
+        [DataFrame(item).to_csv(f'../csv/{key}_area.csv') for key, item in genotype_dict.items()]
