@@ -159,6 +159,9 @@ class MainFrame(wx.Frame):
             if not selected:
                 return
             exp = self.gatherer.filterSelected(selected)
+            if len(exp) <= 1:
+                ErrorDialog("You must select more than one experiment for boxplots")
+                return
             self.plotter.add(exp, 'Onset_latency', choice)
 
     def OnPeakLatency(self, event):
@@ -168,6 +171,9 @@ class MainFrame(wx.Frame):
             if not selected:
                 return
             exp = self.gatherer.filterSelected(selected)
+            if len(exp) <= 1:
+                ErrorDialog("You must select more than one experiment for boxplots")
+                return
             self.plotter.add(exp, 'Peak_Latency', choice)
 
     def OnPeakValue(self, event):
@@ -177,6 +183,9 @@ class MainFrame(wx.Frame):
             if not selected:
                 return
             exp = self.gatherer.filterSelected(selected)
+            if len(exp) <= 1:
+                ErrorDialog("You must select more than one experiment for boxplots")
+                return
             self.plotter.add(exp, 'Peak_Value', choice)
 
     def OnAnat(self, event):
@@ -189,12 +198,16 @@ class MainFrame(wx.Frame):
 
 
     def OnArea(self, event):
-        with wx.BusyInfo('Plotting pixel area'):
+        with wx.BusyInfo('Plotting area'):
+            choice = self.boxplot_choices.GetSelection()
             selected = self.exp_list.GetSelection()
             if not selected:
                 return
             exp = self.gatherer.filterSelected(selected)
-            self.plotter.add(exp, 'area')
+            if len(exp) <= 1:
+                ErrorDialog("You must select more than one experiment for boxplots")
+                return
+            self.plotter.add(exp, 'area', choice)
 
     def OnClear(self, args=None):
         res = self.gatherer.clear_filters()
@@ -404,6 +417,7 @@ class Plot(wx.Panel):
         gatherer = self.GetTopLevelParent().gatherer
         experiment_data = [gatherer.get_experiment(exp.name) for exp in experiment_list]
         plotter = FPIPlotter(self.figure, experiment_data)
+        print(f'Choices for plot: {choice}')
         plotter.plot(plot_type, choice)
 
         self.canvas.draw()
