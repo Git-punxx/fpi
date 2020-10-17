@@ -211,11 +211,22 @@ class HD5Parser(FPIParser):
     def parser_type(self):
         return 'hdf5'
 
-    def response(self):
+    def get_range(self):
         with h5py.File(self._path, 'r') as datastore:
             # here we need to see if we will use 'response' or 'resp_map'
             try:
-                return datastore['df']['avg_df'][()]
+                xs, xe, ys, ye = list(datastore['roi']['roi_range'])
+                return (slice(xs, xe), slice(ys, ye))
+            except Exception as e:
+                print(e)
+                return (slice(None), slice(None))
+
+    def response(self):
+        with h5py.File(self._path, 'r') as datastore:
+            # here we need to see if we will use 'response' or 'resp_map'
+            x_slice, y_slice = self.range()
+            try:
+                return datastore['df']['avg_df'][x_slice, y_slice]
             except Exception as e:
                 print(e)
                 return None
@@ -227,9 +238,10 @@ class HD5Parser(FPIParser):
             # normalize_stack(self.stack, self.n_baseline
             # self.stack is returned on avg_stack()
             # which is df['stack'] in the datastore
+            x_slice, y_slice = self.range()
             try:
                 avg_stack = datastore['df']['stack']
-                df = normalize_stack(avg_stack)
+                df = normalize_stack(avg_stack)[x_slice, y_slice]
                 # Compute the mean
                 df_avg = df.std((0, 1))
                 df_std = df.mean((0, 1))
@@ -241,8 +253,9 @@ class HD5Parser(FPIParser):
 
     def all_pixel(self):
         with h5py.File(self._path, 'r') as datastore:
+            x_slice, y_slice = self.range()
             try:
-                area = datastore['df']['area'][()]
+                area = datastore['df']['area'][x_slice, y_slice]
                 return area
             except Exception as e:
                 print(e)
@@ -250,8 +263,9 @@ class HD5Parser(FPIParser):
 
     def max_df(self):
         with h5py.File(self._path, 'r') as datastore:
+            x_slice, y_slice = self.range()
             try:
-                data = datastore['df']['max_df'][()]
+                data = datastore['df']['max_df'][x_slice, y_slice]
                 return data
             except Exception as e:
                 print(e)
