@@ -1,15 +1,21 @@
-from app_config import config_manager
+from app_config import config_manager, Genotype, AnimalLine, Stimulation, Treatment
 import fpi_util
 from numpy import arange
+from collections import defaultdict
+from itertools import cycle
+from pandas import DataFrame
+
 from gui.dialogs import DataPathDialog
 import pickle
 import os
+from pandas import DataFrame
 '''
 experiment_data = [gatherer.get_experiment(exp.name) for exp in experiment_list]
 plotter = FPIPlotter(ax, experiment_data)
 plotter.plot(plot_type)
 '''
 plot_registry = {}
+boxoplot_colors = cycle(['cyan', 'khakki'])
 
 def register(plot_type):
     def deco(func):
@@ -21,8 +27,8 @@ def register(plot_type):
 
 
 class FPIPlotter:
-    def __init__(self, axes, experiments):
-        self.axes = axes
+    def __init__(self, figure, experiments):
+        self.figure = figure
         self.experiments = experiments
 
 
@@ -35,88 +41,138 @@ class FPIPlotter:
         plot_registry[plot_type](self, self.experiments, choice)
 
 
+    def _plot_dict(self, genotype_dict):
+        no_subplots = len(genotype_dict.keys())
+        print(f'Creating {no_subplots} subplots')
+        axes = self.figure.subplots(1, len(genotype_dict.keys()), sharey = True)
+        if no_subplots > 1:
+            for ax, gen in zip(axes, genotype_dict.keys()):
+                if len(genotype_dict[gen].values()) == 0:
+                    continue
+                ax.boxplot(genotype_dict[gen].values(), labels = [gen.name for gen in genotype_dict[gen].keys()], patch_artist = True)
+                ax.set_xlabel(gen.name)
+                ax.grid(True, alpha = 0.1)
+        else:
+            for gen in genotype_dict.keys():
+                axes.boxplot(genotype_dict[gen].values(), labels=[gen.name for gen in genotype_dict[gen].keys()],
+                             patch_artist=True)
+                axes.set_xlabel(gen.name)
+                axes.grid(True, alpha=0.1)
+
     @register('response')
     def plot_response(self, experiments, choice):
-        values = [exp.response for exp in experiments]
-        for d in values:
-            self.axes.plot(d)
+        ax = self.figure.subplots()
+        ax.grid(True, alpha = 0.1)
+        ax.set_xlabel('Frame')
+        ax.set_ylabel('Response')
+        values = [(exp.response[2:-1], exp.name) for exp in experiments]
+        for data, name in values:
+            ax.plot(range(3, 81), data, label = name)
+        ax.legend()
 
     @register('baseline')
     def plot_baseline(self, experiments, choice):
-        self.axes.set_axisbelow(True)
-        self.axes.set_title('Mean Baseline')
-        self.axes.set_xlabel('Distribution')
-        self.axes.set_ylabel('.... ()')
+        """
 
+        :param experiments: FPIExperiment object list
+        :param choice: A string returned from the util.BoxPlotChoices panel
+        :return:
+        """
         # Get the options for the current category
-        genotypes = config_manager.genotypes
-        data = fpi_util.categorize(experiments, choice)
+        filter_dict = fpi_util.categorize(experiments, choice)
 
-        # Get the actual data from the fpiexperiment
-        for base_filter, genotypes in data.items():
+        # Get the actual data from the fpiexperiment and assign them to the genotype categories
+        genotype_dict = defaultdict(dict)
+        genotype_dict.update((k, {}) for k in [item for item in Genotype])
+        for base_filter, genotypes in filter_dict.items():
             for genotype, exp_list in genotypes.items():
-                data[base_filter][genotype] = [exp.mean_baseline for exp in exp_list]
+                genotype_dict[genotype][base_filter] = []
+                genotype_dict[genotype][base_filter] = [exp.mean_baseline for exp in exp_list if exp.mean_baseline is not None]
 
+        fpi_util.clear_data(genotype_dict)
         # Compute the positions of the boxplots
-        no_genotypes = len(genotypes)
-        no_filters = len(data.keys())
-        filter_positions = {val.lower(): key for key, val in dict(enumerate(data.keys(), 1)).items()}
-        genotype_positions = {val.lower(): key for key, val in dict(enumerate(genotypes, 1)).items()}
+        self._plot_dict(genotype_dict)
+        [DataFrame(item).to_csv(f'../csv/{key}_baseline.csv') for key, item in genotype_dict.items()]
 
-        positions = arange(no_filters * no_genotypes).reshape(no_genotypes, no_filters).T
-        colors = ['pink', 'lightblue', 'lightgreen', 'khaki']
-        for (filter, genotypes_list), position in zip(data.items(), positions):
-            for gen in genotypes_list:
-                d = data[filter][gen]
-                plot = self.axes.boxplot(d, positions = [filter_positions[filter] * genotype_positions[gen] + genotype_positions[gen]], widths = 0.5, patch_artist = True)
-                plot['boxes'][0].set(facecolor= colors[filter_positions[filter]])
-
-        self.axes.set_xticklabels(genotypes)
-        self.axes.set_xticks([1, 4, 7])
 
 
 
     @register('peak_latency')
     def plot_peak_latency(self, experiments, choice):
+        filter_dict = fpi_util.categorize(experiments, choice)
+        genotype_dict = defaultdict(dict)
+        genotype_dict.update((k, {}) for k in [item for item in Genotype])
 
-        self.axes.set_axisbelow(True)
-        self.axes.set_title('Peak latency')
-        self.axes.set_xlabel('Distribution')
-        self.axes.set_ylabel('Latency ()')
-
-        # Get the options for the current category
-        genotypes = config_manager.genotypes
-        data = fpi_util.categorize(experiments, choice)
-
-        # Get the actual data from the fpiexperiment
-        for base_filter, genotypes in data.items():
+        # Loading the data into the genotype dict
+        for base_filter, genotypes in filter_dict.items():
             for genotype, exp_list in genotypes.items():
-                data[base_filter][genotype] = [exp.peak_latency for exp in exp_list]
+                genotype_dict[genotype][base_filter] = []
+                genotype_dict[genotype][base_filter] = [exp.peak_latency[1] for exp in exp_list if exp.peak_latency is not None]
 
+        fpi_util.clear_data(genotype_dict)
+        self._plot_dict(genotype_dict)
+        [DataFrame(item).to_csv(f'../csv/{key}_peak_latency.csv') for key, item in genotype_dict.items()]
+
+
+
+    @register('onset_latency')
+    def plot_onset_latency(self, experiments, choice):
+        filter_dict = fpi_util.categorize(experiments, choice)
+
+        # Get the actual data from the fpiexperiment and assign them to the genotype categories
+        genotype_dict = defaultdict(dict)
+        genotype_dict.update((k, {}) for k in [item for item in Genotype])
+        for base_filter, genotypes in filter_dict.items():
+            for genotype, exp_list in genotypes.items():
+                genotype_dict[genotype][base_filter] = []
+                genotype_dict[genotype][base_filter] = [30 + exp.onset_latency for exp in exp_list if exp.onset_latency is not None]
+
+        fpi_util.clear_data(genotype_dict)
         # Compute the positions of the boxplots
-        no_genotypes = len(genotypes)
-        no_filters = len(data.keys())
+        self._plot_dict(genotype_dict)
+        [DataFrame(item).to_csv(f'../csv/{key}_onset_latency.csv') for key, item in genotype_dict.items()]
 
-        positions = arange(no_filters * no_genotypes).reshape(no_genotypes, no_filters).T
-        colors = ['pink', 'lightblue', 'lightgreen']
-        for (filter, genotypes_list), position in zip(data.items(), positions):
-            gen_data = [data[filter][gen] for gen in genotypes_list]
-            plot = self.axes.boxplot(gen_data, positions = position, widths = 0.5, patch_artist = True)
-            for color, patch in enumerate(plot['boxes']):
-                patch.set(facecolor= colors[color])
+    @register('peak_value')
+    def plot_peak_value(self, experiments, choice):
+        print(f'Plotting peak latency for {experiments} using choices {choice}')
+        print('----------------------------------')
+        print(f'Filtering the experiments based on the choide {choice}')
+        filter_dict = fpi_util.categorize(experiments, choice)
+        print(f'Resulted dictionary: {filter_dict}')
 
-        self.axes.set_xticklabels(genotypes)
-        self.axes.set_xticks([1.5, 4.5, 7.5])
+        # Get the actual data from the fpiexperiment and assign them to the genotype categories
 
-    @register('response_latency')
-    def plot_response_latency(self, experiments, choice):
-        data = [exp.response_latency() for exp in experiments]
-        for item in data:
-            d = [p[1] for p in item]
-            self.axes.plot(d)
+        # Get the actual data from the fpiexperiment and assign them to the genotype categories
+        genotype_dict = defaultdict(dict)
+        genotype_dict.update((k, {}) for k in [item for item in Genotype])
+        print(f'Resulted loaded dictionary: {genotype_dict}')
+        for base_filter, genotypes in filter_dict.items():
+            for genotype, exp_list in genotypes.items():
+                genotype_dict[genotype][base_filter] = []
+                genotype_dict[genotype][base_filter] = [exp.peak_latency[0] for exp in exp_list if exp.peak_latency is not None]
+        print(f'Before clearing: {genotype_dict}')
+        fpi_util.clear_data(genotype_dict)
+        self._plot_dict(genotype_dict)
+        [DataFrame(item).to_csv(f'../csv/{key}_peak_value.csv') for key, item in genotype_dict.items()]
 
     @register('anat')
     def plot_anat(self, experiment, choice):
+        ax = self.figure.subplots()
         data = experiment[0].anat
-        self.axes.pcolor(data)
+        ax.pcolor(data)
 
+    @register('area')
+    def plot_area(self, experiments, choice):
+        filter_dict = fpi_util.categorize(experiments, choice)
+
+        # Get the actual data from the fpiexperiment and assign them to the genotype categories
+        genotype_dict = defaultdict(dict)
+        genotype_dict.update((k, {}) for k in [item for item in Genotype])
+        for base_filter, genotypes in filter_dict.items():
+            for genotype, exp_list in genotypes.items():
+                genotype_dict[genotype][base_filter] = []
+                genotype_dict[genotype][base_filter] = [exp.response_area for exp in exp_list if exp.response_area is not None]
+        fpi_util.clear_data(genotype_dict)
+        # Compute the positions of the boxplots
+        self._plot_dict(genotype_dict)
+        [DataFrame(item).to_csv(f'../csv/{key}_area.csv') for key, item in genotype_dict.items()]

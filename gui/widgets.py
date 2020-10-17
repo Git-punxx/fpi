@@ -44,19 +44,21 @@ class MainFrame(wx.Frame):
         self.boxplot_choices = BoxPlotChoices(self)
 
 
-        self.response_btn = wx.Button(self, label='Plot response')
-        self.baseline_btn = wx.Button(self, label='Plot mean baseline')
-        self.latency_button = wx.Button(self, label='Plot Response Latency')
+        self.response_btn = wx.Button(self, label='Plot Response')
+        self.peak_value_btn = wx.Button(self, label='Plot Peak Value')
+        self.latency_button = wx.Button(self, label='Plot Onset Latency')
         self.peak_button = wx.Button(self, label='Plot Peak Latency')
         self.anat_button = wx.Button(self, label='Plot Anat')
+        self.area_button = wx.Button(self, label='Plot Area')
 
 
         # Bindings
-        self.Bind(wx.EVT_BUTTON, self.OnBaseline, self.baseline_btn)
+        self.Bind(wx.EVT_BUTTON, self.OnPeakValue, self.peak_value_btn)
         self.Bind(wx.EVT_BUTTON, self.OnResponse, self.response_btn)
         self.Bind(wx.EVT_BUTTON, self.OnResponseLatency, self.latency_button)
         self.Bind(wx.EVT_BUTTON, self.OnPeakLatency, self.peak_button)
         self.Bind(wx.EVT_BUTTON, self.OnAnat, self.anat_button)
+        self.Bind(wx.EVT_BUTTON, self.OnArea, self.area_button)
 
         self.Bind(wx.EVT_MENU, self.OnMenu)
 
@@ -71,10 +73,11 @@ class MainFrame(wx.Frame):
         footer_sizer = wx.BoxSizer(wx.HORIZONTAL)
         footer_sizer.Add(self.boxplot_choices, 0)
         footer_sizer.Add(self.response_btn, 0)
-        footer_sizer.Add(self.baseline_btn, 0)
+        footer_sizer.Add(self.peak_value_btn, 0)
         footer_sizer.Add(self.latency_button)
         footer_sizer.Add(self.peak_button)
         footer_sizer.Add(self.anat_button)
+        footer_sizer.Add(self.area_button)
 
         main_sizer = wx.BoxSizer(wx.VERTICAL)
         main_sizer.Add(header_sizer, 0, wx.EXPAND)
@@ -134,29 +137,37 @@ class MainFrame(wx.Frame):
             # Get the selected items from the list ctrl
             choice = self.boxplot_choices.GetSelection()
             selected = self.exp_list.GetSelection()
+            print(selected)
             if not selected:
                 return
             # Return the experiments that correspond to the selected items
             exp = self.gatherer.filterSelected(selected)
             # Create a new tab to our notebook to hold the plots and plot them using the FPIPlotter
             self.plotter.add(exp, 'Baseline', choice)
+        self.exp_list.DeleteSelection()
 
     def OnResponse(self, event):
         with wx.BusyInfo('Plotting response'):
             selected = self.exp_list.GetSelection()
+            choice = self.boxplot_choices.GetSelection()
             if not selected:
                 return
             exp = self.gatherer.filterSelected(selected)
-            self.plotter.add(exp, 'Response')
+            self.plotter.add(exp, 'Response', choice)
+        self.exp_list.DeleteSelection()
 
     def OnResponseLatency(self, event):
-        with wx.BusyInfo('Plotting response latency'):
+        with wx.BusyInfo('Plotting OnSet latency'):
             choice = self.boxplot_choices.GetSelection()
             selected = self.exp_list.GetSelection()
             if not selected:
                 return
             exp = self.gatherer.filterSelected(selected)
-            self.plotter.add(exp, 'Response_Latency', choice)
+            if len(exp) <= 1:
+                ErrorDialog("You must select more than one experiment for boxplots")
+                return
+            self.plotter.add(exp, 'Onset_latency', choice)
+        self.exp_list.DeleteSelection()
 
     def OnPeakLatency(self, event):
         with wx.BusyInfo('Plotting peak latency'):
@@ -165,7 +176,25 @@ class MainFrame(wx.Frame):
             if not selected:
                 return
             exp = self.gatherer.filterSelected(selected)
+            if len(exp) <= 1:
+                ErrorDialog("You must select more than one experiment for boxplots")
+                return
             self.plotter.add(exp, 'Peak_Latency', choice)
+        self.exp_list.DeleteSelection()
+
+    def OnPeakValue(self, event):
+        with wx.BusyInfo('Plotting peak value'):
+            choice = self.boxplot_choices.GetSelection()
+            selected = self.exp_list.GetSelection()
+            if not selected:
+                return
+            exp = self.gatherer.filterSelected(selected)
+            if len(exp) <= 1:
+                ErrorDialog("You must select more than one experiment for boxplots")
+                return
+            self.plotter.add(exp, 'Peak_Value', choice)
+        self.exp_list.DeleteSelection()
+
 
     def OnAnat(self, event):
         with wx.BusyInfo('Plotting anat image'):
@@ -174,7 +203,20 @@ class MainFrame(wx.Frame):
                 return
             exp = self.gatherer.filterSelected(selected)
             self.plotter.add(exp, 'anat')
+        self.exp_list.DeleteSelection()
 
+    def OnArea(self, event):
+        with wx.BusyInfo('Plotting area'):
+            choice = self.boxplot_choices.GetSelection()
+            selected = self.exp_list.GetSelection()
+            if not selected:
+                return
+            exp = self.gatherer.filterSelected(selected)
+            if len(exp) <= 1:
+                ErrorDialog("You must select more than one experiment for boxplots")
+                return
+            self.plotter.add(exp, 'area', choice)
+        self.exp_list.DeleteSelection()
 
     def OnClear(self, args=None):
         res = self.gatherer.clear_filters()
@@ -312,11 +354,14 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         item = self.list.GetItem(event.GetIndex())
         text = item.GetText()
         self.current_selection.append(text)
+        print(self.current_selection)
 
     def OnDeselect(self, event):
         item = self.list.GetItem(event.GetIndex())
         text = item.GetText()
-        self.current_selection.remove(text)
+        if text in self.current_selection:
+            self.current_selection.remove(text)
+        print(self.current_selection)
 
     def clear(self):
         self.list.DeleteAllItems()
@@ -337,6 +382,9 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
 
     def GetSelection(self):
         return self.current_selection
+
+    def DeleteSelection(self):
+        self.current_selection = []
 
     def CreateContextMenu(self, menu):
         menu.Append(wx.ID_COPY)
@@ -381,11 +429,10 @@ class Plot(wx.Panel):
             self.canvas.draw()
 
     def plot(self, plot_type = None, experiment_list = None, choice = None):
-        ax = self.figure.gca()
-        ax.grid(True, color = 'grey', linewidth = 0.5)
         gatherer = self.GetTopLevelParent().gatherer
         experiment_data = [gatherer.get_experiment(exp.name) for exp in experiment_list]
-        plotter = FPIPlotter(ax, experiment_data)
+        plotter = FPIPlotter(self.figure, experiment_data)
+        print(f'Choices for plot: {choice}')
         plotter.plot(plot_type, choice)
 
         self.canvas.draw()
