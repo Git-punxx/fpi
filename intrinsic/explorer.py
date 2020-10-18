@@ -1,4 +1,4 @@
-from imaging import Session, Intrinsic, MOVIE_EXPORT, overlay
+from intrinsic.imaging import Session, Intrinsic, MOVIE_EXPORT, overlay
 import sys
 from PyQt5 import QtGui, QtWidgets, QtCore
 import pyqtgraph as pg
@@ -7,7 +7,7 @@ from skimage.filters import gaussian as gauss_filt
 from skimage.io import imsave
 from pathlib import Path
 from typing import Optional
-from h5_tools import *
+from intrinsic.h5_tools import *
 import logging
 from logging.handlers import RotatingFileHandler
 
