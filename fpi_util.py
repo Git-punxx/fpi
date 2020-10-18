@@ -36,6 +36,7 @@ def categorize(experiment_list, filter = AnimalLine.__name__.lower()):
     for exp in experiment_list:
         # Get the enum value of the experiment that corresponds to the applied filter. This is the same name with the FPIExperiment attribute.
         f = getattr(exp, applied_filter.__name__.lower())
+        print(f)
         filter_dict[getattr(applied_filter, f.name)][exp.genotype].append(exp)
     return filter_dict
 

@@ -652,6 +652,7 @@ def check_datastore(path):
             else:
                 return True
     except Exception as e:
+        print(e)
         print(f'{path} is not a valid datastore file')
 
 

@@ -67,7 +67,7 @@ class FPIPlotter:
         ax.set_ylabel('Response')
         values = [(exp.response[2:-1], exp.name) for exp in experiments]
         for data, name in values:
-            ax.plot(range(3, 81), data, label = name)
+            ax.plot(range(3, 81), data, label = name, linewidth = 2)
         ax.legend()
 
     @register('baseline')

@@ -211,23 +211,26 @@ class HD5Parser(FPIParser):
     def parser_type(self):
         return 'hdf5'
 
-    def get_range(self):
+    def range(self):
         with h5py.File(self._path, 'r') as datastore:
             # here we need to see if we will use 'response' or 'resp_map'
             try:
                 xs, xe, ys, ye = list(datastore['roi']['roi_range'])
                 return (slice(xs, xe), slice(ys, ye))
             except Exception as e:
+                print('Exception on range method')
                 print(e)
                 return (slice(None), slice(None))
 
     def response(self):
         with h5py.File(self._path, 'r') as datastore:
             # here we need to see if we will use 'response' or 'resp_map'
-            x_slice, y_slice = self.range()
             try:
-                return datastore['df']['avg_df'][x_slice, y_slice]
+
+                data = datastore['df']['avg_df'][()]
+                return data
             except Exception as e:
+                print('Exception in range method')
                 print(e)
                 return None
 
@@ -359,7 +362,7 @@ class ExperimentManager:
         if check_datastore(experiment_path):
             return experiment_path
         else:
-            return None
+            return experiment_path
 
     def get_experiment(self, name: str) -> object:
         """
@@ -370,13 +373,13 @@ class ExperimentManager:
         """
         experiment = self[name]
         animal_line, stimulus, treatment, genotype, filename = experiment.split(os.sep)[-5:]
-        return FPIExperiment(name=name, path=experiment, animal_line=animal_line, stimulation=stimulus,
+        return FPIExperiment(name=name, path=experiment, animalline=animal_line, stimulation=stimulus,
                              treatment=treatment, genotype=genotype)
 
     def filterLine(self, line):
         if line != '':
             self.filtered = [experiment for experiment in self.filtered if
-                             self.get_experiment(experiment).animal_line == line]
+                             self.get_experiment(experiment).animalline == line]
 
     def filterTreatment(self, treatment):
         if treatment != '':
@@ -416,7 +419,7 @@ class ExperimentManager:
         res = []
         for exp in self.filtered:
             live = self.get_experiment(exp)
-            res.append(fpi_meta._make((live.name, live.animal_line, live.stimulation, live.treatment, live.genotype)))
+            res.append(fpi_meta._make((live.name, live.animalline, live.stimulation, live.treatment, live.genotype)))
         return res
 
     def __getitem__(self, name):
@@ -437,8 +440,8 @@ class FPIExperiment:
     By providing the name of the experiment we could build the path using the config options
     '''
 
-    def __init__(self, name, path, animal_line, stimulation, treatment, genotype):
-        self.animal_line = animal_line
+    def __init__(self, name, path, animalline, stimulation, treatment, genotype):
+        self.animalline = animalline
         self.stimulation = stimulation
         self.treatment = treatment
         self.genotype = genotype
@@ -470,6 +473,7 @@ class FPIExperiment:
     def response(self):
         if self._response is None:
             self._response = self._parser.response()
+            print(self._response)
         return self._response
 
     @property

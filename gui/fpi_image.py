@@ -10,7 +10,7 @@ class DetailsPanel(wx.Dialog):
     def __init__(self, parent, name, *args, **kwargs):
         wx.Dialog.__init__(self, parent, *args, **kwargs)
 
-        self._experiment =  name
+        self._experiment = name
         self._path = self._experiment._path
         print(self._path)
         self._datastore_structure()
@@ -20,7 +20,7 @@ class DetailsPanel(wx.Dialog):
         self._file_lbl = wx.StaticText(self, label = 'Filename')
         self._file_txt = wx.StaticText(self, label = self._experiment.name)
 
-        self._data_created_lbl = wx.StaticText(self, label = 'Date Dreated')
+        self._data_created_lbl = wx.StaticText(self, label = 'Date Created')
         self._data_created_txt = wx.StaticText(self, label = f'{datetime.datetime.fromtimestamp(os.stat(self._path).st_mtime).strftime("%H:%M:%S - %D %M %Y")}')
 
         self._file_size_txt = wx.StaticText(self, label = f'{os.stat(self._path).st_size}')
