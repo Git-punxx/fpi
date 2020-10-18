@@ -1,5 +1,5 @@
 from typing import Type
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, as_completed
 import numpy as np
 import os
 import h5py
@@ -10,15 +10,13 @@ import re
 from pubsub import pub
 from pub_messages import ANALYSIS_UPDATE
 from intrinsic.imaging import check_datastore
-from app_config import AnimalLine, Treatment, Stimulation, Genotype
-from itertools import takewhile, chain
 
 
 '''
 The point here is that we design a class hirearchy that will be able to handle different types
 of files (csv, h5py) providing a united interface.
 The data files we want to analyze are categorized based on:
-1. Type of animalline (Shank, PTEN etc)
+1. Type of animal_line (Shank, PTEN etc)
 2. Type of animal? (ko, wt)
 3. Type of file (h5, csv)
 4. Type of metadata they contain (response, timecourse, all_pixels)
@@ -96,9 +94,6 @@ def normalize_stack(stack, n_baseline=30):
     norm_stack = stack - decay
 
     return norm_stack
-
-def consecutive(data, number = 4, step = 1):
-    return takewhile(lambda d: len(d) >= number, np.split(data, np.where(np.diff(data) != step)[0] + 1))
 
 
 #
@@ -216,11 +211,22 @@ class HD5Parser(FPIParser):
     def parser_type(self):
         return 'hdf5'
 
-    def response(self):
+    def get_range(self):
         with h5py.File(self._path, 'r') as datastore:
             # here we need to see if we will use 'response' or 'resp_map'
             try:
-                return datastore['df']['avg_df'][()]
+                xs, xe, ys, ye = list(datastore['roi']['roi_range'])
+                return (slice(xs, xe), slice(ys, ye))
+            except Exception as e:
+                print(e)
+                return (slice(None), slice(None))
+
+    def response(self):
+        with h5py.File(self._path, 'r') as datastore:
+            # here we need to see if we will use 'response' or 'resp_map'
+            x_slice, y_slice = self.range()
+            try:
+                return datastore['df']['avg_df'][x_slice, y_slice]
             except Exception as e:
                 print(e)
                 return None
@@ -232,9 +238,10 @@ class HD5Parser(FPIParser):
             # normalize_stack(self.stack, self.n_baseline
             # self.stack is returned on avg_stack()
             # which is df['stack'] in the datastore
+            x_slice, y_slice = self.range()
             try:
                 avg_stack = datastore['df']['stack']
-                df = normalize_stack(avg_stack)
+                df = normalize_stack(avg_stack)[x_slice, y_slice]
                 # Compute the mean
                 df_avg = df.std((0, 1))
                 df_std = df.mean((0, 1))
@@ -246,8 +253,9 @@ class HD5Parser(FPIParser):
 
     def all_pixel(self):
         with h5py.File(self._path, 'r') as datastore:
+            x_slice, y_slice = self.range()
             try:
-                area = datastore['df']['area'][()]
+                area = datastore['df']['area'][x_slice, y_slice]
                 return area
             except Exception as e:
                 print(e)
@@ -255,8 +263,9 @@ class HD5Parser(FPIParser):
 
     def max_df(self):
         with h5py.File(self._path, 'r') as datastore:
+            x_slice, y_slice = self.range()
             try:
-                data = datastore['df']['max_df'][()]
+                data = datastore['df']['max_df'][x_slice, y_slice]
                 return data
             except Exception as e:
                 print(e)
@@ -326,11 +335,10 @@ class ExperimentManager:
         for path, dirs, files in os.walk(self.root):
             file_paths = [os.path.join(path, file) for file in files if file.endswith('h5')]
             [self._exp_paths.add(file) for file in file_paths]
-        print(self._exp_paths)
 
         total = len(self._exp_paths)
         futures = []
-        with ThreadPoolExecutor() as executor:
+        with ProcessPoolExecutor() as executor:
             for exp in self._exp_paths:
                 name = extract_name(os.path.basename(exp))
                 res = executor.submit(self.check_if_valid, exp)
@@ -344,13 +352,13 @@ class ExperimentManager:
                 pub.sendMessage(ANALYSIS_UPDATE, val = val)
 
         self.filtered = list(self._experiments.keys())
+        print(f'Sending message: {self.to_tuple()}')
         pub.sendMessage(EXPERIMENT_LIST_CHANGED, choices=self.to_tuple())
 
     def check_if_valid(self, experiment_path):
         if check_datastore(experiment_path):
             return experiment_path
         else:
-            print(f'{experiment_path} is not a valid hd5 file')
             return None
 
     def get_experiment(self, name: str) -> object:
@@ -362,30 +370,27 @@ class ExperimentManager:
         """
         experiment = self[name]
         animal_line, stimulus, treatment, genotype, filename = experiment.split(os.sep)[-5:]
-        exp = FPIExperiment(name=name, path=experiment, animal_line=getattr(AnimalLine, animal_line.upper()),
-                                                         stimulation= getattr(Stimulation, stimulus.upper()),
-                                                         treatment = getattr(Treatment, treatment.upper()),
-                                                         genotype = getattr(Genotype, genotype.upper()))
-        return exp
+        return FPIExperiment(name=name, path=experiment, animal_line=animal_line, stimulation=stimulus,
+                             treatment=treatment, genotype=genotype)
 
     def filterLine(self, line):
         if line != '':
             self.filtered = [experiment for experiment in self.filtered if
-                             self.get_experiment(experiment).animalline.name == line.upper()]
+                             self.get_experiment(experiment).animal_line == line]
 
     def filterTreatment(self, treatment):
         if treatment != '':
             self.filtered = [experiment for experiment in self.filtered if
-                             self.get_experiment(experiment).treatment.name == treatment.upper()]
+                             self.get_experiment(experiment).treatment == treatment]
 
     def filterStimulus(self, stim):
         if stim != '':
             self.filtered = [experiment for experiment in self.filtered if
-                             self.get_experiment(experiment).stimulation.name == stim.upper()]
+                             self.get_experiment(experiment).stimulation == stim]
 
     def filterGenotype(self, gen):
         if gen != '':
-            self.filtered = [experiment for experiment in self.filtered if self.get_experiment(experiment).genotype.name == gen.upper()]
+            self.filtered = [experiment for experiment in self.filtered if self.get_experiment(experiment).genotype == gen]
 
     def filterAll(self, selections):
         self.clear_filters()
@@ -399,8 +404,9 @@ class ExperimentManager:
 
 
     def filterSelected(self, selected):
-        selected = [filtered for filtered in self.filtered if filtered in selected]
-        return [self.get_experiment(s).to_tuple() for s in selected]
+        self.filtered = list(self._experiments.keys())
+        self.filtered = [filtered for filtered in self.filtered if filtered in selected]
+        return self.to_tuple()
 
     def clear_filters(self):
         self.filtered = list(self._experiments.keys())
@@ -410,14 +416,8 @@ class ExperimentManager:
         res = []
         for exp in self.filtered:
             live = self.get_experiment(exp)
-            res.append(fpi_meta._make((live.name, live.animalline.name, live.stimulation.name, live.treatment.name, live.genotype.name)))
+            res.append(fpi_meta._make((live.name, live.animal_line, live.stimulation, live.treatment, live.genotype)))
         return res
-
-    def experiment_list(self):
-        for exp in self:
-            exp = self.get_experiment(exp)
-            yield f'{exp.name}, {exp.animalline.name}, {exp.stimulation.name}, {exp.treatment.name}, {exp.genotype.name}, {exp.response_area}, {exp.peak_latency[1]}, {exp.onset_latency}'
-
 
     def __getitem__(self, name):
         return self._experiments[name]
@@ -438,7 +438,7 @@ class FPIExperiment:
     '''
 
     def __init__(self, name, path, animal_line, stimulation, treatment, genotype):
-        self.animalline = animal_line
+        self.animal_line = animal_line
         self.stimulation = stimulation
         self.treatment = treatment
         self.genotype = genotype
@@ -457,7 +457,6 @@ class FPIExperiment:
         self._avg_df = None
         self._mean_baseline = None
         self._peak_latency = None
-        self._peak_value = None
         self._anat = None
 
 
@@ -489,55 +488,22 @@ class FPIExperiment:
         return self._mean_baseline
 
     @property
-    def std_baseline(self, n_baseline= 30):
-        return np.std(self.response[:n_baseline])
-
-    @property
     def peak_latency(self):
-        '''
-        apo nomralized stack
-        peak latency = peak value meta to onset latency (4 frames sth seira)
-        boxplot
-        button
-        csv
-        '''
         if self._peak_latency is None:
             data = self.response
             if data is None:
                 return
-            onset = self.onset_latency
-            response_region = data[onset:]
+            response_region = data[:]
             peak = np.argmax(response_region)
             peak_value = np.max(response_region)
             self._peak_latency = (peak, peak_value)
         return self._peak_latency
 
-    @property
-    def onset_latency(self):
-        '''
-        apo normalized stack
-        onset latency = 3 * mean_baseline
-        4 frames sth seira
-        boxplot
-        export se csv
-        sun button
-        '''
-        limit = 3 * self.std_baseline
-
-        # we check values after the end of the baseline
-        valid_response = self.response[self.no_baseline + 1: -1]
-        latency_indices = np.where(valid_response >= limit)
-        if len(latency_indices[0]) == 0:
-            return
-        res = latency_indices[0][0] + self.no_baseline
-        return res
-
-
     def response_latency(self, ratio=0.3, n_baseline=30):
         data = self.response
         if data is None:
             return
-        latency = [(index, val) for index, val in enumerate(data[self.no_baseline + 1:], self.no_baseline + 1) if
+        latency = [(index, val) for index, val in enumerate(data[31:], self.no_baseline + 1) if
                    val > abs(1 + ratio) * self.mean_baseline]
         return latency
 
@@ -566,13 +532,49 @@ class FPIExperiment:
         return self._avg_df
 
     @property
+    def max_df(self):
+        if self._max_df is None:
+            self._max_df = self._parser.max_df()
+        return self._max_df
+
+    @property
     def anat(self):
         if self._anat is None:
             self._anat = self._parser.anat()
         return self._anat
 
+    # def plot(self, ax, type):
+    #     if type == 'response':
+    #         self.plot_response(ax)
+    #     elif type == 'latency':
+    #         self.plot_response_latency(ax)
+    #     elif type == 'timecourse':
+    #         self.plot_timecourse(ax)
+    #     else:
+    #         raise ValueError('Unsupported plot type')
+
+    # def plot_response(self, ax):
+    #     data = self._parser.response()
+    #     x = range(len(data))
+    #     ax.set_title(f'Response: {self.name}')
+    #     ax.plot(x, data)
+    #
+    # def plot_response_latency(self, ax):
+    #     data = self.response_latency()
+    #     if data is None:
+    #         return
+    #     x = range(len(data))
+    #     ax.plot(x, data, 'k-')
+    #
+    # def plot_timecourse(self, ax):
+    #     data = self.timecourse
+    #     if data is None:
+    #         return
+    #     x = range(len(data))
+    #     ax.plot(x, data, 'k-')
+
     def __str__(self):
-        return f'{self.name}: {self.animalline.name} {self.stimulation.name} {self.treatment.name} {self.genotype.name}'
+        return f'{self.name}: {self.animal_line} {self.stimulation} {self.treatment} {self.genotype}'
 
     def check(self):
         result = []
@@ -590,20 +592,11 @@ class FPIExperiment:
             result.append('No all_pixelsj')
         return result
 
-    def to_tuple(self):
-        return fpi_meta._make((self.name, self.animalline.name, self.stimulation.name, self.treatment.name, self.genotype.name))
-
-def write_csv(fname, manager):
-    headers = 'name, animal_line, stimulation, treatment, genotype, response_area, peak_latency, onset_latency\n'
-    with open(fname, 'w') as f:
-        f.write(headers)
-        for exp in manager.experiment_list():
-            f.write(exp)
-            f.write('\n')
 
 if __name__ == '__main__':
     root = app_config.base_dir
     manager = ExperimentManager(root)
     manager.filterLine('PTEN')
     manager.clear_filters()
-    write_csv('test.csv', manager)
+    for item in manager.to_tuple():
+        print(item)
