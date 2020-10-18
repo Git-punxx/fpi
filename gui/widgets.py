@@ -137,7 +137,6 @@ class MainFrame(wx.Frame):
             # Get the selected items from the list ctrl
             choice = self.boxplot_choices.GetSelection()
             selected = self.exp_list.GetSelection()
-            print(selected)
             if not selected:
                 return
             # Return the experiments that correspond to the selected items
@@ -166,7 +165,7 @@ class MainFrame(wx.Frame):
             if len(exp) <= 1:
                 ErrorDialog("You must select more than one experiment for boxplots")
                 return
-            self.plotter.add(exp, 'Onset_latency', choice)
+            self.plotter.add(exp, 'Response_latency', choice)
         self.exp_list.DeleteSelection()
 
     def OnPeakLatency(self, event):
@@ -432,7 +431,6 @@ class Plot(wx.Panel):
         gatherer = self.GetTopLevelParent().gatherer
         experiment_data = [gatherer.get_experiment(exp.name) for exp in experiment_list]
         plotter = FPIPlotter(self.figure, experiment_data)
-        print(f'Choices for plot: {choice}')
         plotter.plot(plot_type, choice)
 
         self.canvas.draw()

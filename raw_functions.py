@@ -1,4 +1,4 @@
-
+import numpy as np
 def parse_responses(fname):
     y = []
     with open(fname) as f:

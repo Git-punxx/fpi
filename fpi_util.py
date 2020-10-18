@@ -11,7 +11,6 @@ def categorize(experiment_list, filter = AnimalLine.__name__.lower()):
     :param choice:
     :return:
     """
-    print(f'categorizing abased on {filter}')
     if filter == AnimalLine.__name__.lower() or filter == '':
         # get the animal filter enum from the configuration
         applied_filter = AnimalLine
@@ -20,7 +19,6 @@ def categorize(experiment_list, filter = AnimalLine.__name__.lower()):
     elif filter == Treatment.__name__.lower():
         applied_filter = Treatment
     else:
-        print(filter)
         raise ValueError(f'Unknown filter {filter}.')
 
     # build a dictionary using the animal filter as keys
@@ -36,8 +34,7 @@ def categorize(experiment_list, filter = AnimalLine.__name__.lower()):
     for exp in experiment_list:
         # Get the enum value of the experiment that corresponds to the applied filter. This is the same name with the FPIExperiment attribute.
         f = getattr(exp, applied_filter.__name__.lower())
-        print(f)
-        filter_dict[getattr(applied_filter, f.name)][exp.genotype].append(exp)
+        filter_dict[getattr(applied_filter, f)][getattr(Genotype, exp.genotype)].append(exp)
     return filter_dict
 
 def clear_data(genotype_dict):
@@ -47,7 +44,6 @@ def clear_data(genotype_dict):
             continue
         else:
             for key, item in filter.copy().items():
-                print(f'Item {item}')
                 if not any(item):
                     del genotype_dict[gen_key][key]
 

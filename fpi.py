@@ -9,7 +9,6 @@ from app_config import config_manager as app_config
 import re
 from pubsub import pub
 from pub_messages import ANALYSIS_UPDATE
-from intrinsic.imaging import check_datastore
 
 
 '''
@@ -216,6 +215,7 @@ class HD5Parser(FPIParser):
             # here we need to see if we will use 'response' or 'resp_map'
             try:
                 xs, xe, ys, ye = list(datastore['roi']['roi_range'])
+                print('Range: ', xs, xe, ys, ye)
                 return (slice(xs, xe), slice(ys, ye))
             except Exception as e:
                 print('Exception on range method')
@@ -226,11 +226,15 @@ class HD5Parser(FPIParser):
         with h5py.File(self._path, 'r') as datastore:
             # here we need to see if we will use 'response' or 'resp_map'
             try:
+                x_slice, y_slice = self.range()
+
+                # get the normalized stack
+                stack = datastore['df']['stack'][x_slice, y_slice]
 
                 data = datastore['df']['avg_df'][()]
                 return data
             except Exception as e:
-                print('Exception in range method')
+                print('Exception in response method')
                 print(e)
                 return None
 
@@ -261,16 +265,17 @@ class HD5Parser(FPIParser):
                 area = datastore['df']['area'][x_slice, y_slice]
                 return area
             except Exception as e:
+                print('Exception in all_pixel method')
                 print(e)
                 return
 
     def max_df(self):
         with h5py.File(self._path, 'r') as datastore:
-            x_slice, y_slice = self.range()
             try:
-                data = datastore['df']['max_df'][x_slice, y_slice]
+                data = datastore['df']['max_df']
                 return data
             except Exception as e:
+                print('Exception on max_df method')
                 print(e)
                 return None
 
@@ -281,15 +286,17 @@ class HD5Parser(FPIParser):
                 avg_df = datastore['df']['avg_df'][()]
                 return avg_df
             except Exception as e:
+                print('Exception on avg_df method')
                 print(e)
                 return None
 
     def no_baseline(self):
         with h5py.File(self._path, 'r') as datastore:
             try:
-                no_baseline = datastore['n_baseline'][()]
+                no_baseline = datastore['n_baseline']
                 return no_baseline
             except Exception as e:
+                print('Exception on no_baseline method')
                 print(e)
                 return None
 
@@ -299,15 +306,18 @@ class HD5Parser(FPIParser):
                 no_trials = len(list(datastore['trials'].keys()))
                 return no_trials
             except Exception as e:
+                print('Exception on no_trials method')
                 print(e)
                 return None
 
     def anat(self):
         with h5py.File(self._path, 'r') as datastore:
+            x_slice, y_slice = self.range()
             try:
-                anat = datastore['anat'][()]
+                anat = datastore['anat'][x_slice, y_slice]
                 return anat
             except Exception as e:
+                print('Exception on anat method')
                 print(e)
                 return None
 
@@ -359,10 +369,7 @@ class ExperimentManager:
         pub.sendMessage(EXPERIMENT_LIST_CHANGED, choices=self.to_tuple())
 
     def check_if_valid(self, experiment_path):
-        if check_datastore(experiment_path):
-            return experiment_path
-        else:
-            return experiment_path
+        return experiment_path
 
     def get_experiment(self, name: str) -> object:
         """
@@ -473,7 +480,6 @@ class FPIExperiment:
     def response(self):
         if self._response is None:
             self._response = self._parser.response()
-            print(self._response)
         return self._response
 
     @property
@@ -503,12 +509,14 @@ class FPIExperiment:
             self._peak_latency = (peak, peak_value)
         return self._peak_latency
 
+    @property
     def response_latency(self, ratio=0.3, n_baseline=30):
         data = self.response
+        print(f'Respnse threshold: {abs((1 + ratio) * self.mean_baseline)}')
         if data is None:
             return
-        latency = [(index, val) for index, val in enumerate(data[31:], self.no_baseline + 1) if
-                   val > abs(1 + ratio) * self.mean_baseline]
+        latency = [(index, val) for index, val in enumerate(data[31:], n_baseline + 1) if
+                   val > abs((1 + ratio) * self.mean_baseline)]
         return latency
 
     @property
@@ -535,11 +543,6 @@ class FPIExperiment:
             self._avg_df = self._parser.avg_df()
         return self._avg_df
 
-    @property
-    def max_df(self):
-        if self._max_df is None:
-            self._max_df = self._parser.max_df()
-        return self._max_df
 
     @property
     def anat(self):

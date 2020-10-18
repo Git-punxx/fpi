@@ -2,12 +2,17 @@ import wx
 from gui.dialogs import *
 from app_config import config_manager as app_config
 
+
+
+# Create a bunch of Id's to use
 ID_CHECK_FOLDERS = wx.NewId()
 ID_CREATE_FOLDERS = wx.NewId()
 ID_CONFIG_RESPONSE_PLOT = wx.NewId()
 ID_SET_DATABASE_DIR = wx.NewId()
 
 
+# Event ids
+ID_PLOT_MEAN_BASELINE = wx.NewId()
 ID_PLOT_MEAN_BASELINE = wx.NewId()
 
 # A dict that associates wx.Ids with functions
@@ -84,9 +89,6 @@ def SetDataPath(parent):
         # here we should check if the directory contains the proper data structure
         # if not we should offer to create it
         app_config.base_dir = path
-
-
-
     else:
         ErrorDialog('Could not set requested path')
 
