@@ -262,7 +262,7 @@ class HD5Parser(FPIParser):
         with h5py.File(self._path, 'r') as datastore:
             x_slice, y_slice = self.range()
             try:
-                area = datastore['df']['area'][x_slice, y_slice]
+                area = datastore['df']['area']
                 return area
             except Exception as e:
                 print('Exception in all_pixel method')

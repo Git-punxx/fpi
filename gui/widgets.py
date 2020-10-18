@@ -63,12 +63,12 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnMenu)
 
         # Layout
-        header_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        header_sizer = wx.BoxSizer(wx.VERTICAL)
         header_sizer.Add(self.filter, 0, wx.EXPAND | wx.ALL, 2)
+        header_sizer.Add(self.exp_list, 1, wx.EXPAND | wx.ALL, 2)
 
-        plot_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        plot_sizer.Add(self.exp_list, 0, wx.EXPAND)
-        plot_sizer.Add(self.plotter, 1, wx.EXPAND)
+        plot_sizer = wx.BoxSizer(wx.VERTICAL)
+        plot_sizer.Add(self.plotter, 1, wx.EXPAND | wx.ALL, 2)
 
         footer_sizer = wx.BoxSizer(wx.HORIZONTAL)
         footer_sizer.Add(self.boxplot_choices, 0)
@@ -79,10 +79,13 @@ class MainFrame(wx.Frame):
         footer_sizer.Add(self.anat_button)
         footer_sizer.Add(self.area_button)
 
+        exp_sizer = wx.BoxSizer(wx.SB_HORIZONTAL)
+        exp_sizer.Add(header_sizer, 0, wx.EXPAND)
+        exp_sizer.Add(plot_sizer, 1, wx.EXPAND)
+
         main_sizer = wx.BoxSizer(wx.VERTICAL)
-        main_sizer.Add(header_sizer, 0, wx.EXPAND)
-        main_sizer.Add(plot_sizer, 1, wx.EXPAND)
-        main_sizer.Add(footer_sizer, 0, wx.EXPAND)
+        main_sizer.Add(exp_sizer, 1, wx.EXPAND | wx.ALL, 5)
+        main_sizer.Add(footer_sizer, 0, wx.EXPAND | wx.ALL, 5)
         self.SetSizer(main_sizer)
         self.Fit()
 
