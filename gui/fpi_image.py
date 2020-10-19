@@ -12,44 +12,44 @@ class DetailsPanel(wx.Dialog):
 
         self._experiment = experiment
         self._path = self._experiment._path
-        self.details_panels= wx.Panel(self)
+        self.details_panel= wx.Panel(self, style = wx.BORDER_RAISED)
 
-        self._file_lbl = wx.StaticText(self, label = 'Filename', style = wx.ALIGN_RIGHT)
-        self._file_txt = wx.StaticText(self, label = self._experiment.name)
+        self._file_lbl = wx.StaticText(self.details_panel, label = 'Filename', style = wx.ALIGN_RIGHT)
+        self._file_txt = wx.StaticText(self.details_panel, label = self._experiment.name)
 
-        self._data_created_lbl = wx.StaticText(self, label = 'Date Created')
-        self._data_created_txt = wx.StaticText(self, label = f'{datetime.datetime.fromtimestamp(os.stat(self._path).st_mtime).strftime("%H:%M:%S - %D %M %Y")}')
+        self._data_created_lbl = wx.StaticText(self.details_panel, label = 'Date Created')
+        self._data_created_txt = wx.StaticText(self.details_panel, label = f'{datetime.datetime.fromtimestamp(os.stat(self._path).st_mtime).strftime("%H:%M:%S - %D %M %Y")}')
 
-        self._file_size_txt = wx.StaticText(self, label = f'{os.stat(self._path).st_size}')
-        self._file_size_lbl = wx.StaticText(self, label = 'File size')
+        self._file_size_txt = wx.StaticText(self.details_panel, label = f'{os.stat(self._path).st_size}')
+        self._file_size_lbl = wx.StaticText(self.details_panel, label = 'File size')
 
-        self._line_lbl = wx.StaticText(self, label = 'Animal Line')
-        self._line_txt = wx.StaticText(self, label = self._experiment.animalline)
+        self._line_lbl = wx.StaticText(self.details_panel, label = 'Animal Line')
+        self._line_txt = wx.StaticText(self.details_panel, label = self._experiment.animalline)
 
-        self._stim_lbl = wx.StaticText(self, label = 'Stimulus')
-        self._stim_txt = wx.StaticText(self, label = self._experiment.stimulation)
+        self._stim_lbl = wx.StaticText(self.details_panel, label = 'Stimulus')
+        self._stim_txt = wx.StaticText(self.details_panel, label = self._experiment.stimulation)
 
-        self._treatment_lbl = wx.StaticText(self, label = 'Treatment')
-        self._treatment_txt = wx.StaticText(self, label = self._experiment.treatment)
+        self._treatment_lbl = wx.StaticText(self.details_panel, label = 'Treatment')
+        self._treatment_txt = wx.StaticText(self.details_panel, label = self._experiment.treatment)
 
-        self._genotype_lbl = wx.StaticText(self, label = 'Genotype')
-        self._genotype_txt = wx.StaticText(self, label = self._experiment.genotype)
+        self._genotype_lbl = wx.StaticText(self.details_panel, label = 'Genotype')
+        self._genotype_txt = wx.StaticText(self.details_panel, label = self._experiment.genotype)
 
-        self._no_trials_lbl = wx.StaticText(self, label = '# trials')
-        self._no_trials_txt = wx.StaticText(self, label = f'{self._experiment.no_trials}')
+        self._no_trials_lbl = wx.StaticText(self.details_panel, label = '# trials')
+        self._no_trials_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.no_trials}')
 
-        self._no_baseline_lbl = wx.StaticText(self, label = '# Baseline')
-        self._no_baseline_txt = wx.StaticText(self, label = f'{self._experiment.no_baseline}')
+        self._no_baseline_lbl = wx.StaticText(self.details_panel, label = '# Baseline')
+        self._no_baseline_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.no_baseline}')
 
-        self._area_lbl  = wx.StaticText(self, label = 'Response area')
-        self._area_txt  = wx.StaticText(self, label = f'{self._experiment.response_area}')
+        self._area_lbl  = wx.StaticText(self.details_panel, label = 'Response area')
+        self._area_txt  = wx.StaticText(self.details_panel, label = f'{self._experiment.response_area}')
 
-        self._max_df_lbl = wx.StaticText(self, label = 'Max DF')
-        self._max_df_txt = wx.StaticText(self, label = f'{self._experiment.max_df}')
+        self._max_df_lbl = wx.StaticText(self.details_panel, label = 'Max DF')
+        self._max_df_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.max_df}')
 
 
-        self._mean_baseline_lbl = wx.StaticText(self, label = 'Baseline Mean')
-        self._mean_baseline_txt = wx.StaticText(self, label = f'{self._experiment.mean_baseline}')
+        self._mean_baseline_lbl = wx.StaticText(self.details_panel, label = 'Baseline Mean')
+        self._mean_baseline_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.mean_baseline}')
 
 
         sizer = wx.GridBagSizer(hgap = 5, vgap = 5)
@@ -90,14 +90,15 @@ class DetailsPanel(wx.Dialog):
         sizer.Add(self._no_baseline_lbl, (11, 0))
         sizer.Add(self._no_baseline_txt, (11, 1))
 
+        self.details_panel.SetSizer((sizer))
         # Load and place the image
         image_panel = self.load_image()
         im_sizer = wx.BoxSizer(wx.VERTICAL)
         im_sizer.Add(image_panel, 1, wx.EXPAND)
 
         main_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        main_sizer.Add(sizer, 0, wx.EXPAND | wx.ALL, 2)
-        main_sizer.Add(im_sizer, 1, wx.EXPAND | wx.ALL, 2)
+        main_sizer.Add(self.details_panel, 0, wx.EXPAND | wx.ALL, 2)
+        main_sizer.Add(image_panel, 1, wx.EXPAND | wx.ALL, 2)
         self.SetSizer(main_sizer)
         self.Fit()
 
@@ -119,7 +120,7 @@ class DetailsPanel(wx.Dialog):
 
     def load_image(self):
         im = self._experiment.anat
-        image_panel = wx.Panel(self)
+        image_panel = wx.Panel(self, style = wx.BORDER_RAISED)
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         im_max = im.max()

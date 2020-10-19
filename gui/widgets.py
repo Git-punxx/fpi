@@ -36,14 +36,14 @@ class MainFrame(wx.Frame):
 
         with wx.BusyInfo('FPIPlotter initializing...'):
             self.setup()
-        self.exp_list = FPIExperimentList(self)
+        self.exp_list = FPIExperimentList(self, style = wx.BORDER_RAISED)
         self.exp_list.add_columns(app_config.categories)
         self.exp_list.add_rows(self.gatherer.to_tuple())
 
-        self.filter = FilterPanel(self)
+        self.filter = FilterPanel(self, style = wx.BORDER_RAISED)
         self.plotter = PlotNotebook(self)
 
-        self.boxplot_choices = BoxPlotChoices(self)
+        self.boxplot_choices = BoxPlotChoices(self, style = wx.BORDER_RAISED)
 
 
         self.response_btn = wx.Button(self, label='Plot Response')
@@ -66,14 +66,16 @@ class MainFrame(wx.Frame):
 
         # Layout
         header_sizer = wx.BoxSizer(wx.VERTICAL)
-        header_sizer.Add(self.filter, 0, wx.EXPAND | wx.ALL, 2)
-        header_sizer.Add(self.exp_list, 1, wx.EXPAND | wx.ALL, 2)
+        header_sizer.Add(self.filter, 0, wx.EXPAND | wx.ALL, 1)
+        header_sizer.Add(self.exp_list, 1, wx.EXPAND | wx.ALL, 1)
 
         plot_sizer = wx.BoxSizer(wx.VERTICAL)
-        plot_sizer.Add(self.plotter, 1, wx.EXPAND | wx.ALL, 2)
+        plot_sizer.Add(self.plotter, 1, wx.EXPAND | wx.ALL, 1)
+
+
 
         footer_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        footer_sizer.Add(self.boxplot_choices, 0)
+        footer_sizer.Add(self.boxplot_choices, 0, wx.EXPAND)
         footer_sizer.Add(self.response_btn, 0)
         footer_sizer.Add(self.peak_value_btn, 0)
         footer_sizer.Add(self.latency_button)
@@ -86,8 +88,8 @@ class MainFrame(wx.Frame):
         exp_sizer.Add(plot_sizer, 1, wx.EXPAND)
 
         main_sizer = wx.BoxSizer(wx.VERTICAL)
-        main_sizer.Add(exp_sizer, 1, wx.EXPAND | wx.ALL, 5)
-        main_sizer.Add(footer_sizer, 0, wx.EXPAND | wx.ALL, 5)
+        main_sizer.Add(exp_sizer, 1, wx.EXPAND | wx.ALL, 2)
+        main_sizer.Add(footer_sizer, 0, wx.EXPAND | wx.ALL, 2)
         self.SetSizer(main_sizer)
         self.Fit()
 
@@ -452,7 +454,7 @@ class PlotNotebook(wx.Panel):
         self.SetSizer(sizer)
 
     def add(self, exp, title, choice = None):
-        page = Plot(self.nb, experiment=exp)
+        page = Plot(self.nb, style = wx.BORDER_SUNKEN, experiment=exp)
         self.nb.AddPage(page, caption=title)
         page.plot(title.lower(), exp, choice)
         self.nb.AdvanceSelection(True)
