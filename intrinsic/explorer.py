@@ -27,6 +27,7 @@ class ViewerIntrinsic(QtWidgets.QMainWindow):
         self.file_model = QtWidgets.QFileSystemModel()
         self.file_model.setFilter(QtCore.QDir.AllDirs | QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot )
         self.file_model.setNameFilters(["*.h5"])
+        print(os.getenv('FPI_PATH'))
         self.file_model.setRootPath(os.getenv('FPI_PATH'))
 
         self.main_widget = QtWidgets.QWidget(self)
@@ -46,6 +47,7 @@ class ViewerIntrinsic(QtWidgets.QMainWindow):
         # Widgets
         self.tree = QtWidgets.QTreeView(self)
         self.tree.setModel(self.file_model)
+        self.tree.setRootIndex(self.file_model.index(os.getenv('FPI_PATH')))
         self.tree.hideColumn(1)
         self.tree.hideColumn(2)
         self.tree.hideColumn(3)
