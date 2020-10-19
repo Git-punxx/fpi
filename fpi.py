@@ -10,6 +10,7 @@ from app_config import config_manager as app_config
 import re
 from pubsub import pub
 from pub_messages import ANALYSIS_UPDATE
+import db.dbmanager as db
 
 
 '''
@@ -358,8 +359,17 @@ class ExperimentManager:
         self._filters = []
 
         self.scan()
-
+        self.test_db()
         pub.subscribe(self.filterAll, CHOICES_CHANGED)
+
+    def test_db(self):
+        db.create_table()
+        data = self.to_tuple()
+        for row in data:
+            print(row)
+            db.insert_experiment(row)
+
+        db.show_all()
 
 
     def scan(self):
