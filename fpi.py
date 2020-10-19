@@ -324,19 +324,17 @@ class ExperimentManager:
             [self._exp_paths.add(file) for file in file_paths]
 
         total = len(self._exp_paths)
-        futures = []
-
         for exp in self._exp_paths:
-            if self.check_if_valid(exp) is not None:
+            res = self.check_if_valid(exp)
+            if  res is not None:
                 name = extract_name(os.path.basename(exp))
-                self._experiments[name] = exp
-                print(f'{self._experiments[name]}: {exp}')
+
+                self._experiments[name] = res
                 val = 100 * (1 / total)
                 pub.sendMessage(ANALYSIS_UPDATE, val = val)
 
         self.filtered = list(self._experiments.keys())
         pub.sendMessage(EXPERIMENT_LIST_CHANGED, choices=self.to_tuple())
-        print(self.to_tuple())
 
     def check_if_valid(self, experiment_path):
         if check_datastore(experiment_path):
@@ -399,9 +397,7 @@ class ExperimentManager:
         res = []
         for exp in self.filtered:
             live = self.get_experiment(exp)
-            print(live)
             res.append(fpi_meta._make((live.name, live.animal_line, live.stimulation, live.treatment, live.genotype)))
-            print(res)
         return res
 
     def __getitem__(self, name):

@@ -636,23 +636,26 @@ def is_complete(h5file):
 
 
 def do_analysis(h5file):
-    print('Performing analysis to ', h5file)
     session = Session(h5file)
     session.resp_mapping()
 
 
 def check_datastore(path):
+    print(f'Checking {path}')
     try:
         with h5py.File(path, 'r+') as datastore:
             if 'anat' not in list(datastore.keys()):
+                print(f'{path} is probably not a valid datastore file')
                 return False
             if not is_complete(datastore):
+                print(f'Performing additional analysis for {path}')
                 do_analysis(path)
                 return True
             else:
                 return True
     except Exception as e:
-        print(f'{path} is not a valid datastore file')
+        print(f'{path} is not a valid datastore file. Ignoring...')
+        pass
 
 
 def clean_response(resp):
