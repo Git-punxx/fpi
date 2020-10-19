@@ -7,6 +7,7 @@ from skimage.filters import gaussian as gauss_filt
 from skimage.io import imsave
 from pathlib import Path
 from typing import Optional
+from h5_tools import *
 import logging
 from logging.handlers import RotatingFileHandler
 
@@ -15,7 +16,7 @@ class ViewerIntrinsic(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         # Read color map from here : http://www.kennethmoreland.com/color-advice/
-        self.cl = np.loadtxt('extended-black-body-table-byte-0256.csv', delimiter=',', skiprows=1)
+        self.cl = np.loadtxt('../intrinsic/extended-black-body-table-byte-0256.csv', delimiter=',', skiprows=1)
         self.cmap = [QtGui.qRgb(*x[1:]) for x in self.cl]
         self.cl = np.vstack((np.ones(self.cl.shape[0]), self.cl[:, 1:].transpose())).transpose()
         self.c_data = np.array([])
@@ -35,7 +36,8 @@ class ViewerIntrinsic(QtWidgets.QMainWindow):
         self.h_layout_btn = QtWidgets.QHBoxLayout()
         self.v_layout_left = QtWidgets.QVBoxLayout()
         self.v_layout_right = QtWidgets.QVBoxLayout()
-        self.h_layout_analysis = QtWidgets.QHBoxLayout()
+        self.f_layout_trial = QtWidgets.QFormLayout()
+        self.h_layout_analysis = QtWidgets.QGridLayout()
         left_scroll = QtWidgets.QScrollArea()
         left_scroll.setWidgetResizable(True)
         left_wdg = QtWidgets.QWidget()
@@ -49,6 +51,21 @@ class ViewerIntrinsic(QtWidgets.QMainWindow):
         self.tree.hideColumn(3)
         self.tree.expanded.connect(self.expanded)
         self.tree.selectionModel().currentChanged.connect(self.select_file)
+        # Trial structure fields
+        self.baseline_sb = QtWidgets.QSpinBox(self)
+        self.stim_sb = QtWidgets.QSpinBox(self)
+        self.recovery_sb = QtWidgets.QSpinBox(self)
+        self.frame_dur = QtWidgets.QSpinBox(self)
+        self.frame_dur.setRange(1, 1000)
+        self.baseline_sb.setValue(30)
+        self.stim_sb.setValue(30)
+        self.recovery_sb.setValue(20)
+        self.frame_dur.setValue(100)
+        self.baseline_sb.setMaximumWidth(50)
+        self.stim_sb.setMaximumWidth(50)
+        self.recovery_sb.setMaximumWidth(50)
+        self.frame_dur.setMaximumWidth(50)
+
         self.analysis_btn = QtWidgets.QPushButton('&Analysis')
         self.analysis_btn.clicked.connect(self.analyze)
         self.movie_btn = QtWidgets.QPushButton('&Movie')
@@ -96,8 +113,15 @@ class ViewerIntrinsic(QtWidgets.QMainWindow):
         # Adding widgets to layouts
         self.v_layout_right.addWidget(self.win)
         self.v_layout_left.addWidget(self.tree)
-        self.h_layout_analysis.addSpacerItem(QtWidgets.QSpacerItem(300, 1, QtWidgets.QSizePolicy.Expanding))
-        self.h_layout_analysis.addWidget(self.analysis_btn)
+        # self.h_layout_analysis.addSpacerItem(QtWidgets.QSpacerItem(300, 1, QtWidgets.QSizePolicy.Expanding))
+        self.f_layout_trial.addRow('Number of baseline frames', self.baseline_sb)
+        self.f_layout_trial.addRow('Number of stimulation frames', self.stim_sb)
+        self.f_layout_trial.addRow('Number of recovery frames', self.recovery_sb)
+        self.f_layout_trial.addRow('Exposure time', self.frame_dur)
+        self.f_layout_trial.addRow("", self.analysis_btn)
+        self.h_layout_analysis.addLayout(self.f_layout_trial, 0, 0)
+        # self.h_layout_analysis.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Fixed,
+        #                                                      QtWidgets.QSizePolicy.Expanding), 0, 1)
         self.v_layout_left.addLayout(self.h_layout_analysis)
         self.v_layout_left.addWidget(self.max_slider)
         self.h_layout_btn.addWidget(self.movie_btn)
@@ -152,7 +176,11 @@ class ViewerIntrinsic(QtWidgets.QMainWindow):
         if any([n > 10 for n in n_png]) and self.an_th is None:
             # Has good chances to be a proper recording folder
             self.statusBar().showMessage('Analysis has started')
-            self.an_th = AnalysisThread(self, c_path, binning=3)
+            self.an_th = AnalysisThread(self, c_path, binning=3,
+                                        n_baseline=self.baseline_sb.value(),
+                                        n_stim=self.stim_sb.value(),
+                                        n_recovery=self.recovery_sb.value(),
+                                        exp_time=self.frame_dur.value()/1000)
             self.an_th.finished.connect(self.finished_analysis)
             self.an_th.start()
 
@@ -179,11 +207,32 @@ class ViewerIntrinsic(QtWidgets.QMainWindow):
         self.statusBar().showMessage(f'Data saved to {save_path}', 5000)
 
     def export_tc(self):
+        print('Exporting Timecourse...')
         if self.S is None:
             return
         ((xs, xe), (ys, ye)), _ = self.roi.getArraySlice(self.S.avg_stack, self.resp_item,
                                                          returnSlice=False)
-        self.S.export_timecourse(xs, xe, ys, ye)
+        try:
+            self.S.export_timecourse(xs, xe, ys, ye, self.S.dt)
+            roi_grp = get_group(self.S.file, 'roi')
+
+            #roi_grp.attrs.create('range', ([xs, xe, ys, ye]))
+            #print(roi_grp.attrs.keys())
+            #sys.stdout.flush()
+            write_roi_range(roi_grp, (xs, xe), (ys, ye), self.S.norm_stack[xs:xe, ys:ye, :])
+            sys.stdout.flush()
+            #last_roi = get_dataset(roi_grp, 'roi_num', -1)[()]
+            #new_roi = last_roi + 1
+            #write_dataset(roi_grp, 'roi_num', new_roi)
+            #c_roi_gp = get_group(roi_grp, f'roi_{new_roi}')
+            #write_dataset(c_roi_gp, 'coords', (xs, xe, ys, ye))
+            #write_dataset(c_roi_gp, 'values', self.S.norm_stack[xs:xe, ys:ye, :])
+        except Exception as e:
+            print(e)
+            sys.stdout.flush()
+        finally:
+            self.S.file.flush()
+
 
     def export_resp(self):
         if self.S is None:
@@ -246,6 +295,10 @@ class ViewerIntrinsic(QtWidgets.QMainWindow):
             self.data_cb.setCurrentIndex(2)
             self.anat_item.setImage(self.S.anat)
             self.comment_le.setText(self.S.comment)
+            self.baseline_sb.setValue(self.S.n_baseline)
+            self.stim_sb.setValue(self.S.n_stim)
+            self.recovery_sb.setValue(self.S.n_recovery)
+            self.frame_dur.setValue(int(self.S.dt * 1000))
 
     def data_changed(self, ix: int):
         if ix == -1 or self.S is None:

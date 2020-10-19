@@ -67,6 +67,9 @@ class JSONConfigManager(ConfigManager):
         with open(self._file, 'w') as f:
             json.dump(self._json, f)
 
+    @property
+    def csv_dir(self):
+        return self._json['paths']['csv']
 
     @property
     def animal_lines(self):

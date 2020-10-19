@@ -2,6 +2,7 @@ from app_config import config_manager, Genotype, AnimalLine, Stimulation, Treatm
 import fpi_util
 from numpy import arange
 from collections import defaultdict
+from itertools import cycle
 from pandas import DataFrame
 
 from gui.dialogs import DataPathDialog
@@ -14,6 +15,7 @@ plotter = FPIPlotter(ax, experiment_data)
 plotter.plot(plot_type)
 '''
 plot_registry = {}
+boxoplot_colors = cycle(['cyan', 'khakki'])
 
 def register(plot_type):
     def deco(func):
@@ -60,10 +62,13 @@ class FPIPlotter:
     @register('response')
     def plot_response(self, experiments, choice):
         ax = self.figure.subplots()
-        ax.grid(True, alpha = 0.5)
-        values = [exp.response[:-1] for exp in experiments]
-        for d in values:
-            ax.plot(d)
+        ax.grid(True, alpha = 0.1)
+        ax.set_xlabel('Frame')
+        ax.set_ylabel('Response')
+        values = [(exp.response[2:-1], exp.name) for exp in experiments]
+        for data, name in values:
+            ax.plot(range(3, 81), data, label = name, linewidth = 2)
+        ax.legend()
 
     @register('baseline')
     def plot_baseline(self, experiments, choice):
@@ -87,7 +92,8 @@ class FPIPlotter:
         fpi_util.clear_data(genotype_dict)
         # Compute the positions of the boxplots
         self._plot_dict(genotype_dict)
-        [DataFrame(item).to_csv(f'../csv/{key}_baseline.csv') for key, item in genotype_dict.items()]
+        path = config_manager.csv_dir
+        [DataFrame(item).to_csv(f'{path}/{key}_baseline.csv') for key, item in genotype_dict.items()]
 
 
 
@@ -106,11 +112,12 @@ class FPIPlotter:
 
         fpi_util.clear_data(genotype_dict)
         self._plot_dict(genotype_dict)
-        [DataFrame(item).to_csv(f'../csv/{key}_peak_latency.csv') for key, item in genotype_dict.items()]
+        path = config_manager.csv_dir
+        [DataFrame(item).to_csv(f'{path}/{key}_peak_latency.csv') for key, item in genotype_dict.items()]
 
 
 
-    @register('onset_latency')
+    @register('response_latency')
     def plot_onset_latency(self, experiments, choice):
         filter_dict = fpi_util.categorize(experiments, choice)
 
@@ -120,35 +127,31 @@ class FPIPlotter:
         for base_filter, genotypes in filter_dict.items():
             for genotype, exp_list in genotypes.items():
                 genotype_dict[genotype][base_filter] = []
-                genotype_dict[genotype][base_filter] = [30 + exp.onset_latency for exp in exp_list if exp.onset_latency is not None]
+                genotype_dict[genotype][base_filter] = [exp.response_latency for exp in exp_list if exp.response_latency is not None]
 
         fpi_util.clear_data(genotype_dict)
         # Compute the positions of the boxplots
+        print(genotype_dict)
         self._plot_dict(genotype_dict)
-        [DataFrame(item).to_csv(f'../csv/{key}_onset_latency.csv') for key, item in genotype_dict.items()]
+        [DataFrame(item).to_csv(f'../csv/{key}_response_latency.csv') for key, item in genotype_dict.items()]
 
     @register('peak_value')
     def plot_peak_value(self, experiments, choice):
-        print(f'Plotting peak latency for {experiments} using choices {choice}')
-        print('----------------------------------')
-        print(f'Filtering the experiments based on the choide {choice}')
         filter_dict = fpi_util.categorize(experiments, choice)
-        print(f'Resulted dictionary: {filter_dict}')
 
         # Get the actual data from the fpiexperiment and assign them to the genotype categories
 
         # Get the actual data from the fpiexperiment and assign them to the genotype categories
         genotype_dict = defaultdict(dict)
         genotype_dict.update((k, {}) for k in [item for item in Genotype])
-        print(f'Resulted loaded dictionary: {genotype_dict}')
         for base_filter, genotypes in filter_dict.items():
             for genotype, exp_list in genotypes.items():
                 genotype_dict[genotype][base_filter] = []
                 genotype_dict[genotype][base_filter] = [exp.peak_latency[0] for exp in exp_list if exp.peak_latency is not None]
-        print(f'Before clearing: {genotype_dict}')
         fpi_util.clear_data(genotype_dict)
         self._plot_dict(genotype_dict)
-        [DataFrame(item).to_csv(f'../csv/{key}_peak_value.csv') for key, item in genotype_dict.items()]
+        path = config_manager.csv_dir
+        [DataFrame(item).to_csv(f'{path}/{key}_peak_value.csv') for key, item in genotype_dict.items()]
 
     @register('anat')
     def plot_anat(self, experiment, choice):
@@ -170,4 +173,5 @@ class FPIPlotter:
         fpi_util.clear_data(genotype_dict)
         # Compute the positions of the boxplots
         self._plot_dict(genotype_dict)
-        [DataFrame(item).to_csv(f'../csv/{key}_area.csv') for key, item in genotype_dict.items()]
+        path = config_manager.csv_dir
+        [DataFrame(item).to_csv(f'{path}/{key}_area.csv') for key, item in genotype_dict.items()]

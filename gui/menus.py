@@ -1,14 +1,28 @@
 import wx
+import subprocess
 from gui.dialogs import *
 from app_config import config_manager as app_config
 
+
+
+
+# Create a bunch of Id's to use
 ID_CHECK_FOLDERS = wx.NewId()
 ID_CREATE_FOLDERS = wx.NewId()
 ID_CONFIG_RESPONSE_PLOT = wx.NewId()
 ID_SET_DATABASE_DIR = wx.NewId()
 
 
+# Event ids
 ID_PLOT_MEAN_BASELINE = wx.NewId()
+
+
+
+# Analysis ids
+ID_INTRINSIC_ANALYSIS = wx.NewId()
+
+
+
 
 # A dict that associates wx.Ids with functions
 # We will use a decorator to populate it
@@ -37,6 +51,8 @@ options_menu = [(ID_CREATE_FOLDERS, 'Create folder structure'),
                 (ID_SET_DATABASE_DIR, 'Set experiments folder')
                  ]
 
+intrincic_menu = [(ID_INTRINSIC_ANALYSIS, 'Intrinsic analysis')]
+
 class FPIMenuBar(wx.MenuBar):
     def __init__(self):
         wx.MenuBar.__init__(self)
@@ -48,9 +64,11 @@ class FPIMenuBar(wx.MenuBar):
         global file_menu
         global edit_menu
         global options_menu
+        global intrincic_menu
         self.FileMenu(file_menu)
         self.EditMenu(edit_menu)
         self.OptionsMenu(options_menu)
+        self.AnalysisMenu(intrincic_menu)
 
     def OnMenu(self, event):
         try:
@@ -77,6 +95,12 @@ class FPIMenuBar(wx.MenuBar):
             optionsm.Append(item_id, description)
         self.Append(optionsm, 'Options')
 
+    def AnalysisMenu(self, items):
+        analysism = wx.Menu()
+        for item_id, description in items:
+            analysism.Append(item_id, description)
+        self.Append(analysism, 'Intrinsic Analysis')
+
 @register(ID_SET_DATABASE_DIR)
 def SetDataPath(parent):
     path = DataPathDialog(parent, 'Select experiments folder ')
@@ -84,15 +108,20 @@ def SetDataPath(parent):
         # here we should check if the directory contains the proper data structure
         # if not we should offer to create it
         app_config.base_dir = path
-
-
-
     else:
         ErrorDialog('Could not set requested path')
 
 @register(ID_CREATE_FOLDERS)
 def CreateFolderStructure(parent):
     app_config.create_folders()
+
+@register(ID_INTRINSIC_ANALYSIS)
+def RunIntrinsic(parent):
+    print('Running intrinsic')
+
+    subprocess.run(['python', '../intrinsic/explorer.py'])
+
+
 
 
 
