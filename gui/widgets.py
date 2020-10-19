@@ -429,7 +429,7 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         item = self.current_selection[0]
         exp = self.GetTopLevelParent().gatherer.get_experiment(item)
         if sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
-            os.system('open ' + shlex.quote(exp))
+            os.system('open ' + shlex.quote(exp._path))
         else:
             os.system('start ' + exp._path)
 

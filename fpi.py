@@ -412,7 +412,7 @@ class ExperimentManager:
 
         futures = []
         #TODO Check if we are on linux, mac or windows and enable or disable the mulitprocessing
-        if app_config.is_linux() or app_config.is_mac():
+        if not app_config.is_linux() and not app_config.is_mac():
             with ProcessPoolExecutor() as executor:
                 for exp in self._exp_paths:
                     res = executor.submit(self.check_if_valid, exp)
