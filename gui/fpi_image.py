@@ -51,6 +51,10 @@ class DetailsPanel(wx.Dialog):
         self._mean_baseline_lbl = wx.StaticText(self.details_panel, label = 'Baseline Mean')
         self._mean_baseline_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.mean_baseline}')
 
+        self._roi_lbl = wx.StaticText(self.details_panel, label = 'Roi Range')
+        self._roi_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.roi_range}')
+
+        self._roi_analysis_btn = wx.Button(self.details_panel, label = 'Analyze Range of Interest')
 
         sizer = wx.GridBagSizer(hgap = 5, vgap = 5)
         sizer.Add(self._file_lbl, (0, 0))
@@ -90,6 +94,11 @@ class DetailsPanel(wx.Dialog):
         sizer.Add(self._no_baseline_lbl, (11, 0))
         sizer.Add(self._no_baseline_txt, (11, 1))
 
+        sizer.Add(self._roi_lbl, (12, 0))
+        sizer.Add(self._roi_txt, (12, 1))
+
+        sizer.Add(self._roi_analysis_btn, (14, 0), flag = wx.EXPAND)
+
         self.details_panel.SetSizer((sizer))
         # Load and place the image
         image_panel = self.load_image()
@@ -101,6 +110,11 @@ class DetailsPanel(wx.Dialog):
         main_sizer.Add(image_panel, 1, wx.EXPAND | wx.ALL, 2)
         self.SetSizer(main_sizer)
         self.Fit()
+
+        # Check if the analysis button should be enabled
+        if self._experiment.roi_range == None:
+            self._roi_analysis_btn.Disable()
+
 
             # self._response = None
         # self._timecourse = None
@@ -133,6 +147,7 @@ class DetailsPanel(wx.Dialog):
         raw_image = Image.fromarray(im)
         image = wx.Image(*raw_image.size)
         image.SetData(raw_image.convert('RGB').tobytes())
+        #TODO Change to wx.Bitmap
         bitmap_image = wx.StaticBitmap(image_panel, -1, wx.BitmapFromImage(image))
 
         sizer.Add(bitmap_image, 1, wx.EXPAND | wx.ALL, 2)

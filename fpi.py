@@ -339,6 +339,16 @@ class HD5Parser(FPIParser):
                 print(e)
                 return None
 
+    def roi_range(self):
+        with h5py.File(self._path, 'r') as datastore:
+            try:
+                roi = datastore['roi']['roi_range'][()]
+                return roi
+            except Exception as e:
+                print('Exception on roi method')
+                print(e)
+                return None
+
 
 ### Model #####
 
@@ -497,7 +507,14 @@ class FPIExperiment:
         self._peak_latency = None
         self._anat = None
         self._stack = None
+        self._roi = None
 
+
+    @property
+    def roi_range(self):
+        if self._roi == None:
+            self._roi = self._parser.roi_range()
+        return self._roi
 
     @property
     def response_area(self):
