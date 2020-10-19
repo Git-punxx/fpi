@@ -356,6 +356,8 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
     def __init__(self, parent, *args, **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
         PopupMenuMixin.__init__(self)
+
+        #TODO Change the style of the row if the experiment has a ROI
         self.list = wx.ListCtrl(self, -1, style=wx.LC_REPORT | wx.LC_VRULES | wx.LC_HRULES)
 
         self.current_selection = []
