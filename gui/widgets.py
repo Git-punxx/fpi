@@ -104,7 +104,7 @@ class MainFrame(wx.Frame):
         try:
             self.gatherer = ExperimentManager(app_config.base_dir)
         except Exception as e:
-            print(e)
+            explain(e)
             with wx.MessageDialog(self, 'Something is wrong with the FPI configuration file', 'Configuration error',
                                   wx.OK | wx.ICON_ERROR) as dlg:
                 dlg.ShowModal()

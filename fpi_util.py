@@ -1,5 +1,10 @@
 from app_config import config_manager, AnimalLine, Treatment, Stimulation, Genotype
+import traceback
+import sys
 
+
+def explain(exc):
+    traceback.print_tb(sys.exc_info()[2])
 
 def categorize(experiment_list, filter = AnimalLine.__name__.lower()):
     """

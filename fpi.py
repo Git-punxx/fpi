@@ -1,4 +1,5 @@
 from typing import Type
+from fpi_util import explain
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import numpy as np
 import os
@@ -349,23 +350,23 @@ class ExperimentManager:
             file_paths = [os.path.join(path, file) for file in files if file.endswith('h5')]
             [self._exp_paths.add(file) for file in file_paths]
 
-        total = len(self._exp_paths)
         futures = []
-        with ProcessPoolExecutor() as executor:
+        #TODO Check if we are on linux, mac or windows and enable or disable the mulitprocessing
+        if app_config.is_linux() or app_config.is_mac():
+            with ProcessPoolExecutor() as executor:
+                for exp in self._exp_paths:
+                    res = executor.submit(self.check_if_valid, exp)
+                    futures.append(res)
+            for fut in as_completed(futures):
+                if fut.result() is not None:
+                    name = extract_name(os.path.basename(fut.result()))
+                    self._experiments[name] = fut.result()
+        else:
             for exp in self._exp_paths:
                 name = extract_name(os.path.basename(exp))
-                res = executor.submit(self.check_if_valid, exp)
-                futures.append(res)
-        for fut in as_completed(futures):
-            if fut.result() is not None:
-                name = extract_name(os.path.basename(fut.result()))
-
-                self._experiments[name] = fut.result()
-                val = 100 * (1 / total)
-                pub.sendMessage(ANALYSIS_UPDATE, val = val)
+                self._experiments[name] = exp
 
         self.filtered = list(self._experiments.keys())
-        print(f'Sending message: {self.to_tuple()}')
         pub.sendMessage(EXPERIMENT_LIST_CHANGED, choices=self.to_tuple())
 
     def check_if_valid(self, experiment_path):

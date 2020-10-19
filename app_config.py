@@ -1,5 +1,6 @@
 import configparser
 import os
+from sys import platform
 from itertools import product
 from pathlib import Path
 import json
@@ -12,6 +13,15 @@ FPI_CONFIG_JSON = os.path.join(os.path.dirname(__file__), 'fpi_config.json')
 class ConfigManager:
     def __init__(self, configuration_file):
         self._file = configuration_file
+
+    def is_linux(self):
+        return True if platform.startswith('linux') else False
+
+    def is_mac(self):
+        return True if platform.startswith('darwin') else False
+
+    def is_win(self):
+        return True if platform.startswith('win32') else False
 
     @property
     def base_dir(self):
