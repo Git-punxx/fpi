@@ -10,7 +10,7 @@ class DetailsPanel(wx.Dialog):
     def __init__(self, parent, name, *args, **kwargs):
         wx.Dialog.__init__(self, parent, *args, **kwargs)
 
-        self._experiment =  name
+        self._experiment = name
         self._path = self._experiment._path
         print(self._path)
         self._datastore_structure()
@@ -20,23 +20,23 @@ class DetailsPanel(wx.Dialog):
         self._file_lbl = wx.StaticText(self, label = 'Filename')
         self._file_txt = wx.StaticText(self, label = self._experiment.name)
 
-        self._data_created_lbl = wx.StaticText(self, label = 'Date Dreated')
+        self._data_created_lbl = wx.StaticText(self, label = 'Date Created')
         self._data_created_txt = wx.StaticText(self, label = f'{datetime.datetime.fromtimestamp(os.stat(self._path).st_mtime).strftime("%H:%M:%S - %D %M %Y")}')
 
         self._file_size_txt = wx.StaticText(self, label = f'{os.stat(self._path).st_size}')
         self._file_size_lbl = wx.StaticText(self, label = 'File size')
 
         self._line_lbl = wx.StaticText(self, label = 'Animal Line')
-        self._line_txt = wx.StaticText(self, label = self._experiment.animal_line)
+        self._line_txt = wx.StaticText(self, label = self._experiment.animalline.name)
 
         self._stim_lbl = wx.StaticText(self, label = 'Stimulus')
-        self._stim_txt = wx.StaticText(self, label = self._experiment.stimulation)
+        self._stim_txt = wx.StaticText(self, label = self._experiment.stimulation.name)
 
         self._treatment_lbl = wx.StaticText(self, label = 'Treatment')
-        self._treatment_txt = wx.StaticText(self, label = self._experiment.treatment)
+        self._treatment_txt = wx.StaticText(self, label = self._experiment.treatment.name)
 
         self._genotype_lbl = wx.StaticText(self, label = 'Genotype')
-        self._genotype_txt = wx.StaticText(self, label = self._experiment.genotype)
+        self._genotype_txt = wx.StaticText(self, label = self._experiment.genotype.name)
 
         self._no_trials_lbl = wx.StaticText(self, label = '# trials')
         self._no_trials_txt = wx.StaticText(self, label = f'{self._experiment.no_trials}')

@@ -1,0 +1,49 @@
+2020-10-16:21:42:12 :: explorer.py :: handle_exception :: line 444 :: ERROR :: Uncaught exception
+Traceback (most recent call last):
+  File ".\explorer.py", line 216, in export_tc
+    last_roi = get_dataset(roi_grp, 'roi_num', -1)[()]
+TypeError: 'int' object is not subscriptable
+2020-10-16:21:44:40 :: explorer.py :: handle_exception :: line 444 :: ERROR :: Uncaught exception
+Traceback (most recent call last):
+  File ".\explorer.py", line 216, in export_tc
+    last_roi = get_dataset(roi_grp, 'roi_num', -1)[()]
+TypeError: 'int' object is not subscriptable
+2020-10-16:21:58:33 :: explorer.py :: handle_exception :: line 446 :: ERROR :: Uncaught exception
+Traceback (most recent call last):
+  File "explorer.py", line 216, in export_tc
+    last_roi = get_dataset(roi_grp, 'roi_num', -1)[()]
+TypeError: 'int' object is not subscriptable
+2020-10-16:21:59:15 :: explorer.py :: handle_exception :: line 446 :: ERROR :: Uncaught exception
+Traceback (most recent call last):
+  File "explorer.py", line 216, in export_tc
+    last_roi = get_dataset(roi_grp, 'roi_num', -1)[()]
+TypeError: 'int' object is not subscriptable
+2020-10-16:22:02:26 :: explorer.py :: handle_exception :: line 449 :: ERROR :: Uncaught exception
+Traceback (most recent call last):
+  File "explorer.py", line 219, in export_tc
+    last_roi = get_dataset(roi_grp, 'roi_num', -1)[()]
+TypeError: 'int' object is not subscriptable
+2020-10-16:22:06:14 :: explorer.py :: handle_exception :: line 452 :: ERROR :: Uncaught exception
+Traceback (most recent call last):
+  File "explorer.py", line 222, in export_tc
+    last_roi = get_dataset(roi_grp, 'roi_num', -1)[()]
+TypeError: 'int' object is not subscriptable
+2020-10-16:22:13:20 :: explorer.py :: handle_exception :: line 448 :: ERROR :: Uncaught exception
+Traceback (most recent call last):
+  File "explorer.py", line 219, in export_tc
+    roi_grp.create_attribute('range', (np.ndarray(xs, xe, ys, ye)))
+AttributeError: 'Group' object has no attribute 'create_attribute'
+2020-10-18:09:48:24 :: explorer.py :: handle_exception :: line 457 :: ERROR :: Uncaught exception
+Traceback (most recent call last):
+  File "C:\Users\spyros\Documents\Projects\intrinsic_October_2020\explorer.py", line 279, in select_file
+    self.S = Session(c_path)
+  File "C:\Users\spyros\Documents\Projects\intrinsic_October_2020\imaging.py", line 244, in __init__
+    self.file = h5py.File(self.path, 'r+')
+  File "C:\Users\spyros\AppData\Local\Programs\Python\Python37\lib\site-packages\h5py\_hl\files.py", line 408, in __init__
+    swmr=swmr)
+  File "C:\Users\spyros\AppData\Local\Programs\Python\Python37\lib\site-packages\h5py\_hl\files.py", line 175, in make_fid
+    fid = h5f.open(name, h5f.ACC_RDWR, fapl=fapl)
+  File "h5py\_objects.pyx", line 54, in h5py._objects.with_phil.wrapper
+  File "h5py\_objects.pyx", line 55, in h5py._objects.with_phil.wrapper
+  File "h5py\h5f.pyx", line 88, in h5py.h5f.open
+OSError: Unable to open file (bad object header version number)
