@@ -2,6 +2,7 @@ import wx
 import subprocess
 from gui.dialogs import *
 from app_config import config_manager as app_config
+import intrinsic
 
 
 
@@ -118,7 +119,6 @@ def CreateFolderStructure(parent):
 @register(ID_INTRINSIC_ANALYSIS)
 def RunIntrinsic(parent):
     print('Running intrinsic')
-
     subprocess.run(['python', '../intrinsic/explorer.py'])
 
 

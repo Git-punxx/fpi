@@ -66,6 +66,10 @@ class JSONConfigManager(ConfigManager):
         ConfigManager.__init__(self, configuration_file)
         with open(self._file, 'r') as f:
             self._json = json.load(f)
+        self.update_env()
+
+    def update_env(self):
+        os.environ['FPI_PATH'] = self.base_dir
 
     @property
     def base_dir(self):

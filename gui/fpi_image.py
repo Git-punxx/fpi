@@ -7,17 +7,14 @@ import datetime
 
 
 class DetailsPanel(wx.Dialog):
-    def __init__(self, parent, name, *args, **kwargs):
+    def __init__(self, parent, experiment, *args, **kwargs):
         wx.Dialog.__init__(self, parent, *args, **kwargs)
 
-        self._experiment = name
+        self._experiment = experiment
         self._path = self._experiment._path
-        print(self._path)
-        self._datastore_structure()
-        self.image = None
         self.details_panels= wx.Panel(self)
 
-        self._file_lbl = wx.StaticText(self, label = 'Filename')
+        self._file_lbl = wx.StaticText(self, label = 'Filename', style = wx.ALIGN_RIGHT)
         self._file_txt = wx.StaticText(self, label = self._experiment.name)
 
         self._data_created_lbl = wx.StaticText(self, label = 'Date Created')
@@ -93,8 +90,15 @@ class DetailsPanel(wx.Dialog):
         sizer.Add(self._no_baseline_lbl, (11, 0))
         sizer.Add(self._no_baseline_txt, (11, 1))
 
+        # Load and place the image
+        image_panel = self.load_image()
+        im_sizer = wx.BoxSizer(wx.VERTICAL)
+        im_sizer.Add(image_panel, 1, wx.EXPAND)
 
-        self.SetSizer(sizer)
+        main_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        main_sizer.Add(sizer, 0, wx.EXPAND | wx.ALL, 2)
+        main_sizer.Add(im_sizer, 1, wx.EXPAND | wx.ALL, 2)
+        self.SetSizer(main_sizer)
         self.Fit()
 
             # self._response = None
@@ -110,14 +114,31 @@ class DetailsPanel(wx.Dialog):
 
     def _datastore_structure(self):
         with h5py.File(self._path, 'r') as datastore:
-            print(list(datastore.keys()))
             for key, items in datastore['df'].items():
                 pass
 
     def load_image(self):
-        with h5py.File(self._path, 'r') as datastore:
-            image = Image.fromarray(datastore['anat'][()])
-            print(np.asarray(image))
-            self.image = wx.Image(*image.size)
-            self.image.SetData(image.convert('RGB').tobytes())
+        im = self._experiment.anat
+        image_panel = wx.Panel(self)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        im_max = im.max()
+        im_min = im.min()
+        divider = im_max - im_min
+        if divider == 0:
+            divider = 1
+        im = 255*(im - im_min)/divider
+
+        raw_image = Image.fromarray(im)
+        image = wx.Image(*raw_image.size)
+        image.SetData(raw_image.convert('RGB').tobytes())
+        bitmap_image = wx.StaticBitmap(image_panel, -1, wx.BitmapFromImage(image))
+
+        sizer.Add(bitmap_image, 1, wx.EXPAND | wx.ALL, 2)
+
+        image_panel.SetSizer(sizer)
+        image_panel.Fit()
+        return image_panel
+
+
 

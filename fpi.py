@@ -219,8 +219,7 @@ class HD5Parser(FPIParser):
                 print('Range: ', xs, xe, ys, ye)
                 return (slice(xs, xe), slice(ys, ye))
             except Exception as e:
-                print('Exception on range method')
-                print(e)
+                print('No ROI for this experiment')
                 return (slice(None), slice(None))
 
     def response(self):
@@ -228,16 +227,23 @@ class HD5Parser(FPIParser):
             # here we need to see if we will use 'response' or 'resp_map'
             try:
                 x_slice, y_slice = self.range()
-
-                # get the normalized stack
-                stack = datastore['df']['stack'][x_slice, y_slice]
-
                 data = datastore['df']['avg_df'][()]
                 return data
             except Exception as e:
                 print('Exception in response method')
                 print(e)
                 return None
+
+    def stack(self):
+        with h5py.File(self._path, 'r') as datastore:
+            # here we need to see if we will use 'response' or 'resp_map'
+            try:
+                x_slice, y_slice = self.range()
+                data = datastore['df']['stack'][x_slice, y_slice]
+            except Exception as e:
+                print('Exception in response method')
+                data = datastore['df']['stack'][()]
+            return data
 
     def timecourse(self):
         with h5py.File(self._path, 'r') as datastore:
@@ -263,7 +269,7 @@ class HD5Parser(FPIParser):
         with h5py.File(self._path, 'r') as datastore:
             x_slice, y_slice = self.range()
             try:
-                area = datastore['df']['area']
+                area = datastore['df']['area'][()]
                 return area
             except Exception as e:
                 print('Exception in all_pixel method')
@@ -273,13 +279,12 @@ class HD5Parser(FPIParser):
     def max_df(self):
         with h5py.File(self._path, 'r') as datastore:
             try:
-                data = datastore['df']['max_df']
+                data = datastore['df']['max_df'][()]
                 return data
             except Exception as e:
                 print('Exception on max_df method')
                 print(e)
                 return None
-
 
     def avg_df(self):
         with h5py.File(self._path, 'r') as datastore:
@@ -294,7 +299,7 @@ class HD5Parser(FPIParser):
     def no_baseline(self):
         with h5py.File(self._path, 'r') as datastore:
             try:
-                no_baseline = datastore['n_baseline']
+                no_baseline = datastore['n_baseline'][()]
                 return no_baseline
             except Exception as e:
                 print('Exception on no_baseline method')
@@ -321,6 +326,18 @@ class HD5Parser(FPIParser):
                 print('Exception on anat method')
                 print(e)
                 return None
+
+    def response_map(self):
+        with h5py.File(self._path, 'r') as datastore:
+            x_slice, y_slice = self.range()
+            try:
+                anat = datastore['df']['resp_map'][x_slice, y_slice]
+                return anat
+            except Exception as e:
+                print('Exception on anat method')
+                print(e)
+                return None
+
 
 ### Model #####
 
@@ -469,12 +486,13 @@ class FPIExperiment:
         self._mean_baseline = None
         self._peak_latency = None
         self._anat = None
+        self._stack = None
 
 
     @property
     def response_area(self):
         if self._response_area is None:
-            self._response_area = self._parser.all_pixel()
+            self._response_area = self._parser.response_map()
         return self._response_area
 
     @property
@@ -544,12 +562,30 @@ class FPIExperiment:
             self._avg_df = self._parser.avg_df()
         return self._avg_df
 
-
     @property
     def anat(self):
         if self._anat is None:
             self._anat = self._parser.anat()
         return self._anat
+
+    @property
+    def stack(self):
+        if self._stack is None:
+            self._stack = self._parser.stack()
+        return self._stack
+
+    def clear(self):
+        self._response = None
+        self._timecourse = None
+        self._no_trials = None
+        self._no_baseline = None
+        self._response_area = None
+        self._max_df = None
+        self._avg_df = None
+        self._mean_baseline = None
+        self._peak_latency = None
+        self._anat = None
+        self._stack = None
 
     # def plot(self, ax, type):
     #     if type == 'response':

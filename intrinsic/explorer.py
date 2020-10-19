@@ -10,10 +10,11 @@ from typing import Optional
 from h5_tools import *
 import logging
 from logging.handlers import RotatingFileHandler
+import os
 
 
 class ViewerIntrinsic(QtWidgets.QMainWindow):
-    def __init__(self):
+    def __init__(self, root = '.'):
         super().__init__()
         # Read color map from here : http://www.kennethmoreland.com/color-advice/
         self.cl = np.loadtxt('../intrinsic/extended-black-body-table-byte-0256.csv', delimiter=',', skiprows=1)
@@ -23,11 +24,10 @@ class ViewerIntrinsic(QtWidgets.QMainWindow):
         self._c_slice = 0
         self.S: Optional[Session] = None
         # File model
-        home = str(Path.home())
         self.file_model = QtWidgets.QFileSystemModel()
         self.file_model.setFilter(QtCore.QDir.AllDirs | QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot )
         self.file_model.setNameFilters(["*.h5"])
-        self.file_model.setRootPath(home)
+        self.file_model.setRootPath(os.getenv('FPI_PATH'))
 
         self.main_widget = QtWidgets.QWidget(self)
         # Layouts
