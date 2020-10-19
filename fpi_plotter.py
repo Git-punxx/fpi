@@ -119,6 +119,7 @@ class FPIPlotter:
 
     @register('response_latency')
     def plot_onset_latency(self, experiments, choice):
+        #TODO Check this functions because it causes an exception
         filter_dict = fpi_util.categorize(experiments, choice)
 
         # Get the actual data from the fpiexperiment and assign them to the genotype categories

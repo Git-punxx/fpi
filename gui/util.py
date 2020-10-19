@@ -11,7 +11,6 @@ class BoxPlotChoices(wx.Panel):
         self.choices = wx.Choice(self, choices = self._category_choices)
         self.choices.SetSelection(0)
 
-        sizer = wx.BoxSizer(wx.VERTICAL)
 
     def GetSelection(self):
         choice = self.choices.GetString(self.choices.GetSelection())
