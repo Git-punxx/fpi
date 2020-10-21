@@ -364,7 +364,10 @@ class HDF5Writer:
                 datastore.create_group('roi')
             roi_grp = datastore['roi']
             for key, dataset in data_dict.items():
+                if key in roi_grp.keys():
+                    del roi_grp[key]
                 roi_grp.create_dataset(key, data = dataset)
+
     def delete_roi(self):
         with h5py.File(self._path, 'r+') as datastore:
             if not 'roi' in datastore:
