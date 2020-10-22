@@ -364,7 +364,10 @@ class HDF5Writer:
                 datastore.create_group('roi')
             roi_grp = datastore['roi']
             for key, dataset in data_dict.items():
+                if key in roi_grp.keys():
+                    del roi_grp[key]
                 roi_grp.create_dataset(key, data = dataset)
+
     def delete_roi(self):
         with h5py.File(self._path, 'r+') as datastore:
             if not 'roi' in datastore:
@@ -412,22 +415,22 @@ class ExperimentManager:
 
         futures = []
         #TODO Check if we are on linux, mac or windows and enable or disable the mulitprocessing
-        if app_config.is_linux() or app_config.is_mac():
-            with ProcessPoolExecutor() as executor:
-                for exp in self._exp_paths:
-                    res = executor.submit(self.check_if_valid, exp)
-                    futures.append(res)
-            for fut in as_completed(futures):
-                if fut.result() is not None:
-                    name = extract_name(os.path.basename(fut.result()))
-                    self._experiments[name] = fut.result()
-        else:
-            for exp in self._exp_paths:
-                if self.check_if_valid(exp):
-                    name = extract_name(os.path.basename(exp))
-                    self._experiments[name] = exp
-                else:
-                    pass
+        #if not app_config.is_linux() and not app_config.is_mac():
+        #    with ProcessPoolExecutor() as executor:
+        #        for exp in self._exp_paths:
+        #            res = executor.submit(self.check_if_valid, exp)
+        #            futures.append(res)
+        #    for fut in as_completed(futures):
+        #        if fut.result() is not None:
+        #            name = extract_name(os.path.basename(fut.result()))
+        #            self._experiments[name] = fut.result()
+        #else:
+        for exp in self._exp_paths:
+            if self.check_if_valid(exp):
+                name = extract_name(os.path.basename(exp))
+                self._experiments[name] = exp
+            else:
+                pass
 
         self.filtered = list(self._experiments.keys())
         pub.sendMessage(EXPERIMENT_LIST_CHANGED, choices=self.to_tuple())

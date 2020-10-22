@@ -8,6 +8,11 @@ in every instance of the application. This means that there should be an option 
 6. Having this application in a working condition we could relate it to the imaging sript. That means that we could
 run the multianalysis.py script inside this app and specify the output folder for the hdf5 file. That means that we should
 
+5. Use soft links to datastores to create list of rois for the experiments.
+5.5 Having a list of rois for experiments in a datastore we could present a list with them and run threads to compute the
+    rest of the data
+6. Create an overlay in Image_details for quicker region choice
+7.
 
 
 
@@ -20,5 +25,9 @@ run the multianalysis.py script inside this app and specify the output folder fo
 
 
 4. Persist the parser. At this time we instantiate it each time we plot something
+
+
+
+
 
 

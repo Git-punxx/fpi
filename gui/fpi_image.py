@@ -5,6 +5,7 @@ import os
 import datetime
 import intrinsic.imaging as intr
 from fpi import HDF5Writer
+import numpy as np
 
 
 class DetailsPanel(wx.Dialog):
@@ -149,7 +150,7 @@ class DetailsPanel(wx.Dialog):
             divider = 1
         im = 255*(im - im_min)/divider
 
-        raw_image = Image.fromarray(im)
+        raw_image = Image.fromarray(im.T)
         image = wx.Image(*raw_image.size)
         image.SetData(raw_image.convert('RGB').tobytes())
         #TODO Change to wx.Bitmap
@@ -164,9 +165,11 @@ class DetailsPanel(wx.Dialog):
     def OnAnalysis(self, event):
         with wx.BusyInfo('Performing analysis on ROI...'):
             norm_stack = intr.normalize_stack(self._experiment.stack)
+            resp = intr.find_resp(self._experiment.stack)
             resp_map, df = intr.resp_map(norm_stack)
+
             print('Analysis finished')
-        data_dict = {'norm_stack': norm_stack, 'resp_map': resp_map, 'df': df}
+        data_dict = {'norm_stack': norm_stack, 'resp_map': resp_map, 'resp': resp,  'df': df, 'avg_df': df.mean(0), 'max_df': df.max(1).mean() , 'area': np.sum(resp_map > 0)}
         self._save_analysis(data_dict)
 
     def OnDeleteROI(self, event):

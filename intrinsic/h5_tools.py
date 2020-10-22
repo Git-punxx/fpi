@@ -87,8 +87,6 @@ def write_roi_range(roi_grp, x_range, y_range, stack):
     try:
         range_ds = roi_grp.create_dataset('roi_range', data = np.array([0,0,0,0]))
         range_ds[:] = [*x_range, *y_range]
-
-        write_dataset(roi_grp, 'normalized_stack', stack)
     except Exception as e:
         print(e)
         range_ds = roi_grp['roi_range']

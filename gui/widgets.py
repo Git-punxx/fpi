@@ -2,6 +2,7 @@ import wx
 import time
 import wx.lib.agw.aui as aui
 import matplotlib as mpl
+from PyQt5 import QtWidgets
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
 from fpi import *
@@ -14,6 +15,10 @@ from gui.popups import PopupMenuMixin
 from gui.util import BoxPlotChoices
 import sys
 import shlex
+import gui.splash_screen
+import subprocess
+
+from intrinsic.explorer import ViewerIntrinsic
 
 CHOICES_CHANGED = 'choices.changed'
 LINE_CHANGED = 'line.changed'
@@ -27,12 +32,26 @@ EXPERIMENT_LIST_CHANGED = 'experiments.list.changed'
 STATUS_BAR_TEXT = '{:<40} | Total experiments selected: {:<2} | Working dir: {}'
 
 ID_OPEN_PANOPLY = wx.NewId()
+ID_OPEN_INSTRINSIC = wx.NewId()
+SPLASH_IMAGE = '../assets/splash.jpg'
+ICON = '../assets/eukaryote.ico'
 
+command_registry = {}
+
+def register(wx_id):
+    def deco(func):
+        global command_registry
+        command_registry[wx_id] = func
+        def wrapper(*args, **kwargs):
+            return func(*args, **kwargs)
+        return wrapper
+    return deco
 
 class MainFrame(wx.Frame):
     def __init__(self, parent, id=wx.ID_ANY, title='FPIAnalyzer'):
         super(MainFrame, self).__init__(parent, id, title)
         self.Maximize(True)
+        self.SetIcon(wx.Icon(ICON))
 
         self.CreateStatusBar()
         #TODO Use panels to group widgets
@@ -337,6 +356,8 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
     def __init__(self, parent, *args, **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
         PopupMenuMixin.__init__(self)
+
+        #TODO Change the style of the row if the experiment has a ROI
         self.list = wx.ListCtrl(self, -1, style=wx.LC_REPORT | wx.LC_VRULES | wx.LC_HRULES)
 
         self.current_selection = []
@@ -344,7 +365,7 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnSelect)
         self.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.OnDeselect)
         self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnActivate)
-        self.Bind(wx.EVT_MENU, self.OpenPanoply)
+        self.Bind(wx.EVT_MENU, self.HandleContextAction)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.list, 1, wx.EXPAND)
@@ -401,14 +422,34 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
 
     def CreateContextMenu(self, menu):
         menu.Append(ID_OPEN_PANOPLY, 'Open in Panoply')
+        menu.Append(ID_OPEN_INSTRINSIC, 'Choose Range of Interest')
 
-    def OpenPanoply(self, event):
+    @register(ID_OPEN_PANOPLY)
+    def OpenPanoply(self):
         item = self.current_selection[0]
         exp = self.GetTopLevelParent().gatherer.get_experiment(item)
         if sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
-            os.system('open ' + shlex.quote(exp))
+            os.system('open ' + shlex.quote(exp._path))
         else:
             os.system('start ' + exp._path)
+
+    @register(ID_OPEN_INSTRINSIC)
+    def OpenIntrinsic(self):
+        item = self.current_selection[0]
+        exp = self.GetTopLevelParent().gatherer.get_experiment(item)
+        print(f'Dir: {os.path.dirname(exp._path)}')
+        qApp = QtWidgets.QApplication(sys.argv)
+        window = ViewerIntrinsic(root = os.path.dirname(exp._path))
+        window.show()
+        qApp.exec_()
+
+    def HandleContextAction(self, event):
+        evt_id = event.GetId()
+        try:
+            command_registry[evt_id](self)
+        except KeyError:
+            with wx.MessageDialog(None, 'Action not implemented', 'Not implemented', style = wx.ID_OK | wx.ICON_WARNING) as dlg:
+                resp = dlg.ShowModal()
 
 class Plot(wx.Panel):
     def __init__(self, parent, id=wx.ID_ANY, dpi = 100, experiment=None, **kwargs):
@@ -475,9 +516,12 @@ class PlotNotebook(wx.Panel):
 
 class FPI(wx.App):
     def OnInit(self):
+        splash = gui.splash_screen.Splash(SPLASH_IMAGE)
+        splash.CenterOnScreen()
+        splash.Show(True)
         self.frame = MainFrame(None, -1, 'FPI Plotter')
         self.SetTopWindow(self.frame)
-        self.frame.Show()
+        self.frame.Show(True)
         return True
 
 
