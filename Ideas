@@ -29,5 +29,11 @@ run the multianalysis.py script inside this app and specify the output folder fo
 
 
 
+TODO
+----
+1. Complete analysis for incomplete h5py
+2. Put resp map image instead of anat in fpi_image
+3. Allow region choice from fpi_image -> recalculate
+4. Plots from ROIs
 
 

@@ -360,6 +360,7 @@ class HDF5Writer:
         :return: Nada
         """
         with h5py.File(self._path, 'r+') as datastore:
+            print(data_dict.keys())
             if not 'roi' in datastore:
                 datastore.create_group('roi')
             roi_grp = datastore['roi']

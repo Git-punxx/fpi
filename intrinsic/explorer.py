@@ -14,7 +14,7 @@ import os
 
 
 class ViewerIntrinsic(QtWidgets.QMainWindow):
-    def __init__(self, root = os.getenv('FPI_PATH')):
+    def __init__(self, root = '/Volumes'):
         super().__init__()
         # Read color map from here : http://www.kennethmoreland.com/color-advice/
         self.cl = np.loadtxt('../intrinsic/extended-black-body-table-byte-0256.csv', delimiter=',', skiprows=1)
@@ -367,6 +367,8 @@ class AnalysisThread(QtCore.QThread):
         self.kwargs = kwargs
 
     def run(self) -> None:
+        print('Running analysis thread')
+        sys.stdout.flush()
         I = Intrinsic(self.datapath, **self.kwargs)
         I.save_analysis()
 

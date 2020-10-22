@@ -47,3 +47,14 @@ Traceback (most recent call last):
   File "h5py\_objects.pyx", line 55, in h5py._objects.with_phil.wrapper
   File "h5py\h5f.pyx", line 88, in h5py.h5f.open
 OSError: Unable to open file (bad object header version number)
+2020-10-22:16:50:05 :: explorer.py :: handle_exception :: line 461 :: ERROR :: Uncaught exception
+Traceback (most recent call last):
+  File "/Users/Ftero/PycharmProjects/fpi/intrinsic/explorer.py", line 173, in analyze
+    c_path = Path(file_path)
+  File "/usr/local/Cellar/python/3.7.6_1/Frameworks/Python.framework/Versions/3.7/lib/python3.7/pathlib.py", line 1022, in __new__
+    self = cls._from_parts(args, init=False)
+  File "/usr/local/Cellar/python/3.7.6_1/Frameworks/Python.framework/Versions/3.7/lib/python3.7/pathlib.py", line 669, in _from_parts
+    drv, root, parts = self._parse_args(args)
+  File "/usr/local/Cellar/python/3.7.6_1/Frameworks/Python.framework/Versions/3.7/lib/python3.7/pathlib.py", line 653, in _parse_args
+    a = os.fspath(a)
+TypeError: expected str, bytes or os.PathLike object, not bool
