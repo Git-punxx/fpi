@@ -339,6 +339,39 @@ class HD5Parser(FPIParser):
                 print(e)
                 return None
 
+    def roi_range(self):
+        with h5py.File(self._path, 'r') as datastore:
+            try:
+                roi = datastore['roi']['roi_range'][()]
+                return roi
+            except Exception as e:
+                print('Exception on roi method')
+                print(e)
+                return None
+
+
+class HDF5Writer:
+    def __init__(self, path):
+        self._path = path
+
+    def insert_into_group(self, grp_name, data_dict):
+        """
+        :param data_dict: A dictionary that contains names of datasets and dataset to write into group
+        :return: Nada
+        """
+        with h5py.File(self._path, 'r+') as datastore:
+            if not 'roi' in datastore:
+                datastore.create_group('roi')
+            roi_grp = datastore['roi']
+            for key, dataset in data_dict.items():
+                roi_grp.create_dataset(key, data = dataset)
+    def delete_roi(self):
+        with h5py.File(self._path, 'r+') as datastore:
+            if not 'roi' in datastore:
+                return
+            roi_grp = datastore['roi']
+            for key, dataset in roi_grp.items():
+                del roi_grp[key]
 
 ### Model #####
 
@@ -390,14 +423,21 @@ class ExperimentManager:
                     self._experiments[name] = fut.result()
         else:
             for exp in self._exp_paths:
-                name = extract_name(os.path.basename(exp))
-                self._experiments[name] = exp
+                if self.check_if_valid(exp):
+                    name = extract_name(os.path.basename(exp))
+                    self._experiments[name] = exp
+                else:
+                    pass
 
         self.filtered = list(self._experiments.keys())
         pub.sendMessage(EXPERIMENT_LIST_CHANGED, choices=self.to_tuple())
 
     def check_if_valid(self, experiment_path):
-        return experiment_path
+        try:
+            h5py.File(experiment_path, 'r')
+            return True
+        except OSError:
+            return False
 
     def get_experiment(self, name: str) -> object:
         """
@@ -497,7 +537,14 @@ class FPIExperiment:
         self._peak_latency = None
         self._anat = None
         self._stack = None
+        self._roi = None
 
+
+    @property
+    def roi_range(self):
+        if self._roi is None:
+            self._roi = self._parser.roi_range()
+        return self._roi
 
     @property
     def response_area(self):

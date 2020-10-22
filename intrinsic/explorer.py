@@ -1,4 +1,4 @@
-from intrinsic.imaging import Session, Intrinsic, MOVIE_EXPORT, overlay
+from imaging import Session, Intrinsic, MOVIE_EXPORT, overlay
 import sys
 from PyQt5 import QtGui, QtWidgets, QtCore
 import pyqtgraph as pg
@@ -7,27 +7,28 @@ from skimage.filters import gaussian as gauss_filt
 from skimage.io import imsave
 from pathlib import Path
 from typing import Optional
-from intrinsic.h5_tools import *
+from h5_tools import *
 import logging
 from logging.handlers import RotatingFileHandler
+import os
 
 
 class ViewerIntrinsic(QtWidgets.QMainWindow):
-    def __init__(self):
+    def __init__(self, root = '.'):
         super().__init__()
         # Read color map from here : http://www.kennethmoreland.com/color-advice/
-        self.cl = np.loadtxt('extended-black-body-table-byte-0256.csv', delimiter=',', skiprows=1)
+        self.cl = np.loadtxt('../intrinsic/extended-black-body-table-byte-0256.csv', delimiter=',', skiprows=1)
         self.cmap = [QtGui.qRgb(*x[1:]) for x in self.cl]
         self.cl = np.vstack((np.ones(self.cl.shape[0]), self.cl[:, 1:].transpose())).transpose()
         self.c_data = np.array([])
         self._c_slice = 0
         self.S: Optional[Session] = None
         # File model
-        home = str(Path.home())
         self.file_model = QtWidgets.QFileSystemModel()
         self.file_model.setFilter(QtCore.QDir.AllDirs | QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot )
         self.file_model.setNameFilters(["*.h5"])
-        self.file_model.setRootPath('.')
+        print(os.getenv('FPI_PATH'))
+        self.file_model.setRootPath(os.getenv('FPI_PATH'))
 
         self.main_widget = QtWidgets.QWidget(self)
         # Layouts
@@ -46,6 +47,7 @@ class ViewerIntrinsic(QtWidgets.QMainWindow):
         # Widgets
         self.tree = QtWidgets.QTreeView(self)
         self.tree.setModel(self.file_model)
+        self.tree.setRootIndex(self.file_model.index(os.getenv('FPI_PATH')))
         self.tree.hideColumn(1)
         self.tree.hideColumn(2)
         self.tree.hideColumn(3)

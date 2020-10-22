@@ -12,6 +12,8 @@ from fpi_plotter import FPIPlotter
 from gui.fpi_image import DetailsPanel
 from gui.popups import PopupMenuMixin
 from gui.util import BoxPlotChoices
+import sys
+import shlex
 
 CHOICES_CHANGED = 'choices.changed'
 LINE_CHANGED = 'line.changed'
@@ -21,6 +23,10 @@ GENOTYPE_CHANGED = 'genotype.changed'
 EXPERIMENT_CHANGED = 'experiment.changed'
 CLEAR_FILTERS = 'clear.filters'
 EXPERIMENT_LIST_CHANGED = 'experiments.list.changed'
+
+STATUS_BAR_TEXT = '{:<40} | Total experiments selected: {:<2} | Working dir: {}'
+
+ID_OPEN_PANOPLY = wx.NewId()
 
 
 class MainFrame(wx.Frame):
@@ -338,6 +344,7 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnSelect)
         self.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.OnDeselect)
         self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnActivate)
+        self.Bind(wx.EVT_MENU, self.OpenPanoply)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.list, 1, wx.EXPAND)
@@ -359,7 +366,7 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         text = item.GetText()
         self.current_selection.append(text)
         status_text = 'Experiment {} selected'.format(text)
-        self.GetParent().SetStatusText(f'{status_text:<40} | Total experiments selected: {len(self.current_selection):<2}')
+        self.GetParent().SetStatusText(STATUS_BAR_TEXT.format(status_text, len(self.current_selection), os.getenv('FPI_PATH')))
 
     def OnDeselect(self, event):
         item = self.list.GetItem(event.GetIndex())
@@ -367,7 +374,7 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         if text in self.current_selection:
             self.current_selection.remove(text)
         status_text = 'Experiment {} deselected'.format(text)
-        self.GetParent().SetStatusText(f'{status_text:<40} | Total experiments selected: {len(self.current_selection):<2}')
+        self.GetParent().SetStatusText(STATUS_BAR_TEXT.format(status_text, len(self.current_selection), os.getenv('FPI_PATH')))
 
     def clear(self):
         self.list.DeleteAllItems()
@@ -393,9 +400,15 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         self.current_selection = []
 
     def CreateContextMenu(self, menu):
-        menu.Append(wx.ID_COPY)
-        menu.Append(wx.ID_CUT)
-        menu.Append(wx.ID_PASTE)
+        menu.Append(ID_OPEN_PANOPLY, 'Open in Panoply')
+
+    def OpenPanoply(self, event):
+        item = self.current_selection[0]
+        exp = self.GetTopLevelParent().gatherer.get_experiment(item)
+        if sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
+            os.system('open ' + shlex.quote(exp))
+        else:
+            os.system('start ' + exp._path)
 
 class Plot(wx.Panel):
     def __init__(self, parent, id=wx.ID_ANY, dpi = 100, experiment=None, **kwargs):
