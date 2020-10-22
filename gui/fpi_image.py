@@ -1,4 +1,5 @@
 import wx
+import sys
 import h5py
 from PIL import Image
 import os
@@ -122,6 +123,9 @@ class DetailsPanel(wx.Dialog):
 
         self.Bind(wx.EVT_BUTTON, self.OnAnalysis, self._roi_analysis_btn)
         self.Bind(wx.EVT_BUTTON, self.OnDeleteROI, self._delete_roi)
+        self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown, image_panel)
+
+
             # self._response = None
         # self._timecourse = None
         #
@@ -133,13 +137,20 @@ class DetailsPanel(wx.Dialog):
         # self._mean_baseline = None
         # self._peak_latency = None
 
+    def OnLeftDown(self, event):
+        print(event.GetPosition())
+        sys.stdout.flush()
+
+    def OnLeftUp(self, event):
+        pass
+
     def _datastore_structure(self):
         with h5py.File(self._path, 'r') as datastore:
             for key, items in datastore['df'].items():
                 pass
 
     def load_image(self):
-        im = self._experiment.anat
+        im = self._experiment.resp_map
         image_panel = wx.Panel(self, style = wx.BORDER_RAISED)
         sizer = wx.BoxSizer(wx.VERTICAL)
 

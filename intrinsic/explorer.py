@@ -14,7 +14,7 @@ import os
 
 
 class ViewerIntrinsic(QtWidgets.QMainWindow):
-    def __init__(self, root = '/Volumes'):
+    def __init__(self, root = os.getenv('FPI_PATH')):
         super().__init__()
         # Read color map from here : http://www.kennethmoreland.com/color-advice/
         self.cl = np.loadtxt('../intrinsic/extended-black-body-table-byte-0256.csv', delimiter=',', skiprows=1)

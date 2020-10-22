@@ -335,7 +335,7 @@ class HD5Parser(FPIParser):
                 anat = datastore['df']['resp_map'][x_slice, y_slice]
                 return anat
             except Exception as e:
-                print('Exception on anat method')
+                print('Exception on resp_map method')
                 print(e)
                 return None
 
@@ -535,6 +535,7 @@ class FPIExperiment:
         self._no_trials = None
         self._no_baseline = None
         self._response_area = None
+        self._resp_map = None
         self._max_df = None
         self._avg_df = None
         self._mean_baseline = None
@@ -561,6 +562,12 @@ class FPIExperiment:
         if self._response is None:
             self._response = self._parser.response()
         return self._response
+
+    @property
+    def resp_map(self):
+        if self._resp_map is None:
+            self._resp_map = self._parser.response_map()
+        return self._resp_map
 
     @property
     def timecourse(self):
