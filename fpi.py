@@ -344,7 +344,7 @@ class HD5Parser(FPIParser):
     def roi_range(self):
         with h5py.File(self._path, 'r') as datastore:
             try:
-                roi = datastore['roi']['roi_range'][()]
+                roi = datastore['roi']['range'][()]
                 return roi
             except Exception as e:
                 print('Exception on roi method')
@@ -446,6 +446,8 @@ class ExperimentManager:
                 pass
 
         self.filtered = list(self._experiments.keys())
+        print('Updating list')
+        print('-----------------------------------------')
         pub.sendMessage(EXPERIMENT_LIST_CHANGED, choices=self.to_tuple())
 
     def check_if_valid(self, experiment_path):
@@ -654,6 +656,11 @@ class FPIExperiment:
             self._stack = self._parser.stack()
         return self._stack
 
+    @property
+    def roi(self):
+        if self._roi is None:
+            self._roi = self._parser.roi_range()
+        return self._roi
 
     def clear(self):
         self._response = None

@@ -172,6 +172,7 @@ class DetailsPanel(wx.Dialog):
                 writer.delete_roi()
                 self._roi_analysis_btn.Disable()
                 self._delete_roi.Disable()
+        wx.PostEvent(self.GetParent(), event)
 
     def OnRoiUpdate(self, event):
         # Delete the previous roi
@@ -182,6 +183,7 @@ class DetailsPanel(wx.Dialog):
         writer.write_roi(event.roi)
         self._roi_analysis_btn.Enable()
         self._delete_roi.Enable()
+        self._roi_txt.SetLabel(f'{self._experiment.roi_range}')
 
     def _save_analysis(self, analysis_dict):
         writer = HDF5Writer(self._experiment._path)

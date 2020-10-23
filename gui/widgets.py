@@ -16,7 +16,8 @@ from gui.util import BoxPlotChoices
 import sys
 import shlex
 import gui.splash_screen
-import subprocess
+from gui.custom_events import *
+import itertools
 
 from intrinsic.explorer import ViewerIntrinsic
 
@@ -92,6 +93,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnArea, self.area_button)
 
         self.Bind(wx.EVT_MENU, self.OnMenu)
+        self.Bind(wx.EVT_IDLE, self.OnActivate)
 
         # Layout
         header_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -150,6 +152,9 @@ class MainFrame(wx.Frame):
     def OnMenu(self, event):
         evt_id = event.GetId()
 
+    def OnActivate(self, event):
+        if self.exp_list is not None:
+            self.exp_list.mark_items()
 
     def OnLineChange(self, args):
         res = self.gatherer.filterLine(args)
@@ -364,6 +369,7 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
     def __init__(self, parent, *args, **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
         PopupMenuMixin.__init__(self)
+        self.length = 0
 
         #TODO Change the style of the row if the experiment has a ROI
         self.list = wx.ListCtrl(self, -1, style=wx.LC_REPORT | wx.LC_VRULES | wx.LC_HRULES)
@@ -405,13 +411,15 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         status_text = 'Experiment {} deselected'.format(text)
         self.GetParent().SetStatusText(STATUS_BAR_TEXT.format(status_text, len(self.current_selection), os.getenv('FPI_PATH')))
 
+
     def clear(self):
         self.list.DeleteAllItems()
 
     def update(self, choices):
-        print('Received message')
+        self.length = len(choices)
         self.clear()
         self.add_rows(choices)
+        self.mark_items()
 
     def add_columns(self, columns):
         self.list.InsertColumn(0, 'Experiment')
@@ -421,6 +429,7 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
     def add_rows(self, data):
         for row in data:
             self.list.Append(row)
+            self.length += 1
 
     def GetSelection(self):
         return self.current_selection
@@ -431,6 +440,35 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
     def CreateContextMenu(self, menu):
         menu.Append(ID_OPEN_PANOPLY, 'Open in Panoply')
         menu.Append(ID_OPEN_INSTRINSIC, 'Choose Range of Interest')
+
+    def mark_items(self):
+        '''
+        For every experiment in the list check:
+        1. If it has a roi
+        2. If it has a resp map
+        Mark it
+        :return: None
+        '''
+        if self.list is None:
+            return
+        for index in range(self.length):
+            item = self.list.GetItem(index)
+            exp_name = item.GetText()
+            if exp_name == '':
+                break
+            print(exp_name)
+            exp = self.GetTopLevelParent().gatherer.get_experiment(exp_name)
+            # Load it
+            if exp.roi is not None:
+                self.list.SetItemBackgroundColour(index, wx.Colour(240, 240, 240))
+                self.list.SetItemTextColour(index, wx.Colour(50, 155, 50))
+            elif exp.resp_map is not None:
+                self.list.SetItemBackgroundColour(index, wx.Colour(240, 240, 240))
+                self.list.SetItemTextColour(index, wx.Colour(0, 0, 255))
+            else:
+                self.list.SetItemBackgroundColour(index, wx.Colour(240, 240, 240))
+                self.list.SetItemTextColour(index, wx.Colour(255, 0, 255))
+        self.Refresh()
 
     @register(ID_OPEN_PANOPLY)
     def OpenPanoply(self):
