@@ -206,8 +206,9 @@ class CSVParser(FPIParser):
 
 
 class HD5Parser(FPIParser):
-    def __init__(self, experiment, path):
+    def __init__(self, experiment, path, roi = None):
         FPIParser.__init__(self, experiment, path)
+        self.roi = roi
 
     def parser_type(self):
         return 'hdf5'
@@ -227,7 +228,6 @@ class HD5Parser(FPIParser):
         with h5py.File(self._path, 'r') as datastore:
             # here we need to see if we will use 'response' or 'resp_map'
             try:
-                x_slice, y_slice = self.range()
                 data = datastore['df']['avg_df'][()]
                 return data
             except Exception as e:
@@ -240,7 +240,7 @@ class HD5Parser(FPIParser):
             # here we need to see if we will use 'response' or 'resp_map'
             try:
                 x_slice, y_slice = self.range()
-                data = datastore['df']['stack'][x_slice, y_slice]
+                data = datastore['df']['stack'][x_slice, y_slice, :] # This is the stack of average frames. It is a 3D array
             except Exception as e:
                 print('Exception in response method')
                 data = datastore['df']['stack'][()]
@@ -633,6 +633,7 @@ class FPIExperiment:
         if self._stack is None:
             self._stack = self._parser.stack()
         return self._stack
+
 
     def clear(self):
         self._response = None

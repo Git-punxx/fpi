@@ -187,3 +187,23 @@ class DetailsPanel(wx.Dialog):
         writer.insert_into_group('roi', analysis_dict)
 
 
+class ROIPanel(wx.Panel):
+    def __init__(self, exp_name, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.exp_name = exp_name
+
+        # Panel for scalar values of experiment
+        self.roi_details = wx.StaticBox(self, wx.NewId(), 'ROI Details')
+
+        # Panel for images
+        self.roi_images = wx.Panel(self)
+
+        # Panel for the average frame stack
+        self.stack_frames = wx.Panel(self)
+
+    def construct_images(self):
+        """
+
+        :return:
+        """
+
