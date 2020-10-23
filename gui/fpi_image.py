@@ -1,11 +1,13 @@
 import wx
+import threading
 import h5py
-from PIL import Image
 import os
 import datetime
 import intrinsic.imaging as intr
 from fpi import HDF5Writer
 import numpy as np
+import gui.image_roi
+from gui.custom_events import *
 
 
 class DetailsPanel(wx.Dialog):
@@ -105,13 +107,13 @@ class DetailsPanel(wx.Dialog):
 
         self.details_panel.SetSizer((sizer))
         # Load and place the image
-        image_panel = self.load_image()
+        self.image_panel = self.load_image()
         im_sizer = wx.BoxSizer(wx.VERTICAL)
-        im_sizer.Add(image_panel, 1, wx.EXPAND)
+        im_sizer.Add(self.image_panel, 1, wx.EXPAND)
 
         main_sizer = wx.BoxSizer(wx.HORIZONTAL)
         main_sizer.Add(self.details_panel, 0, wx.EXPAND | wx.ALL, 2)
-        main_sizer.Add(image_panel, 1, wx.EXPAND | wx.ALL, 2)
+        main_sizer.Add(im_sizer, 1, wx.EXPAND | wx.ALL, 2)
         self.SetSizer(main_sizer)
         self.Fit()
 
@@ -122,6 +124,8 @@ class DetailsPanel(wx.Dialog):
 
         self.Bind(wx.EVT_BUTTON, self.OnAnalysis, self._roi_analysis_btn)
         self.Bind(wx.EVT_BUTTON, self.OnDeleteROI, self._delete_roi)
+
+        self.Bind(EVT_ROI_UPDATE, self.OnRoiUpdate)
             # self._response = None
         # self._timecourse = None
         #
@@ -139,38 +143,24 @@ class DetailsPanel(wx.Dialog):
                 pass
 
     def load_image(self):
-        im = self._experiment.anat
-        image_panel = wx.Panel(self, style = wx.BORDER_RAISED)
-        sizer = wx.BoxSizer(wx.VERTICAL)
-
-        im_max = im.max()
-        im_min = im.min()
-        divider = im_max - im_min
-        if divider == 0:
-            divider = 1
-        im = 255*(im - im_min)/divider
-
-        raw_image = Image.fromarray(im.T)
-        image = wx.Image(*raw_image.size)
-        image.SetData(raw_image.convert('RGB').tobytes())
-        #TODO Change to wx.Bitmap
-        bitmap_image = wx.StaticBitmap(image_panel, -1, wx.BitmapFromImage(image))
-
-        sizer.Add(bitmap_image, 1, wx.EXPAND | wx.ALL, 2)
-
-        image_panel.SetSizer(sizer)
-        image_panel.Fit()
+        im = self._experiment.resp_map
+        image_panel = gui.image_roi.ImageControl.fromarray(self, im)
         return image_panel
 
-    def OnAnalysis(self, event):
+    def _analyze(self, roi = None):
         with wx.BusyInfo('Performing analysis on ROI...'):
             norm_stack = intr.normalize_stack(self._experiment.stack)
             resp = intr.find_resp(self._experiment.stack)
+
+            print('Threads finished...')
             resp_map, df = intr.resp_map(norm_stack)
 
             print('Analysis finished')
         data_dict = {'norm_stack': norm_stack, 'resp_map': resp_map, 'resp': resp,  'df': df, 'avg_df': df.mean(0), 'max_df': df.max(1).mean() , 'area': np.sum(resp_map > 0)}
         self._save_analysis(data_dict)
+
+    def OnAnalysis(self, event):
+        self._analyze()
 
     def OnDeleteROI(self, event):
         with wx.MessageDialog(None, 'Are you sure you want to delete this ROI?', 'Deleting ROI', style = wx.YES_NO | wx.NO_DEFAULT | wx.ICON_WARNING) as dlg:
@@ -180,7 +170,18 @@ class DetailsPanel(wx.Dialog):
             else:
                 writer = HDF5Writer(self._experiment._path)
                 writer.delete_roi()
+                self._roi_analysis_btn.Disable()
+                self._delete_roi.Disable()
 
+    def OnRoiUpdate(self, event):
+        # Delete the previous roi
+        # Update the h5 file with the new data
+        # maybe use threads here
+        print(event.roi)
+        writer = HDF5Writer(self._experiment._path)
+        writer.write_roi(event.roi)
+        self._roi_analysis_btn.Enable()
+        self._delete_roi.Enable()
 
     def _save_analysis(self, analysis_dict):
         writer = HDF5Writer(self._experiment._path)

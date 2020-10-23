@@ -321,21 +321,23 @@ class HD5Parser(FPIParser):
         with h5py.File(self._path, 'r') as datastore:
             x_slice, y_slice = self.range()
             try:
-                anat = datastore['anat'][x_slice, y_slice]
+                anat = datastore['anat'][()]
                 return anat
             except Exception as e:
                 print('Exception on anat method')
                 print(e)
                 return None
 
-    def response_map(self):
+    def resp_map(self):
+        print('Getting rsp_map from h5py')
         with h5py.File(self._path, 'r') as datastore:
             x_slice, y_slice = self.range()
             try:
-                anat = datastore['df']['resp_map'][x_slice, y_slice]
-                return anat
+                resp_map = datastore['df']['resp_map'][()]
+                print(resp_map.shape)
+                return resp_map
             except Exception as e:
-                print('Exception on anat method')
+                print('Exception on resp_map method')
                 print(e)
                 return None
 
@@ -375,6 +377,17 @@ class HDF5Writer:
             roi_grp = datastore['roi']
             for key, dataset in roi_grp.items():
                 del roi_grp[key]
+
+    def write_roi(self, roi):
+        print(f'received {roi}')
+        with h5py.File(self._path, 'r+') as datastore:
+            if 'roi' not in datastore:
+                datastore.create_group('roi')
+            roi_grp = datastore['roi']
+            if 'range' in roi_grp:
+                del roi_grp['range']
+            roi_grp.create_dataset(name = 'range', data = np.array([roi[0], roi[0] + roi[2], roi[1], roi[1] + roi[3]]))
+
 
 ### Model #####
 
@@ -530,6 +543,7 @@ class FPIExperiment:
 
         self._response = None
         self._timecourse = None
+        self._resp_map = None
 
         self._no_trials = None
         self._no_baseline = None
@@ -560,6 +574,12 @@ class FPIExperiment:
         if self._response is None:
             self._response = self._parser.response()
         return self._response
+
+    @property
+    def resp_map(self):
+        if self._resp_map is None:
+            self._resp_map = self._parser.resp_map()
+        return self._resp_map
 
     @property
     def timecourse(self):

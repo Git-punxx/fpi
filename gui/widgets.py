@@ -68,15 +68,19 @@ class MainFrame(wx.Frame):
         self.filter = FilterPanel(self, style = wx.BORDER_RAISED)
         self.plotter = PlotNotebook(self)
 
-        self.boxplot_choices = BoxPlotChoices(self, style = wx.BORDER_RAISED)
 
 
-        self.response_btn = wx.Button(self, label='Plot Response')
-        self.peak_value_btn = wx.Button(self, label='BoxPlot Peak Values')
-        self.latency_button = wx.Button(self, label='BoxPlot Onset Latencies')
-        self.peak_button = wx.Button(self, label='BoxPlot Peak Latencies')
-        self.anat_button = wx.Button(self, label='Plot Anat')
-        self.area_button = wx.Button(self, label='Plot Area')
+        # Footer panel
+        self.footer_panel = wx.Panel(self)
+        self.boxplot_choices = BoxPlotChoices(self.footer_panel, style = wx.BORDER_RAISED)
+
+        self.response_btn = wx.Button(self.footer_panel, label='Plot Response')
+        self.peak_value_btn = wx.Button(self.footer_panel, label='BoxPlot Peak Values')
+        self.latency_button = wx.Button(self.footer_panel, label='BoxPlot Onset Latencies')
+        self.peak_button = wx.Button(self.footer_panel, label='BoxPlot Peak Latencies')
+        self.anat_button = wx.Button(self.footer_panel, label='Plot Anat')
+        self.area_button = wx.Button(self.footer_panel, label='Plot Area')
+        self.roi_tick = wx.CheckBox(self.footer_panel, label = 'Use ROIs')
 
 
         # Bindings
@@ -100,13 +104,17 @@ class MainFrame(wx.Frame):
 
 
         footer_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        footer_sizer.Add(self.boxplot_choices, 0, wx.EXPAND)
-        footer_sizer.Add(self.response_btn, 0)
-        footer_sizer.Add(self.peak_value_btn, 0)
-        footer_sizer.Add(self.latency_button)
-        footer_sizer.Add(self.peak_button)
-        footer_sizer.Add(self.anat_button)
-        footer_sizer.Add(self.area_button)
+        footer_sizer.Add(self.boxplot_choices, 0, wx.ALL, 5)
+        footer_sizer.Add(self.response_btn, 0, wx.ALL, 5)
+        footer_sizer.Add(self.peak_value_btn, 0, wx.ALL, 5)
+        footer_sizer.Add(self.latency_button, 0, wx.ALL, 5)
+        footer_sizer.Add(self.peak_button, 0, wx.ALL, 5)
+        footer_sizer.Add(self.anat_button, 0, wx.ALL, 5)
+        footer_sizer.Add(self.area_button, 0, wx.ALL, 5)
+        footer_sizer.Add(self.roi_tick, 0, wx.ALL, 5)
+
+        self.footer_panel.SetSizer(footer_sizer)
+        self.Fit()
 
         exp_sizer = wx.BoxSizer(wx.SB_HORIZONTAL)
         exp_sizer.Add(header_sizer, 0, wx.EXPAND)
@@ -114,7 +122,7 @@ class MainFrame(wx.Frame):
 
         main_sizer = wx.BoxSizer(wx.VERTICAL)
         main_sizer.Add(exp_sizer, 1, wx.EXPAND | wx.ALL, 2)
-        main_sizer.Add(footer_sizer, 0, wx.EXPAND | wx.ALL, 2)
+        main_sizer.Add(self.footer_panel, 0, wx.EXPAND | wx.ALL, 2)
         self.SetSizer(main_sizer)
         self.Fit()
 

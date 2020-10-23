@@ -2,11 +2,16 @@ import wx
 from PIL import Image
 import numpy as np
 import sys
+from matplotlib import cm
+import random
+from gui.custom_events import *
 
 
 def PIL2wx(image):
     width, height = image.size
-    return wx.BitmapFromBuffer(width, height, image.tobytes())
+    print(width, height)
+    print(len(image.tobytes()))
+    return wx.Bitmap.FromBuffer(width, height, image.tobytes())
 
 def wx2PIL(bitmap):
     size = tuple(bitmap.GetSize())
@@ -23,8 +28,8 @@ def log(msg):
     print(msg)
     sys.stdout.flush()
 
-class ImageControl(wx.Window):
-    def __init__(self, image_path, rescale = True,  *args, **kwargs):
+class ImageControl(wx.Panel):
+    def __init__(self, image: Image, rescale = True,  *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.rescale = rescale
@@ -33,7 +38,10 @@ class ImageControl(wx.Window):
         self.end = None
 
         self.buffer = None
-        self.image = wx.Image(image_path)
+        self.image = image
+
+        width, height = self.image.GetSize()
+        self.SetMinSize((width, height))
 
         self.Bind(wx.EVT_SIZE, self.OnSize)
         self.Bind(wx.EVT_PAINT, self.OnPaint)
@@ -52,9 +60,20 @@ class ImageControl(wx.Window):
         pass
 
     @staticmethod
-    def FromNpArray(self, nparr):
-        pass
-    
+    def fromarray(parent, nparray):
+        #im = Image.fromarray(np.uint8(cm.viridis(nparray)*255))
+        data = nparray.copy()
+        nparray -= nparray.min()
+        nparray /= nparray.max()
+        nparray = cm.viridis(nparray)
+        nparray *= 255
+
+        im = Image.fromarray(np.uint8(nparray)).convert('RGB')
+        wxim = PIL2wx(im)
+        ctrl = ImageControl(parent = parent, image = wxim, style = wx.BORDER_RAISED)
+        ctrl.data = data
+        return ctrl
+
     def InitBuffer(self):
         '''
         Initialize the buffer
@@ -62,7 +81,7 @@ class ImageControl(wx.Window):
         Then using a buffereddc we should draw the image on the bitmap
         '''
         w, h = self.GetClientSize()
-        scaled = self.image.Copy()
+        scaled = self.image.ConvertToImage()
 
         # Here maybe we could have preallocated a large enough bitmap
         # and use GetSubBitmap(rect)
@@ -77,10 +96,12 @@ class ImageControl(wx.Window):
 
     def OnSize(self, evt):
         self.InitBuffer()
-        dc = wx.BufferedDC(wx.ClientDC(self), self.buffer)
+        wx.BufferedDC(wx.ClientDC(self), self.buffer)
 
     def OnPaint(self, evt):
-        dc = wx.BufferedPaintDC(self, self.buffer)
+        if not self.buffer:
+            self.InitBuffer()
+        wx.BufferedPaintDC(self, self.buffer)
 
     def OnLeftDown(self, event):
         self.InitBuffer()
@@ -91,8 +112,13 @@ class ImageControl(wx.Window):
 
     def OnLeftUp(self, event):
         self.ReleaseMouse()
-        log(self.roi_to_rect())
-        
+        x, y, w, h = self.roi_to_rect()
+        #TODO Create an event about roi change
+
+        # Generate the event
+        evt = UpdatedROI(id = EVT_ROI_UPDATE, roi = self.roi_to_rect())
+        wx.PostEvent(self.GetParent(), evt)
+
     def OnMotion(self, event):
         if event.Dragging(): 
             x, y = event.GetPosition()
@@ -131,7 +157,8 @@ class ImageControl(wx.Window):
 class MyFrame(wx.Frame):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.panel = ImageControl(parent = self, image_path = 'test.png', rescale = False)
+        arr = create_array(600, 400)
+        self.panel = ImageControl.fromarray(self, arr)
 
 
 class MyApp(wx.App):
@@ -140,6 +167,7 @@ class MyApp(wx.App):
         f.Show()
         return True
 
-app = MyApp()
-app.MainLoop()
+def create_array(n, m):
+    print('Creating image')
+    return np.array([random.randint(0, 255) for i in range(n * m)]).reshape(n, m)
 
