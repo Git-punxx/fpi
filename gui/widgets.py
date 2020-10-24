@@ -451,7 +451,7 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         '''
         if self.list is None:
             return
-        for index in range(self.length):
+        for index in range(self.list.GetItemCount()):
             item = self.list.GetItem(index)
             exp_name = item.GetText()
             if exp_name == '':
