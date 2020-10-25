@@ -132,7 +132,7 @@ class FPIPlotter:
 
         fpi_util.clear_data(genotype_dict)
         # Compute the positions of the boxplots
-        print(genotype_dict)
+
         self._plot_dict(genotype_dict)
         [DataFrame(item).to_csv(f'../csv/{key}_response_latency.csv') for key, item in genotype_dict.items()]
 

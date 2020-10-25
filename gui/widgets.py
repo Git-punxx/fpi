@@ -456,7 +456,7 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
             exp_name = item.GetText()
             if exp_name == '':
                 break
-            print(exp_name)
+
             exp = self.GetTopLevelParent().gatherer.get_experiment(exp_name)
             # Load it
             if exp.roi is not None:

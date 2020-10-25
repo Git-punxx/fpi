@@ -218,10 +218,8 @@ class HD5Parser(FPIParser):
             # here we need to see if we will use 'response' or 'resp_map'
             try:
                 xs, xe, ys, ye = list(datastore['roi']['roi_range'])
-                print('Range: ', xs, xe, ys, ye)
                 return (slice(xs, xe), slice(ys, ye))
             except Exception as e:
-                print('No ROI for this experiment')
                 return (slice(None), slice(None))
 
     def response(self):
@@ -329,12 +327,12 @@ class HD5Parser(FPIParser):
                 return None
 
     def resp_map(self):
-        print('Getting rsp_map from h5py')
+
         with h5py.File(self._path, 'r') as datastore:
             x_slice, y_slice = self.range()
             try:
                 resp_map = datastore['df']['resp_map'][()]
-                print(resp_map.shape)
+
                 return resp_map
             except Exception as e:
                 print('Exception on resp_map method')
@@ -347,8 +345,6 @@ class HD5Parser(FPIParser):
                 roi = datastore['roi']['range'][()]
                 return roi
             except Exception as e:
-                print('Exception on roi method')
-                print(e)
                 return None
 
 
