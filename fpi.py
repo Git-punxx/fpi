@@ -341,7 +341,7 @@ class HD5Parser(FPIParser):
     def roi_range(self):
         with h5py.File(self._path, 'r') as datastore:
             try:
-                roi = datastore['roi']['range'][()]
+                roi = datastore['roi']['roi_range'][()]
                 return roi
             except Exception as e:
                 return None
@@ -367,7 +367,8 @@ class HDF5Writer:
 
     def delete_roi(self):
         with h5py.File(self._path, 'r+') as datastore:
-            if not 'roi' in datastore:
+            if 'roi' not in datastore:
+                print(datastore.keys())
                 return
             roi_grp = datastore['roi']
             for key, dataset in roi_grp.items():
@@ -377,11 +378,12 @@ class HDF5Writer:
         print(f'received {roi}')
         with h5py.File(self._path, 'r+') as datastore:
             if 'roi' not in datastore:
+                print(datastore.keys())
                 datastore.create_group('roi')
             roi_grp = datastore['roi']
             if 'range' in roi_grp:
                 del roi_grp['range']
-            roi_grp.create_dataset(name = 'range', data = np.array([roi[0], roi[0] + roi[2], roi[1], roi[1] + roi[3]]))
+            roi_grp.create_dataset(name = 'roi_range', data = np.array([roi[0], roi[0] + roi[2], roi[1], roi[1] + roi[3]]))
 
 
 ### Model #####
@@ -547,6 +549,8 @@ class FPIExperiment:
         self._stack = None
         self._roi = None
 
+    def roi_slice(self):
+        return self._parser.range()
 
     @property
     def roi_range(self):

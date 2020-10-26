@@ -459,7 +459,7 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
 
             exp = self.GetTopLevelParent().gatherer.get_experiment(exp_name)
             # Load it
-            if exp.roi is not None:
+            if exp.roi_range is not None:
                 self.list.SetItemBackgroundColour(index, wx.Colour(240, 240, 240))
                 self.list.SetItemTextColour(index, wx.Colour(50, 155, 50))
             elif exp.resp_map is not None:

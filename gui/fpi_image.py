@@ -149,6 +149,9 @@ class DetailsPanel(wx.Dialog):
 
     def _analyze(self, roi = None):
         with wx.BusyInfo('Performing analysis on ROI...'):
+            if self._experiment.roi_range is not None:
+                slice = self._experiment.roi_slice()
+                print(slice)
             norm_stack = intr.normalize_stack(self._experiment.stack)
             resp = intr.find_resp(self._experiment.stack)
 
@@ -156,6 +159,7 @@ class DetailsPanel(wx.Dialog):
             resp_map, df = intr.resp_map(norm_stack)
 
             print('Analysis finished')
+
         data_dict = {'norm_stack': norm_stack, 'resp_map': resp_map, 'resp': resp,  'df': df, 'avg_df': df.mean(0), 'max_df': df.max(1).mean() , 'area': np.sum(resp_map > 0)}
         self._save_analysis(data_dict)
 
@@ -172,13 +176,12 @@ class DetailsPanel(wx.Dialog):
                 writer.delete_roi()
                 self._roi_analysis_btn.Disable()
                 self._delete_roi.Disable()
-        wx.PostEvent(self.GetParent(), event)
 
     def OnRoiUpdate(self, event):
         # Delete the previous roi
         # Update the h5 file with the new data
         # maybe use threads here
-        print(event.roi)
+        print(f'Updating ROI')
         writer = HDF5Writer(self._experiment._path)
         writer.write_roi(event.roi)
         self._roi_analysis_btn.Enable()
