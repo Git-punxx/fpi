@@ -54,6 +54,10 @@ class FPIPlotter:
                 ax.grid(True, alpha = 0.1)
         else:
             for gen in genotype_dict.keys():
+                vals = genotype_dict[gen].values()
+                labels = [gen.name for gen in genotype_dict[gen].keys()]
+                print(vals)
+                print(labels)
                 axes.boxplot(genotype_dict[gen].values(), labels=[gen.name for gen in genotype_dict[gen].keys()],
                              patch_artist=True)
                 axes.set_xlabel(gen.name)
@@ -107,7 +111,7 @@ class FPIPlotter:
         for base_filter, genotypes in filter_dict.items():
             for genotype, exp_list in genotypes.items():
                 genotype_dict[genotype][base_filter] = []
-                genotype_dict[genotype][base_filter] = [exp.peak_latency[1] for exp in exp_list if exp.peak_latency is not None]
+                genotype_dict[genotype][base_filter] = [exp.peak_latency for exp in exp_list if exp.peak_latency is not None]
 
         fpi_util.clear_data(genotype_dict)
         self._plot_dict(genotype_dict)
@@ -164,6 +168,23 @@ class FPIPlotter:
             for genotype, exp_list in genotypes.items():
                 genotype_dict[genotype][base_filter] = []
                 genotype_dict[genotype][base_filter] = [exp.area for exp in exp_list if exp.area is not None]
+        fpi_util.clear_data(genotype_dict)
+        # Compute the positions of the boxplots
+        self._plot_dict(genotype_dict)
+
+    @register('areadf')
+    def plot_areadf(self, experiments, choice):
+        print(experiments)
+        print(choice)
+        filter_dict = fpi_util.categorize(experiments, choice)
+
+        # Get the actual data from the fpiexperiment and assign them to the genotype categories
+        genotype_dict = defaultdict(dict)
+        genotype_dict.update((k, {}) for k in [item for item in Genotype])
+        for base_filter, genotypes in filter_dict.items():
+            for genotype, exp_list in genotypes.items():
+                genotype_dict[genotype][base_filter] = []
+                genotype_dict[genotype][base_filter] = [exp.area_df for exp in exp_list if exp.area is not None]
         fpi_util.clear_data(genotype_dict)
         # Compute the positions of the boxplots
         self._plot_dict(genotype_dict)

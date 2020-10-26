@@ -16,6 +16,7 @@ def categorize(experiment_list, filter = AnimalLine.__name__.lower()):
     :param choice:
     :return:
     """
+    print(filter)
     if filter == AnimalLine.__name__.lower() or filter == '':
         # get the animal filter enum from the configuration
         applied_filter = AnimalLine
@@ -52,7 +53,8 @@ def clear_data(genotype_dict):
             continue
         else:
             for key, item in filter.copy().items():
-                if not any(item):
+                print(item)
+                if item is None:
                     del genotype_dict[gen_key][key]
 
 

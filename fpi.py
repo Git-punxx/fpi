@@ -616,25 +616,29 @@ class FPIExperiment:
 
     @property
     def peak_latency(self):
+        # it must return a frame
         if self._peak_latency is None:
-            data = self.response
+            #TODO Add 5 before and 5 after and find the mean frame integral
+            data = self.response # average df per frame
             if data is None:
                 return
-            response_region = data[:]
+            response_region = data[30:75]
             peak = np.argmax(response_region)
             peak_value = np.max(response_region)
-            self._peak_latency = (peak, peak_value)
+            self._peak_latency = peak
         return self._peak_latency
 
     @property
     def response_latency(self, ratio=0.3, n_baseline=30):
+        # returns frames. Find 5 syneomena pou na plhroun th sun8hkh 1 + 0.3 * basekube <  frmaw
         data = self.response
         print(f'Respnse threshold: {abs((1 + ratio) * self.mean_baseline)}')
         if data is None:
             return
-        latency = [(index, val) for index, val in enumerate(data[31:], n_baseline + 1) if
-                   val > abs((1 + ratio) * self.mean_baseline)]
-        return [v[1] for v in latency] # return the values
+        latency = np.array([index for index, val in enumerate(data[31:], n_baseline + 1) if
+                   val > abs((1 + ratio) * self.mean_baseline)])
+
+        return latency
 
     @property
     def no_trials(self):
@@ -663,6 +667,14 @@ class FPIExperiment:
         if self._avg_df is None:
             self._avg_df = parser.avg_df()
         return self._avg_df
+
+    @property
+    def area_df(self, percent = 0.5):
+        # returns the pixels  (area) that are above the given percent * max_df/f
+        # TODO add a button and a input field to enter the percentage
+        area_df = np.sum(self.resp_map[self.resp_map > percent * self.max_df])
+        print(area_df)
+        return area_df
 
     @property
     def anat(self):

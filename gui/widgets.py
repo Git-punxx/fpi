@@ -79,7 +79,7 @@ class MainFrame(wx.Frame):
         self.peak_value_btn = wx.Button(self.footer_panel, label='BoxPlot Peak Values')
         self.latency_button = wx.Button(self.footer_panel, label='BoxPlot Onset Latencies')
         self.peak_button = wx.Button(self.footer_panel, label='BoxPlot Peak Latencies')
-        self.anat_button = wx.Button(self.footer_panel, label='Plot Anat')
+        self.areadf_button = wx.Button(self.footer_panel, label='Plot Area DF')
         self.area_button = wx.Button(self.footer_panel, label='Plot Area')
         self.roi_tick = wx.CheckBox(self.footer_panel, label = 'Use ROIs')
 
@@ -89,7 +89,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnResponse, self.response_btn)
         self.Bind(wx.EVT_BUTTON, self.OnResponseLatency, self.latency_button)
         self.Bind(wx.EVT_BUTTON, self.OnPeakLatency, self.peak_button)
-        self.Bind(wx.EVT_BUTTON, self.OnAnat, self.anat_button)
+        self.Bind(wx.EVT_BUTTON, self.OnAreaDF, self.areadf_button)
         self.Bind(wx.EVT_BUTTON, self.OnArea, self.area_button)
 
         self.Bind(wx.EVT_MENU, self.OnMenu)
@@ -113,7 +113,7 @@ class MainFrame(wx.Frame):
         footer_sizer.Add(self.peak_value_btn, 0, wx.ALL, 5)
         footer_sizer.Add(self.latency_button, 0, wx.ALL, 5)
         footer_sizer.Add(self.peak_button, 0, wx.ALL, 5)
-        footer_sizer.Add(self.anat_button, 0, wx.ALL, 5)
+        footer_sizer.Add(self.areadf_button, 0, wx.ALL, 5)
         footer_sizer.Add(self.area_button, 0, wx.ALL, 5)
         footer_sizer.Add(self.roi_tick, 0, wx.ALL, 5)
 
@@ -248,14 +248,19 @@ class MainFrame(wx.Frame):
         self.exp_list.DeleteSelection()
 
 
-    def OnAnat(self, event):
+    def OnAreaDF(self, event):
+        choice = self.boxplot_choices.GetSelection()
         selected = self.exp_list.GetSelection()
         if not selected:
             return
         exp = self.gatherer.filterSelected(selected)
-        with wx.BusyInfo('Plotting anat image'):
-            self.plotter.add(exp, 'anat')
+        if len(exp) <= 1:
+            ErrorDialog("You must select more than one experiment for boxplots")
+            return
+        with wx.BusyInfo('Plotting area df'):
+            self.plotter.add(exp, 'areadf', choice)
         self.exp_list.DeleteSelection()
+
 
     def OnArea(self, event):
         choice = self.boxplot_choices.GetSelection()
@@ -470,16 +475,16 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
             # Load it
             if exp.is_roi_analyzed():
                 self.list.SetItemBackgroundColour(index, wx.Colour(240, 240, 240))
-                self.list.SetItemTextColour(index, wx.Colour(220, 200, 0))
+                self.list.SetItemTextColour(index, wx.Colour(0, 0, 200))
             elif exp.roi_range is not None:
                 self.list.SetItemBackgroundColour(index, wx.Colour(240, 240, 240))
-                self.list.SetItemTextColour(index, wx.Colour(50, 200, 0))
+                self.list.SetItemTextColour(index, wx.Colour(0, 200, 0))
             elif exp.resp_map is not None:
                 self.list.SetItemBackgroundColour(index, wx.Colour(240, 240, 240))
-                self.list.SetItemTextColour(index, wx.Colour(0, 0, 255))
+                self.list.SetItemTextColour(index, wx.Colour(255, 0, 0))
             else:
                 self.list.SetItemBackgroundColour(index, wx.Colour(240, 240, 240))
-                self.list.SetItemTextColour(index, wx.Colour(255, 0, 255))
+                self.list.SetItemTextColour(index, wx.Colour(0, 0, 0))
         self.Refresh()
 
     @register(ID_OPEN_PANOPLY)
