@@ -27,6 +27,7 @@ def insert_experiment(exp: collections.namedtuple):
         cur.execute(query, exp)
         conn.commit()
     except Exception as e:
+        print('Exception in db')
         print(e)
 
 

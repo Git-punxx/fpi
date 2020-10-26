@@ -1,0 +1,25 @@
+Instructions
+-----
+
+The folder structure must be defined like this
+Data (root folder)
+    csb
+    Animalline folders (ie PTEN, Shank3B etc)
+        Stimulation folders (ie hindpaw, whiskers etc)
+            Treatment folders (DMSO, BMS, No)
+                Genotype folders (KO, WT, Heterogenous etc)
+
+This structure is reflected in the config.json file.
+This file is used to build the corresponding enums for automatic creation
+If we want to create a new Animaline or Stimulation etc we must create the corresponding folder and update the config.json
+file.
+
+The names of the experiments must follows a pattern that is reflected in the config.json file
+-----------------------------------------------------------------------------------------------------------------------
+
+We must set Panoply as the default program for opening hdf5 files
+
+-----------------------------------------------------------------------------------------------------------------------
+
+
+

@@ -4,7 +4,7 @@ from matplotlib.patches import Rectangle
 from matplotlib.cm import viridis, YlOrRd
 from matplotlib.gridspec import GridSpec
 import seaborn as sns
-from stack import Stack
+from intrinsic.stack import Stack
 import numpy as np
 import os
 from tqdm import tqdm

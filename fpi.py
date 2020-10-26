@@ -10,7 +10,6 @@ from app_config import config_manager as app_config
 import re
 from pubsub import pub
 from pub_messages import ANALYSIS_UPDATE
-import db.dbmanager as db
 
 
 '''
@@ -206,8 +205,9 @@ class CSVParser(FPIParser):
 
 
 class HD5Parser(FPIParser):
-    def __init__(self, experiment, path):
+    def __init__(self, experiment, path, roi = None):
         FPIParser.__init__(self, experiment, path)
+        self.roi = roi
 
     def parser_type(self):
         return 'hdf5'
@@ -217,17 +217,14 @@ class HD5Parser(FPIParser):
             # here we need to see if we will use 'response' or 'resp_map'
             try:
                 xs, xe, ys, ye = list(datastore['roi']['roi_range'])
-                print('Range: ', xs, xe, ys, ye)
                 return (slice(xs, xe), slice(ys, ye))
             except Exception as e:
-                print('No ROI for this experiment')
                 return (slice(None), slice(None))
 
     def response(self):
         with h5py.File(self._path, 'r') as datastore:
             # here we need to see if we will use 'response' or 'resp_map'
             try:
-                x_slice, y_slice = self.range()
                 data = datastore['df']['avg_df'][()]
                 return data
             except Exception as e:
@@ -240,7 +237,7 @@ class HD5Parser(FPIParser):
             # here we need to see if we will use 'response' or 'resp_map'
             try:
                 x_slice, y_slice = self.range()
-                data = datastore['df']['stack'][x_slice, y_slice]
+                data = datastore['df']['stack'][x_slice, y_slice, :] # This is the stack of average frames. It is a 3D array
             except Exception as e:
                 print('Exception in response method')
                 data = datastore['df']['stack'][()]
@@ -321,23 +318,72 @@ class HD5Parser(FPIParser):
         with h5py.File(self._path, 'r') as datastore:
             x_slice, y_slice = self.range()
             try:
-                anat = datastore['anat'][x_slice, y_slice]
+                anat = datastore['anat'][()]
                 return anat
             except Exception as e:
                 print('Exception on anat method')
                 print(e)
                 return None
 
-    def response_map(self):
+    def resp_map(self):
+
         with h5py.File(self._path, 'r') as datastore:
             x_slice, y_slice = self.range()
             try:
-                anat = datastore['df']['resp_map'][x_slice, y_slice]
-                return anat
+                resp_map = datastore['df']['resp_map'][()]
+
+                return resp_map
             except Exception as e:
-                print('Exception on anat method')
+                print('Exception on resp_map method')
                 print(e)
                 return None
+
+    def roi_range(self):
+        with h5py.File(self._path, 'r') as datastore:
+            try:
+                roi = datastore['roi']['roi_range'][()]
+                return roi
+            except Exception as e:
+                return None
+
+
+class HDF5Writer:
+    def __init__(self, path):
+        self._path = path
+
+    def insert_into_group(self, grp_name, data_dict):
+        """
+        :param data_dict: A dictionary that contains names of datasets and dataset to write into group
+        :return: Nada
+        """
+        with h5py.File(self._path, 'r+') as datastore:
+            if 'roi' not in datastore:
+                datastore.create_group('roi')
+            roi_grp = datastore['roi']
+            for key, dataset in data_dict.items():
+                if key in roi_grp.keys():
+                    del roi_grp[key]
+                roi_grp.create_dataset(key, data = dataset)
+
+    def delete_roi(self):
+        with h5py.File(self._path, 'r+') as datastore:
+            if 'roi' not in datastore:
+                print(datastore.keys())
+                return
+            roi_grp = datastore['roi']
+            for key, dataset in roi_grp.items():
+                del roi_grp[key]
+
+    def write_roi(self, roi):
+        print(f'received {roi}')
+        with h5py.File(self._path, 'r+') as datastore:
+            if 'roi' not in datastore:
+                print(datastore.keys())
+                datastore.create_group('roi')
+            roi_grp = datastore['roi']
+            if 'range' in roi_grp:
+                del roi_grp['range']
+            roi_grp.create_dataset(name = 'roi_range', data = np.array([roi[0], roi[0] + roi[2], roi[1], roi[1] + roi[3]]))
 
 
 ### Model #####
@@ -359,17 +405,8 @@ class ExperimentManager:
         self._filters = []
 
         self.scan()
-        self.test_db()
         pub.subscribe(self.filterAll, CHOICES_CHANGED)
 
-    def test_db(self):
-        db.create_table()
-        data = self.to_tuple()
-        for row in data:
-            print(row)
-            db.insert_experiment(row)
-
-        db.show_all()
 
 
     def scan(self):
@@ -379,25 +416,34 @@ class ExperimentManager:
 
         futures = []
         #TODO Check if we are on linux, mac or windows and enable or disable the mulitprocessing
-        if app_config.is_linux() or app_config.is_mac():
-            with ProcessPoolExecutor() as executor:
-                for exp in self._exp_paths:
-                    res = executor.submit(self.check_if_valid, exp)
-                    futures.append(res)
-            for fut in as_completed(futures):
-                if fut.result() is not None:
-                    name = extract_name(os.path.basename(fut.result()))
-                    self._experiments[name] = fut.result()
-        else:
-            for exp in self._exp_paths:
+        #if not app_config.is_linux() and not app_config.is_mac():
+        #    with ProcessPoolExecutor() as executor:
+        #        for exp in self._exp_paths:
+        #            res = executor.submit(self.check_if_valid, exp)
+        #            futures.append(res)
+        #    for fut in as_completed(futures):
+        #        if fut.result() is not None:
+        #            name = extract_name(os.path.basename(fut.result()))
+        #            self._experiments[name] = fut.result()
+        #else:
+        for exp in self._exp_paths:
+            if self.check_if_valid(exp):
                 name = extract_name(os.path.basename(exp))
                 self._experiments[name] = exp
+            else:
+                pass
 
         self.filtered = list(self._experiments.keys())
+        print('Updating list')
+        print('-----------------------------------------')
         pub.sendMessage(EXPERIMENT_LIST_CHANGED, choices=self.to_tuple())
 
     def check_if_valid(self, experiment_path):
-        return experiment_path
+        try:
+            h5py.File(experiment_path, 'r')
+            return True
+        except OSError:
+            return False
 
     def get_experiment(self, name: str) -> object:
         """
@@ -454,7 +500,10 @@ class ExperimentManager:
         res = []
         for exp in self.filtered:
             live = self.get_experiment(exp)
-            res.append(fpi_meta._make((live.name, live.animalline, live.stimulation, live.treatment, live.genotype)))
+            try:
+                res.append(fpi_meta._make((live.name, live.animalline, live.stimulation, live.treatment, live.genotype)))
+            except Exception as e:
+                print('Exception in as_tuple')
         return res
 
     def __getitem__(self, name):
@@ -487,6 +536,7 @@ class FPIExperiment:
 
         self._response = None
         self._timecourse = None
+        self._resp_map = None
 
         self._no_trials = None
         self._no_baseline = None
@@ -497,7 +547,16 @@ class FPIExperiment:
         self._peak_latency = None
         self._anat = None
         self._stack = None
+        self._roi = None
 
+    def roi_slice(self):
+        return self._parser.range()
+
+    @property
+    def roi_range(self):
+        if self._roi is None:
+            self._roi = self._parser.roi_range()
+        return self._roi
 
     @property
     def response_area(self):
@@ -510,6 +569,12 @@ class FPIExperiment:
         if self._response is None:
             self._response = self._parser.response()
         return self._response
+
+    @property
+    def resp_map(self):
+        if self._resp_map is None:
+            self._resp_map = self._parser.resp_map()
+        return self._resp_map
 
     @property
     def timecourse(self):
@@ -583,6 +648,12 @@ class FPIExperiment:
         if self._stack is None:
             self._stack = self._parser.stack()
         return self._stack
+
+    @property
+    def roi(self):
+        if self._roi is None:
+            self._roi = self._parser.roi_range()
+        return self._roi
 
     def clear(self):
         self._response = None

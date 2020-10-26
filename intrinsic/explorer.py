@@ -1,4 +1,4 @@
-from imaging import Session, Intrinsic, MOVIE_EXPORT, overlay
+from intrinsic.imaging import Session, Intrinsic, MOVIE_EXPORT, overlay
 import sys
 from PyQt5 import QtGui, QtWidgets, QtCore
 import pyqtgraph as pg
@@ -7,14 +7,14 @@ from skimage.filters import gaussian as gauss_filt
 from skimage.io import imsave
 from pathlib import Path
 from typing import Optional
-from h5_tools import *
+from intrinsic.h5_tools import *
 import logging
 from logging.handlers import RotatingFileHandler
 import os
 
 
 class ViewerIntrinsic(QtWidgets.QMainWindow):
-    def __init__(self, root = '.'):
+    def __init__(self, root = os.getenv('FPI_PATH')):
         super().__init__()
         # Read color map from here : http://www.kennethmoreland.com/color-advice/
         self.cl = np.loadtxt('../intrinsic/extended-black-body-table-byte-0256.csv', delimiter=',', skiprows=1)
@@ -27,7 +27,7 @@ class ViewerIntrinsic(QtWidgets.QMainWindow):
         self.file_model = QtWidgets.QFileSystemModel()
         self.file_model.setFilter(QtCore.QDir.AllDirs | QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot )
         self.file_model.setNameFilters(["*.h5"])
-        self.file_model.setRootPath(os.getenv('FPI_PATH'))
+        self.file_model.setRootPath(root)
 
         self.main_widget = QtWidgets.QWidget(self)
         # Layouts
@@ -46,6 +46,7 @@ class ViewerIntrinsic(QtWidgets.QMainWindow):
         # Widgets
         self.tree = QtWidgets.QTreeView(self)
         self.tree.setModel(self.file_model)
+        self.tree.setRootIndex(self.file_model.index(root))
         self.tree.hideColumn(1)
         self.tree.hideColumn(2)
         self.tree.hideColumn(3)
@@ -161,12 +162,15 @@ class ViewerIntrinsic(QtWidgets.QMainWindow):
 
         self.statusBar().showMessage('Ready!', 1500)
 
-    def analyze(self):
+    def analyze(self, file_path = None):
         if self.S is not None:
             self.S.close()
             self.S = None
         # c_item = self.tree.model().itemData(self.tree.currentIndex())[0]
-        c_path = Path(self.file_model.filePath(self.tree.currentIndex()))
+        if file_path is None:
+            c_path = Path(self.file_model.filePath(self.tree.currentIndex()))
+        else:
+            c_path = Path(file_path)
         if not c_path.is_dir():
             return
         # Get all children directories
