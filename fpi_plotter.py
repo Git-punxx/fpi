@@ -146,7 +146,7 @@ class FPIPlotter:
         for base_filter, genotypes in filter_dict.items():
             for genotype, exp_list in genotypes.items():
                 genotype_dict[genotype][base_filter] = []
-                genotype_dict[genotype][base_filter] = [exp.peak_latency[0] for exp in exp_list if exp.peak_latency is not None]
+                genotype_dict[genotype][base_filter] = [exp.peak_latency for exp in exp_list if exp.peak_latency is not None]
         fpi_util.clear_data(genotype_dict)
         self._plot_dict(genotype_dict)
         path = config_manager.csv_dir

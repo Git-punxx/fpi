@@ -638,7 +638,7 @@ class FPIExperiment:
         latency = np.array([index for index, val in enumerate(data[31:], n_baseline + 1) if
                    val > abs((1 + ratio) * self.mean_baseline)])
 
-        return latency
+        return latency[:10]
 
     @property
     def no_trials(self):
