@@ -381,6 +381,7 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnActivate)
         self.Bind(wx.EVT_MENU, self.HandleContextAction)
 
+
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.list, 1, wx.EXPAND)
         self.SetSizer(sizer)
@@ -459,9 +460,12 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
 
             exp = self.GetTopLevelParent().gatherer.get_experiment(exp_name)
             # Load it
-            if exp.roi_range is not None:
+            if exp.is_roi_analyzed():
                 self.list.SetItemBackgroundColour(index, wx.Colour(240, 240, 240))
-                self.list.SetItemTextColour(index, wx.Colour(50, 155, 50))
+                self.list.SetItemTextColour(index, wx.Colour(220, 200, 0))
+            elif exp.roi_range is not None:
+                self.list.SetItemBackgroundColour(index, wx.Colour(240, 240, 240))
+                self.list.SetItemTextColour(index, wx.Colour(50, 200, 0))
             elif exp.resp_map is not None:
                 self.list.SetItemBackgroundColour(index, wx.Colour(240, 240, 240))
                 self.list.SetItemTextColour(index, wx.Colour(0, 0, 255))

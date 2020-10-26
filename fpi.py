@@ -209,6 +209,13 @@ class HD5Parser(FPIParser):
         FPIParser.__init__(self, experiment, path)
         self.roi = roi
 
+    def analyzed_roi(self):
+        with h5py.File(self._path, 'r') as datastore:
+            if 'roi/resp_map' in datastore:
+                return True
+            else:
+                return False
+
     def parser_type(self):
         return 'hdf5'
 
@@ -233,6 +240,11 @@ class HD5Parser(FPIParser):
                 return None
 
     def stack(self):
+        '''
+        Returns the average stack from the datastore. If a roi_range is in datastore too it will return a slice
+        of the stack
+        :return: A 3d np.array
+        '''
         with h5py.File(self._path, 'r') as datastore:
             # here we need to see if we will use 'response' or 'resp_map'
             try:
@@ -263,7 +275,7 @@ class HD5Parser(FPIParser):
             except Exception as e:
                 return
 
-    def all_pixel(self):
+    def area(self):
         with h5py.File(self._path, 'r') as datastore:
             x_slice, y_slice = self.range()
             try:
@@ -316,7 +328,6 @@ class HD5Parser(FPIParser):
 
     def anat(self):
         with h5py.File(self._path, 'r') as datastore:
-            x_slice, y_slice = self.range()
             try:
                 anat = datastore['anat'][()]
                 return anat
@@ -331,7 +342,6 @@ class HD5Parser(FPIParser):
             x_slice, y_slice = self.range()
             try:
                 resp_map = datastore['df']['resp_map'][()]
-
                 return resp_map
             except Exception as e:
                 print('Exception on resp_map method')
@@ -381,8 +391,8 @@ class HDF5Writer:
                 print(datastore.keys())
                 datastore.create_group('roi')
             roi_grp = datastore['roi']
-            if 'range' in roi_grp:
-                del roi_grp['range']
+            if 'roi_range' in roi_grp:
+                del roi_grp['roi_range']
             roi_grp.create_dataset(name = 'roi_range', data = np.array([roi[0], roi[0] + roi[2], roi[1], roi[1] + roi[3]]))
 
 
@@ -700,6 +710,9 @@ class FPIExperiment:
 
     def __str__(self):
         return f'{self.name}: {self.animal_line} {self.stimulation} {self.treatment} {self.genotype}'
+
+    def is_roi_analyzed(self):
+        return self._parser.analyzed_roi()
 
     def check(self):
         result = []

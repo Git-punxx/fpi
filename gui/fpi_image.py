@@ -1,5 +1,5 @@
 import wx
-import threading
+import concurrent.futures
 import h5py
 import os
 import datetime
@@ -60,6 +60,7 @@ class DetailsPanel(wx.Dialog):
 
         self._roi_analysis_btn = wx.Button(self.details_panel, label = 'Analyze Range of Interest')
         self._delete_roi = wx.Button(self.details_panel, label = 'Delete Range of interest')
+
 
         sizer = wx.GridBagSizer(hgap = 5, vgap = 5)
         sizer.Add(self._file_lbl, (0, 0))
@@ -152,15 +153,23 @@ class DetailsPanel(wx.Dialog):
             if self._experiment.roi_range is not None:
                 slice = self._experiment.roi_slice()
                 print(slice)
-            norm_stack = intr.normalize_stack(self._experiment.stack)
-            resp = intr.find_resp(self._experiment.stack)
 
-            print('Threads finished...')
-            resp_map, df = intr.resp_map(norm_stack)
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                print(self._experiment.stack.shape)
+                norm_stack_future = executor.submit(intr.normalize_stack, self._experiment.stack)
+                resp_map_future = executor.submit(intr.find_resp, self._experiment.stack)
+                norm_stack = norm_stack_future.result()
+                resp = resp_map_future.result()
+            # norm_stack = intr.normalize_stack(self._experiment.stack)
+            # resp = intr.find_resp(self._experiment.stack)
+            im_resp, df = intr.resp_map(norm_stack)
+            resp_map = im_resp
+            avg_df = df.mean(0)
+            max_df = df.max(1).mean()
+            area = np.sum(im_resp > 0)
 
-            print('Analysis finished')
-
-        data_dict = {'norm_stack': norm_stack, 'resp_map': resp_map, 'resp': resp,  'df': df, 'avg_df': df.mean(0), 'max_df': df.max(1).mean() , 'area': np.sum(resp_map > 0)}
+        print('Saving ROI analysis')
+        data_dict = {'norm_stack': norm_stack, 'resp': resp,'resp_map': resp_map, 'df': df, 'avg_df': avg_df, 'max_df': max_df, 'area':area}
         self._save_analysis(data_dict)
 
     def OnAnalysis(self, event):
@@ -174,6 +183,7 @@ class DetailsPanel(wx.Dialog):
             else:
                 writer = HDF5Writer(self._experiment._path)
                 writer.delete_roi()
+                self._experiment._roi = None
                 self._roi_analysis_btn.Disable()
                 self._delete_roi.Disable()
 
@@ -182,8 +192,10 @@ class DetailsPanel(wx.Dialog):
         # Update the h5 file with the new data
         # maybe use threads here
         print(f'Updating ROI')
+
         writer = HDF5Writer(self._experiment._path)
         writer.write_roi(event.roi)
+        self._experiment._roi = event.roi
         self._roi_analysis_btn.Enable()
         self._delete_roi.Enable()
         self._roi_txt.SetLabel(f'{self._experiment.roi_range}')
