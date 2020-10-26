@@ -112,10 +112,6 @@ class FPIPlotter:
 
         fpi_util.clear_data(genotype_dict)
         self._plot_dict(genotype_dict)
-        path = config_manager.csv_dir
-        [DataFrame(item).to_csv(f'{path}/{key}_peak_latency.csv') for key, item in genotype_dict.items()]
-
-
 
     @register('response_latency')
     def plot_onset_latency(self, experiments, choice):
@@ -134,7 +130,6 @@ class FPIPlotter:
         # Compute the positions of the boxplots
 
         self._plot_dict(genotype_dict)
-        [DataFrame(item).to_csv(f'../csv/{key}_response_latency.csv') for key, item in genotype_dict.items()]
 
     @register('peak_value')
     def plot_peak_value(self, experiments, choice):
@@ -152,7 +147,6 @@ class FPIPlotter:
         fpi_util.clear_data(genotype_dict)
         self._plot_dict(genotype_dict)
         path = config_manager.csv_dir
-        [DataFrame(item).to_csv(f'{path}/{key}_peak_value.csv') for key, item in genotype_dict.items()]
 
     @register('anat')
     def plot_anat(self, experiment, choice):
