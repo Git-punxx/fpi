@@ -95,6 +95,8 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnMenu)
         self.Bind(wx.EVT_IDLE, self.OnActivate)
 
+        self.Bind(wx.EVT_CHECKBOX, self.OnTick)
+
         # Layout
         header_sizer = wx.BoxSizer(wx.VERTICAL)
         header_sizer.Add(self.filter, 0, wx.EXPAND | wx.ALL, 1)
@@ -143,7 +145,7 @@ class MainFrame(wx.Frame):
         try:
             self.gatherer = ExperimentManager(app_config.base_dir)
         except Exception as e:
-            explain(e)
+            print(e)
             with wx.MessageDialog(self, 'Something is wrong with the FPI configuration file', 'Configuration error',
                                   wx.OK | wx.ICON_ERROR) as dlg:
                 dlg.ShowModal()
@@ -151,6 +153,12 @@ class MainFrame(wx.Frame):
 
     def OnMenu(self, event):
         evt_id = event.GetId()
+
+    def OnTick(self, event):
+        val = self.roi_tick.GetValue()
+        self.gatherer.use_roi = val
+        print(f'Setting roi switch to {val}')
+
 
     def OnActivate(self, event):
         if self.exp_list is not None:

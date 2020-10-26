@@ -1,14 +1,8 @@
 from app_config import config_manager, Genotype, AnimalLine, Stimulation, Treatment
 import fpi_util
-from numpy import arange
 from collections import defaultdict
 from itertools import cycle
-from pandas import DataFrame
 
-from gui.dialogs import DataPathDialog
-import pickle
-import os
-from pandas import DataFrame
 '''
 experiment_data = [gatherer.get_experiment(exp.name) for exp in experiment_list]
 plotter = FPIPlotter(ax, experiment_data)
@@ -64,10 +58,11 @@ class FPIPlotter:
         ax = self.figure.subplots()
         ax.grid(True, alpha = 0.1)
         ax.set_xlabel('Frame')
-        ax.set_ylabel('Response')
-        values = [(exp.response[2:-1], exp.name) for exp in experiments]
-        for data, name in values:
-            ax.plot(range(3, 81), data, label = name, linewidth = 2)
+        ax.set_ylabel(f'Response (avg_df)')
+        values = [(exp.response[2:-1], exp.name, exp.resp_map.shape) for exp in experiments]
+        for data, name, shape in values:
+            plt = ax.plot(range(3, 81), data, label = name, linewidth = 2)
+            plt[0].set_label(f'{name}: {shape}')
         ax.legend()
 
     @register('baseline')
@@ -92,8 +87,6 @@ class FPIPlotter:
         fpi_util.clear_data(genotype_dict)
         # Compute the positions of the boxplots
         self._plot_dict(genotype_dict)
-        path = config_manager.csv_dir
-        [DataFrame(item).to_csv(f'{path}/{key}_baseline.csv') for key, item in genotype_dict.items()]
 
 
 
@@ -164,9 +157,7 @@ class FPIPlotter:
         for base_filter, genotypes in filter_dict.items():
             for genotype, exp_list in genotypes.items():
                 genotype_dict[genotype][base_filter] = []
-                genotype_dict[genotype][base_filter] = [exp.response_area for exp in exp_list if exp.response_area is not None]
+                genotype_dict[genotype][base_filter] = [exp.area for exp in exp_list if exp.area is not None]
         fpi_util.clear_data(genotype_dict)
         # Compute the positions of the boxplots
         self._plot_dict(genotype_dict)
-        path = config_manager.csv_dir
-        [DataFrame(item).to_csv(f'{path}/{key}_area.csv') for key, item in genotype_dict.items()]

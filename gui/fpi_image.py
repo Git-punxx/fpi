@@ -169,7 +169,7 @@ class DetailsPanel(wx.Dialog):
             area = np.sum(im_resp > 0)
 
         print('Saving ROI analysis')
-        data_dict = {'norm_stack': norm_stack, 'resp': resp,'resp_map': resp_map, 'df': df, 'avg_df': avg_df, 'max_df': max_df, 'area':area}
+        data_dict = {'norm_stack': norm_stack, 'response': resp,'resp_map': resp_map, 'df': df, 'avg_df': avg_df, 'max_df': max_df, 'area':area}
         self._save_analysis(data_dict)
 
     def OnAnalysis(self, event):

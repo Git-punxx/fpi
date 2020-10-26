@@ -62,7 +62,7 @@ def extract_name(path):
     return res
 
 
-def fpiparser(path):
+def fpiparser(path, root = 'df'):
     '''
     A factory method that tries to understand if we are dealing with a list of csv files or a single datastore file
     :param path: A list of filenames
@@ -70,7 +70,7 @@ def fpiparser(path):
     '''
     # Check if there is only one file and that it ends with h5. Then we return an HD%Parser
     if os.path.basename(path).endswith('h5'):
-        return HD5Parser(extract_name(path), path)
+        return HD5Parser(extract_name(path), path, root)
     # timecourse and all_pixels. This should be enforced in the analysis step
     else:
         # raise ValueError(f'{path} could not be matched against a parser')
@@ -205,9 +205,9 @@ class CSVParser(FPIParser):
 
 
 class HD5Parser(FPIParser):
-    def __init__(self, experiment, path, roi = None):
+    def __init__(self, experiment, path, root = 'df'):
         FPIParser.__init__(self, experiment, path)
-        self.roi = roi
+        self.root = root
 
     def analyzed_roi(self):
         with h5py.File(self._path, 'r') as datastore:
@@ -232,7 +232,7 @@ class HD5Parser(FPIParser):
         with h5py.File(self._path, 'r') as datastore:
             # here we need to see if we will use 'response' or 'resp_map'
             try:
-                data = datastore['df']['avg_df'][()]
+                data = datastore[self.root]['avg_df'][()]
                 return data
             except Exception as e:
                 print('Exception in response method')
@@ -249,10 +249,10 @@ class HD5Parser(FPIParser):
             # here we need to see if we will use 'response' or 'resp_map'
             try:
                 x_slice, y_slice = self.range()
-                data = datastore['df']['stack'][x_slice, y_slice, :] # This is the stack of average frames. It is a 3D array
+                data = datastore[self.root]['stack'][x_slice, y_slice, :] # This is the stack of average frames. It is a 3D array
             except Exception as e:
                 print('Exception in response method')
-                data = datastore['df']['stack'][()]
+                data = datastore[self.root]['stack'][()]
             return data
 
     def timecourse(self):
@@ -264,7 +264,7 @@ class HD5Parser(FPIParser):
             # which is df['stack'] in the datastore
             x_slice, y_slice = self.range()
             try:
-                avg_stack = datastore['df']['stack']
+                avg_stack = datastore[self.root]['stack']
                 df = normalize_stack(avg_stack)[x_slice, y_slice]
                 # Compute the mean
                 df_avg = df.std((0, 1))
@@ -279,7 +279,7 @@ class HD5Parser(FPIParser):
         with h5py.File(self._path, 'r') as datastore:
             x_slice, y_slice = self.range()
             try:
-                area = datastore['df']['area'][()]
+                area = datastore[self.root]['area'][()]
                 return area
             except Exception as e:
                 print('Exception in all_pixel method')
@@ -289,7 +289,7 @@ class HD5Parser(FPIParser):
     def max_df(self):
         with h5py.File(self._path, 'r') as datastore:
             try:
-                data = datastore['df']['max_df'][()]
+                data = datastore[self.root]['max_df'][()]
                 return data
             except Exception as e:
                 print('Exception on max_df method')
@@ -299,7 +299,7 @@ class HD5Parser(FPIParser):
     def avg_df(self):
         with h5py.File(self._path, 'r') as datastore:
             try:
-                avg_df = datastore['df']['avg_df'][()]
+                avg_df = datastore[self.root]['avg_df'][()]
                 return avg_df
             except Exception as e:
                 print('Exception on avg_df method')
@@ -337,15 +337,12 @@ class HD5Parser(FPIParser):
                 return None
 
     def resp_map(self):
-
         with h5py.File(self._path, 'r') as datastore:
             x_slice, y_slice = self.range()
             try:
-                resp_map = datastore['df']['resp_map'][()]
+                resp_map = datastore[self.root]['resp_map'][()]
                 return resp_map
             except Exception as e:
-                print('Exception on resp_map method')
-                print(e)
                 return None
 
     def roi_range(self):
@@ -355,6 +352,7 @@ class HD5Parser(FPIParser):
                 return roi
             except Exception as e:
                 return None
+
 
 
 class HDF5Writer:
@@ -376,6 +374,7 @@ class HDF5Writer:
                 roi_grp.create_dataset(key, data = dataset)
 
     def delete_roi(self):
+        print('Deleting roi')
         with h5py.File(self._path, 'r+') as datastore:
             if 'roi' not in datastore:
                 print(datastore.keys())
@@ -407,6 +406,7 @@ class ExperimentManager:
         :param root: The root folder of the experiments. The directory tree must conform a specific structure that
         is specified in the fpi_config.json
         """
+        self.use_roi = False
         self.root = root  # The root folder
         self._exp_paths = set()  # A set that contains the paths of the datastores
         self._experiments = {}  # A mapping between the name of an experiment and its path
@@ -464,8 +464,10 @@ class ExperimentManager:
         """
         experiment = self[name]
         animal_line, stimulus, treatment, genotype, filename = experiment.split(os.sep)[-5:]
-        return FPIExperiment(name=name, path=experiment, animalline=animal_line, stimulation=stimulus,
+        exp = FPIExperiment(name=name, path=experiment, animalline=animal_line, stimulation=stimulus,
                              treatment=treatment, genotype=genotype)
+        exp._use_roi = self.use_roi
+        return exp
 
     def filterLine(self, line):
         if line != '':
@@ -542,7 +544,6 @@ class FPIExperiment:
         self.name = name
         self._path = path
 
-        self._parser = fpiparser(self._path)
 
         self._response = None
         self._timecourse = None
@@ -558,38 +559,50 @@ class FPIExperiment:
         self._anat = None
         self._stack = None
         self._roi = None
+        self._area = None
+
+        self._use_roi = False
 
     def roi_slice(self):
-        return self._parser.range()
+        parser = fpiparser(self._path)
+        return parser.range()
+
+    def get_root(self):
+        return 'roi' if self._use_roi else 'df'
 
     @property
     def roi_range(self):
+        parser = fpiparser(self._path)
         if self._roi is None:
-            self._roi = self._parser.roi_range()
+            self._roi = parser.roi_range()
         return self._roi
 
     @property
-    def response_area(self):
-        if self._response_area is None:
-            self._response_area = self._parser.response_map()
-        return self._response_area
+    def area(self):
+        parser = fpiparser(self._path, self.get_root())
+        if self._area is None:
+            self._area = parser.area()
+        return self._area
 
     @property
     def response(self):
+        parser = fpiparser(self._path, self.get_root())
         if self._response is None:
-            self._response = self._parser.response()
+            self._response = parser.response()
         return self._response
 
     @property
     def resp_map(self):
+        parser = fpiparser(self._path, self.get_root())
         if self._resp_map is None:
-            self._resp_map = self._parser.resp_map()
+            self._resp_map = parser.resp_map()
         return self._resp_map
 
     @property
     def timecourse(self):
+        parser = fpiparser(self._path, self.get_root())
         if self._timecourse is None:
-            self._timecourse = self._parser.timecourse()
+            self._timecourse = parser.timecourse()
         return self._timecourse
 
     @property
@@ -625,44 +638,51 @@ class FPIExperiment:
 
     @property
     def no_trials(self):
+        parser = fpiparser(self._path)
         if self._no_trials is None:
-            self._no_trials = self._parser.no_trials()
+            self._no_trials = parser.no_trials()
         return self._no_trials
 
     @property
     def no_baseline(self):
+        parser = fpiparser(self._path)
         if self._no_baseline is None:
-            self._no_baseline = self._parser.no_baseline()
+            self._no_baseline = parser.no_baseline()
         return self._no_baseline
 
     @property
     def max_df(self):
+        parser = fpiparser(self._path, self.get_root())
         if self._max_df is None:
-            self._max_df = self._parser.max_df()
+            self._max_df = parser.max_df()
         return self._max_df
 
     @property
     def avg_df(self):
+        parser = fpiparser(self._path, self.get_root())
         if self._avg_df is None:
-            self._avg_df = self._parser.avg_df()
+            self._avg_df = parser.avg_df()
         return self._avg_df
 
     @property
     def anat(self):
+        parser = fpiparser(self._path)
         if self._anat is None:
-            self._anat = self._parser.anat()
+            self._anat = parser.anat()
         return self._anat
 
     @property
     def stack(self):
+        parser = fpiparser(self._path)
         if self._stack is None:
-            self._stack = self._parser.stack()
+            self._stack = parser.stack()
         return self._stack
 
     @property
     def roi(self):
+        parser = fpiparser(self._path)
         if self._roi is None:
-            self._roi = self._parser.roi_range()
+            self._roi = parser.roi_range()
         return self._roi
 
     def clear(self):
@@ -712,7 +732,8 @@ class FPIExperiment:
         return f'{self.name}: {self.animal_line} {self.stimulation} {self.treatment} {self.genotype}'
 
     def is_roi_analyzed(self):
-        return self._parser.analyzed_roi()
+        parser = fpiparser(self._path)
+        return parser.analyzed_roi()
 
     def check(self):
         result = []
@@ -724,7 +745,7 @@ class FPIExperiment:
             result.append('timecourse')
         else:
             result.append('No timecourse')
-        if self.response_area is not None:
+        if self.area is not None:
             result.append('response_area')
         else:
             result.append('No all_pixelsj')
