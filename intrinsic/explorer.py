@@ -179,7 +179,7 @@ class ViewerIntrinsic(QtWidgets.QMainWindow):
             self.an_th = AnalysisThread(self, c_path, binning=3,
                                         n_baseline=self.baseline_sb.value(),
                                         n_stim=self.stim_sb.value(),
-                                        n_recovery=self.recovery_sb.value(),
+                                        n_recover=self.recovery_sb.value(),
                                         exp_time=self.frame_dur.value()/1000)
             self.an_th.finished.connect(self.finished_analysis)
             self.an_th.start()
