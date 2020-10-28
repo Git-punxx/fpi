@@ -8,6 +8,7 @@ from fpi import HDF5Writer
 import numpy as np
 import gui.image_roi
 from gui.custom_events import *
+from gui.animator import animate, export_frames
 
 
 class DetailsPanel(wx.Dialog):
@@ -16,13 +17,21 @@ class DetailsPanel(wx.Dialog):
 
         self._experiment = experiment
         self._path = self._experiment._path
+        self.SetTitle(f'Experiment {self._experiment.name}')
+
+        self.status_bar = wx.StatusBar(self)
+        self.status_bar.SetFieldsCount(1)
+        self.status_bar.SetStatusText(f'Details for {self._experiment.name}')
+
+
         self.details_panel= wx.Panel(self, style = wx.BORDER_RAISED)
+        self.image_panel = self.load_image()
 
         self._file_lbl = wx.StaticText(self.details_panel, label = 'Filename', style = wx.ALIGN_RIGHT)
         self._file_txt = wx.StaticText(self.details_panel, label = self._experiment.name)
 
         self._data_created_lbl = wx.StaticText(self.details_panel, label = 'Date Created')
-        self._data_created_txt = wx.StaticText(self.details_panel, label = f'{datetime.datetime.fromtimestamp(os.stat(self._path).st_mtime).strftime("%H:%M:%S - %D %M %Y")}')
+        self._data_created_txt = wx.StaticText(self.details_panel, label = f'{datetime.datetime.fromtimestamp(os.stat(self._path).st_mtime).strftime("%D %M %Y")}')
 
         self._file_size_txt = wx.StaticText(self.details_panel, label = f'{os.stat(self._path).st_size}')
         self._file_size_lbl = wx.StaticText(self.details_panel, label = 'File size')
@@ -45,8 +54,8 @@ class DetailsPanel(wx.Dialog):
         self._no_baseline_lbl = wx.StaticText(self.details_panel, label = '# Baseline')
         self._no_baseline_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.no_baseline}')
 
-        #self._area_lbl  = wx.StaticText(self.details_panel, label = 'Response area')
-        #self._area_txt  = wx.StaticText(self.details_panel, label = f'{self._experiment.response_area}')
+        self._image_lbl  = wx.StaticText(self.details_panel, label = 'Image Shape')
+        self._image_txt  = wx.StaticText(self.details_panel, label = f'{self.image_panel.image_size}')
 
         self._max_df_lbl = wx.StaticText(self.details_panel, label = 'Max DF')
         self._max_df_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.max_df}')
@@ -60,6 +69,8 @@ class DetailsPanel(wx.Dialog):
 
         self._roi_analysis_btn = wx.Button(self.details_panel, label = 'Analyze Range of Interest')
         self._delete_roi = wx.Button(self.details_panel, label = 'Delete Range of interest')
+        self._animate_button = wx.Button(self.details_panel, label = 'Animate')
+        self._export_button = wx.Button(self.details_panel, label = 'Export Frames')
 
 
         sizer = wx.GridBagSizer(hgap = 5, vgap = 5)
@@ -87,8 +98,8 @@ class DetailsPanel(wx.Dialog):
         sizer.Add(self._no_trials_lbl, (7, 0))
         sizer.Add(self._no_trials_txt, (7, 1))
 
-        #sizer.Add(self._area_lbl, (8, 0))
-        #sizer.Add(self._area_txt, (8, 1))
+        sizer.Add(self._image_lbl, (8, 0))
+        sizer.Add(self._image_txt, (8, 1))
 
 
         sizer.Add(self._max_df_lbl, (9, 0))
@@ -105,16 +116,22 @@ class DetailsPanel(wx.Dialog):
 
         sizer.Add(self._roi_analysis_btn, (14, 0), flag = wx.EXPAND)
         sizer.Add(self._delete_roi, (15, 0), flag = wx.EXPAND)
+        sizer.Add(self._animate_button, (16, 0), flag = wx.EXPAND)
+        sizer.Add(self._export_button, (17, 0), flag = wx.EXPAND)
 
         self.details_panel.SetSizer((sizer))
         # Load and place the image
-        self.image_panel = self.load_image()
-        im_sizer = wx.BoxSizer(wx.VERTICAL)
-        im_sizer.Add(self.image_panel, 1, wx.EXPAND)
+        self.im_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.im_sizer.Add(self.image_panel, 1, wx.EXPAND)
+
+        footer_sizer = wx.BoxSizer(wx.VERTICAL)
+        footer_sizer.Add(self.status_bar, 1, wx.EXPAND)
+
+        self.im_sizer.Add(footer_sizer, 0, wx.EXPAND)
 
         main_sizer = wx.BoxSizer(wx.HORIZONTAL)
         main_sizer.Add(self.details_panel, 0, wx.EXPAND | wx.ALL, 2)
-        main_sizer.Add(im_sizer, 1, wx.EXPAND | wx.ALL, 2)
+        main_sizer.Add(self.im_sizer, 1, wx.EXPAND | wx.ALL, 2)
         self.SetSizer(main_sizer)
         self.Fit()
 
@@ -125,6 +142,8 @@ class DetailsPanel(wx.Dialog):
 
         self.Bind(wx.EVT_BUTTON, self.OnAnalysis, self._roi_analysis_btn)
         self.Bind(wx.EVT_BUTTON, self.OnDeleteROI, self._delete_roi)
+        self.Bind(wx.EVT_BUTTON, self.OnAnimate, self._animate_button)
+        self.Bind(wx.EVT_BUTTON, self.OnExport, self._export_button)
 
         self.Bind(EVT_ROI_UPDATE, self.OnRoiUpdate)
             # self._response = None
@@ -143,6 +162,9 @@ class DetailsPanel(wx.Dialog):
             for key, items in datastore['df'].items():
                 pass
 
+    def update_stats(self):
+        self._max_df_txt.SetLabel(f'{self._experiment.max_df}')
+
     def load_image(self):
         im = self._experiment.resp_map
         image_panel = gui.image_roi.ImageControl.fromarray(self, im)
@@ -152,28 +174,54 @@ class DetailsPanel(wx.Dialog):
         with wx.BusyInfo('Performing analysis on ROI...'):
             if self._experiment.roi_range is not None:
                 slice = self._experiment.roi_slice()
-                print(slice)
-
+                self.status_bar.SetStatusText(f'Analyzing for slice {slice}')
+                x_slice, y_slice = slice
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                print(self._experiment.stack.shape)
-                norm_stack_future = executor.submit(intr.normalize_stack, self._experiment.stack)
+                self.status_bar.SetStatusText(f'Analyzing norm_stack')
+                norm_stack_future = executor.submit(intr.normalize_stack, self._experiment.stack[x_slice, y_slice])
                 resp_map_future = executor.submit(intr.find_resp, self._experiment.stack)
                 norm_stack = norm_stack_future.result()
                 resp = resp_map_future.result()
             # norm_stack = intr.normalize_stack(self._experiment.stack)
             # resp = intr.find_resp(self._experiment.stack)
+            self.status_bar.SetStatusText(f'Analyzing resp_stack')
             im_resp, df = intr.resp_map(norm_stack)
+            self.status_bar.SetStatusText(f'Calculating df, avg_df, max_df and area ')
             resp_map = im_resp
             avg_df = df.mean(0)
             max_df = df.max(1).mean()
             area = np.sum(im_resp > 0)
 
         print('Saving ROI analysis')
-        data_dict = {'norm_stack': norm_stack, 'response': resp,'resp_map': resp_map, 'df': df, 'avg_df': avg_df, 'max_df': max_df, 'area':area}
+        data_dict = {'stack': self._experiment.stack,
+                     'norm_stack': norm_stack,
+                     'response': resp,
+                     'resp_map': resp_map,
+                     'df': df,
+                     'avg_df': avg_df,
+                     'max_df': max_df,
+                     'area':area}
         self._save_analysis(data_dict)
 
     def OnAnalysis(self, event):
+        self.status_bar.SetStatusText('Beginning analysis')
         self._analyze()
+        self.status_bar.SetStatusText('Finished analysis')
+
+
+    def OnAnimate(self, event):
+        self.status_bar.SetStatusText(f'Beginning animation for {self._experiment.roi_range}')
+        animate(self._experiment)
+        self.status_bar.SetStatusText(f'Finished animation for {self._experiment.roi_range}')
+
+    def OnExport(self, event):
+        # Choose dialog to choose frames
+        dlg =  wx.TextEntryDialog(self, 'Enter no of frames', 'Choose frames to export')
+        dlg.ShowModal()
+        res = dlg.GetValue()
+        frame_list = [int(arg) for arg in res.split()]
+        dlg.Destroy()
+        export_frames(self._experiment, frame_list)
 
     def OnDeleteROI(self, event):
         with wx.MessageDialog(None, 'Are you sure you want to delete this ROI?', 'Deleting ROI', style = wx.YES_NO | wx.NO_DEFAULT | wx.ICON_WARNING) as dlg:
@@ -186,6 +234,7 @@ class DetailsPanel(wx.Dialog):
                 self._experiment._roi = None
                 self._roi_analysis_btn.Disable()
                 self._delete_roi.Disable()
+                self.Fit()
 
     def OnRoiUpdate(self, event):
         # Delete the previous roi
@@ -194,6 +243,7 @@ class DetailsPanel(wx.Dialog):
         print(f'Updating ROI')
 
         writer = HDF5Writer(self._experiment._path)
+        print(event.roi)
         writer.write_roi(event.roi)
         self._experiment._roi = event.roi
         self._roi_analysis_btn.Enable()
@@ -202,7 +252,7 @@ class DetailsPanel(wx.Dialog):
 
     def _save_analysis(self, analysis_dict):
         writer = HDF5Writer(self._experiment._path)
-        writer.insert_into_group('roi', analysis_dict)
+        writer.insert_into_group(analysis_dict)
 
 
 class ROIPanel(wx.Panel):

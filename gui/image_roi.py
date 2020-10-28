@@ -39,7 +39,6 @@ class ImageControl(wx.Panel):
 
         self.buffer = None
         self.image = image
-
         width, height = self.image.GetSize()
         self.SetMinSize((width, height))
 
@@ -59,9 +58,14 @@ class ImageControl(wx.Panel):
     def FromPIL(self, pil_image):
         pass
 
+    @property
+    def image_size(self):
+        return self.image.GetSize()
+
     @staticmethod
     def fromarray(parent, nparray):
         #im = Image.fromarray(np.uint8(cm.viridis(nparray)*255))
+        print(nparray.shape)
         data = nparray.copy()
         nparray -= nparray.min()
         nparray /= nparray.max()
@@ -116,7 +120,7 @@ class ImageControl(wx.Panel):
         #TODO Create an event about roi change
 
         # Generate the event
-        evt = UpdatedROI(id = EVT_ROI_UPDATE, roi = self.roi_to_rect())
+        evt = UpdatedROI(id = EVT_ROI_UPDATE, roi = self.roi_to_slice())
         wx.PostEvent(self.GetParent(), evt)
 
     def OnMotion(self, event):
@@ -131,7 +135,7 @@ class ImageControl(wx.Panel):
 # TODO here we init buffer in every motion event. We must keep the image buffer in tact and draw on 
 # a tmp buffer and then write it on the image buffer
                     self.InitBuffer()
-                    dc.SetPen(wx.Pen('yellow', 3))
+                    dc.SetPen(wx.Pen('yellow', 1))
                     dc.SetBrush(wx.TRANSPARENT_BRUSH)
                     dc.DrawRectangle(*self.start, dx, dy)
 
@@ -141,8 +145,37 @@ class ImageControl(wx.Panel):
         startx, starty = (min(self.start[0], self.end[0]), min(self.start[1], self.end[1]))
         return (startx, starty, dx, dy)
 
+    def roi_to_slice(self):
+        dx = abs(self.end[0] - self.start[0])
+        dy = abs(self.end[1] - self.start[1])
+
+        print(f'Mouse down at {self.start[0]}, {self.start[1]}')
+        print(f'Mouse up at {self.end[0]}, {self.end[1]}')
+
+        x_start = min(self.start[0], self.end[0])
+        y_start = min(self.start[1], self.end[1])
+
+        print(f'Starting at {x_start}, {y_start}')
+
+        x_start = min(self.start[0], self.end[0])
+        y_start = min(self.start[1], self.end[1])
+        x_end = max(self.start[0], self.end[0])
+        y_end = max(self.start[1], self.end[1])
+
+        print(x_start, y_start, x_end, y_end)
+
+        x_from = min(self.start[0], self.end[0])
+        x_to = x_from + dx
+
+        y_from = min(self.start[1], self.end[1])
+        y_to = y_from + dy
+        return (x_start, x_end, y_start, y_end)
+
+
+
+
     def range_of_interest(self):
-        self.roi_to_rect()
+        self.roi_to_slice()
                     
     def image_region(self):
         return self.buffer.GetSubBitmap(wx.Rect(*self.roi_to_rect())).ConvertToImage()

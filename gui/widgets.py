@@ -17,8 +17,7 @@ import sys
 import shlex
 import gui.splash_screen
 from gui.custom_events import *
-import itertools
-
+from gui.animator import animate
 from intrinsic.explorer import ViewerIntrinsic
 
 CHOICES_CHANGED = 'choices.changed'
@@ -81,6 +80,7 @@ class MainFrame(wx.Frame):
         self.peak_button = wx.Button(self.footer_panel, label='BoxPlot Peak Latencies')
         self.areadf_button = wx.Button(self.footer_panel, label='Plot Area DF')
         self.area_button = wx.Button(self.footer_panel, label='Plot Area')
+        self.animate_button = wx.Button(self.footer_panel, label='Animate')
         self.roi_tick = wx.CheckBox(self.footer_panel, label = 'Use ROIs')
 
 
@@ -91,6 +91,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnPeakLatency, self.peak_button)
         self.Bind(wx.EVT_BUTTON, self.OnAreaDF, self.areadf_button)
         self.Bind(wx.EVT_BUTTON, self.OnArea, self.area_button)
+        self.Bind(wx.EVT_BUTTON, self.OnAnimate, self.animate_button)
 
         self.Bind(wx.EVT_MENU, self.OnMenu)
         self.Bind(wx.EVT_IDLE, self.OnActivate)
@@ -115,6 +116,7 @@ class MainFrame(wx.Frame):
         footer_sizer.Add(self.peak_button, 0, wx.ALL, 5)
         footer_sizer.Add(self.areadf_button, 0, wx.ALL, 5)
         footer_sizer.Add(self.area_button, 0, wx.ALL, 5)
+        footer_sizer.Add(self.animate_button, 0, wx.ALL, 5)
         footer_sizer.Add(self.roi_tick, 0, wx.ALL, 5)
 
         self.footer_panel.SetSizer(footer_sizer)
@@ -159,10 +161,23 @@ class MainFrame(wx.Frame):
         self.gatherer.use_roi = val
         print(f'Setting roi switch to {val}')
 
+    def OnAnimate(self, event):
+        choice = self.boxplot_choices.GetSelection()
+        selected = self.exp_list.GetSelection()
+        if not selected:
+            return
+        # Return the experiments that correspond to the selected items
+        experiments = self.gatherer.filterSelected(selected)
+        # Choose the first one
+        exp = self.gatherer.get_experiment(experiments[0].name)
+        self.SetStatusText(f'Beginning animation of {exp.name}')
+        animate(exp)
+        self.SetStatusText(f'Finished animation of {exp.name}')
 
     def OnActivate(self, event):
-        if self.exp_list is not None:
-            self.exp_list.mark_items()
+        pass
+        #if self.exp_list is not None:
+        #    self.exp_list.mark_items()
 
     def OnLineChange(self, args):
         res = self.gatherer.filterLine(args)

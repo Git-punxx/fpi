@@ -223,7 +223,9 @@ class HD5Parser(FPIParser):
         with h5py.File(self._path, 'r') as datastore:
             # here we need to see if we will use 'response' or 'resp_map'
             try:
-                xs, xe, ys, ye = list(datastore['roi']['roi_range'])
+                print('Reading from datastore: ')
+                ys, ye, xs, xe = datastore['roi']['roi_range']
+                print(slice(xs, xe), slice(ys, ye))
                 return (slice(xs, xe), slice(ys, ye))
             except Exception as e:
                 return (slice(None), slice(None))
@@ -248,11 +250,28 @@ class HD5Parser(FPIParser):
         with h5py.File(self._path, 'r') as datastore:
             # here we need to see if we will use 'response' or 'resp_map'
             try:
-                x_slice, y_slice = self.range()
-                data = datastore[self.root]['stack'][x_slice, y_slice, :] # This is the stack of average frames. It is a 3D array
+                x_slice, y_slice = (None, None)
+                if self.root == 'df':
+                    data = datastore[self.root]['stack'][()] # This is the stack of average frames. It is a 3D array
+                else:
+                    x_slice, y_slice = self.range()
+                    data = datastore['df']['stack'][x_slice, y_slice, :] # This is the stack of average frames. It is a 3D array
             except Exception as e:
-                print('Exception in response method')
+                print('Exception in stack method')
                 data = datastore[self.root]['stack'][()]
+            return data
+
+    def norm_stack(self):
+        with h5py.File(self._path, 'r') as datastore:
+            try:
+                x_slice, y_slice = (None, None)
+                if self.root == 'df':
+                    x_slice, y_slice = self.range()
+                data = datastore[self.root]['norm_stack'][x_slice, y_slice, :] # This is the stack of average frames. It is a 3D array
+            except Exception as e:
+                print('Exception in norm_stack method')
+                print(e)
+                data = datastore[self.root]['norm_stack'][()]
             return data
 
     def timecourse(self):
@@ -262,7 +281,9 @@ class HD5Parser(FPIParser):
             # normalize_stack(self.stack, self.n_baseline
             # self.stack is returned on avg_stack()
             # which is df['stack'] in the datastore
-            x_slice, y_slice = self.range()
+            x_slice, y_slice = (None, None)
+            if self.root == 'df':
+                x_slice, y_slice = self.range()
             try:
                 avg_stack = datastore[self.root]['stack']
                 df = normalize_stack(avg_stack)[x_slice, y_slice]
@@ -306,6 +327,16 @@ class HD5Parser(FPIParser):
                 print(e)
                 return None
 
+    def max_project(self):
+        with h5py.File(self._path, 'r') as datastore:
+            try:
+                avg_df = datastore['df']['max_project'][()]
+                return avg_df
+            except Exception as e:
+                print('Exception on avg_df method')
+                print(e)
+                return None
+
     def no_baseline(self):
         with h5py.File(self._path, 'r') as datastore:
             try:
@@ -339,10 +370,16 @@ class HD5Parser(FPIParser):
     def resp_map(self):
         with h5py.File(self._path, 'r') as datastore:
             x_slice, y_slice = self.range()
+            print(f'Searching resp_map for {self.root} at {x_slice}, {y_slice}')
             try:
-                resp_map = datastore[self.root]['resp_map'][()]
+                if self.root == 'df':
+                    resp_map = datastore[self.root]['resp_map'][()][x_slice, y_slice]
+                else:
+                    resp_map = datastore[self.root]['resp_map'][()]
                 return resp_map
             except Exception as e:
+                print(f'{self._path}')
+                print(e)
                 return None
 
     def roi_range(self):
@@ -359,7 +396,7 @@ class HDF5Writer:
     def __init__(self, path):
         self._path = path
 
-    def insert_into_group(self, grp_name, data_dict):
+    def insert_into_group(self, data_dict):
         """
         :param data_dict: A dictionary that contains names of datasets and dataset to write into group
         :return: Nada
@@ -368,6 +405,7 @@ class HDF5Writer:
             if 'roi' not in datastore:
                 datastore.create_group('roi')
             roi_grp = datastore['roi']
+            print('Inserting ', data_dict.keys())
             for key, dataset in data_dict.items():
                 if key in roi_grp.keys():
                     del roi_grp[key]
@@ -392,7 +430,7 @@ class HDF5Writer:
             roi_grp = datastore['roi']
             if 'roi_range' in roi_grp:
                 del roi_grp['roi_range']
-            roi_grp.create_dataset(name = 'roi_range', data = np.array([roi[0], roi[0] + roi[2], roi[1], roi[1] + roi[3]]))
+            roi_grp.create_dataset(name = 'roi_range', data =np.array(roi))
 
 
 ### Model #####
@@ -558,8 +596,10 @@ class FPIExperiment:
         self._peak_latency = None
         self._anat = None
         self._stack = None
+        self._norm_stack = None
         self._roi = None
         self._area = None
+        self._max_project = None
 
         self._use_roi = False
 
@@ -599,6 +639,13 @@ class FPIExperiment:
         return self._resp_map
 
     @property
+    def norm_stack(self):
+        parser = fpiparser(self._path, self.get_root())
+        if self._norm_stack is None:
+            self._norm_stack = parser.norm_stack()
+        return self._norm_stack
+
+    @property
     def timecourse(self):
         parser = fpiparser(self._path, self.get_root())
         if self._timecourse is None:
@@ -613,6 +660,13 @@ class FPIExperiment:
             baseline = np.array(data[:n_baseline])
             self._mean_baseline = np.mean(baseline)
         return self._mean_baseline
+
+    @property
+    def max_project(self):
+        parser = fpiparser(self._path, self.get_root())
+        if self._max_project is None:
+            self._max_project = parser.max_project()
+        return self._max_prroject
 
     @property
     def peak_latency(self):
@@ -694,7 +748,7 @@ class FPIExperiment:
     def roi(self):
         parser = fpiparser(self._path)
         if self._roi is None:
-            self._roi = parser.roi_range()
+            self._roi = parser.range()
         return self._roi
 
     def clear(self):
@@ -741,7 +795,7 @@ class FPIExperiment:
     #     ax.plot(x, data, 'k-')
 
     def __str__(self):
-        return f'{self.name}: {self.animal_line} {self.stimulation} {self.treatment} {self.genotype}'
+        return f'{self.name}: {self.animalline} {self.stimulation} {self.treatment} {self.genotype}'
 
     def is_roi_analyzed(self):
         parser = fpiparser(self._path)
