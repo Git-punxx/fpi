@@ -2,6 +2,7 @@ from app_config import config_manager, Genotype, AnimalLine, Stimulation, Treatm
 import fpi_util
 from collections import defaultdict
 from itertools import cycle
+import numpy as np
 
 '''
 experiment_data = [gatherer.get_experiment(exp.name) for exp in experiment_list]
@@ -73,6 +74,15 @@ class FPIPlotter:
         for data, name, shape in values:
             plt = ax.plot(range(3, 81), data, label = name, linewidth = 2)
             plt[0].set_label(f'{name}: {shape}')
+
+        half_duration, half_val= experiments[0].halfwidth()
+        print('Halfwith')
+        print(half_duration, half_val)
+        start, end = half_duration
+        half_line= np.zeros(end - start + 10)
+        half_line[()] = half_val
+        ax.plot(np.arange(start - 5, end + 5), half_line)
+        # Plot the halwidth line
         ax.legend()
 
     @register('baseline')

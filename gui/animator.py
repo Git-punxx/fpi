@@ -29,19 +29,14 @@ def export_frames(exp, frame_list):
     else:
         s = exp.stack
         print('Printing from stack')
-    print(s.shape)
-    length = s.shape[2]
-    print(length)
-    for index in range(length):
+    for index in frame_list:
         try:
             nparray = s[:, :, index]
-            print(nparray)
             nparray -= nparray.min()
             nparray /= nparray.max()
             nparray = cm.viridis(nparray)
             nparray *= 255
             im = Image.fromarray(np.uint8(nparray)).convert('RGB')
-            print(os.path.abspath(os.curdir))
             path = f'../frames/{exp.name}-Frame-{index}.png'
             im.save(path)
         except Exception as e:

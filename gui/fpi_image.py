@@ -64,6 +64,9 @@ class DetailsPanel(wx.Dialog):
         self._mean_baseline_lbl = wx.StaticText(self.details_panel, label = 'Baseline Mean')
         self._mean_baseline_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.mean_baseline}')
 
+        self._halfwidth_lbl = wx.StaticText(self.details_panel, label = 'Halfwitdh Mean')
+        self._halfwidth_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.halfwidth()[0]} - {self._experiment.halfwidth()[1]}')
+
         self._roi_lbl = wx.StaticText(self.details_panel, label = 'Roi Range')
         self._roi_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.roi_range}')
 
@@ -114,10 +117,13 @@ class DetailsPanel(wx.Dialog):
         sizer.Add(self._roi_lbl, (12, 0))
         sizer.Add(self._roi_txt, (12, 1))
 
-        sizer.Add(self._roi_analysis_btn, (14, 0), flag = wx.EXPAND)
-        sizer.Add(self._delete_roi, (15, 0), flag = wx.EXPAND)
-        sizer.Add(self._animate_button, (16, 0), flag = wx.EXPAND)
-        sizer.Add(self._export_button, (17, 0), flag = wx.EXPAND)
+        sizer.Add(self._halfwidth_lbl, (13, 0))
+        sizer.Add(self._halfwidth_txt, (13, 1))
+
+        sizer.Add(self._roi_analysis_btn, (15, 0), flag = wx.EXPAND)
+        sizer.Add(self._delete_roi, (16, 0), flag = wx.EXPAND)
+        sizer.Add(self._animate_button, (17, 0), flag = wx.EXPAND)
+        sizer.Add(self._export_button, (18, 0), flag = wx.EXPAND)
 
         self.details_panel.SetSizer((sizer))
         # Load and place the image

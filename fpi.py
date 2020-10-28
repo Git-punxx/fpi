@@ -764,36 +764,6 @@ class FPIExperiment:
         self._anat = None
         self._stack = None
 
-    # def plot(self, ax, type):
-    #     if type == 'response':
-    #         self.plot_response(ax)
-    #     elif type == 'latency':
-    #         self.plot_response_latency(ax)
-    #     elif type == 'timecourse':
-    #         self.plot_timecourse(ax)
-    #     else:
-    #         raise ValueError('Unsupported plot type')
-
-    # def plot_response(self, ax):
-    #     data = self._parser.response()
-    #     x = range(len(data))
-    #     ax.set_title(f'Response: {self.name}')
-    #     ax.plot(x, data)
-    #
-    # def plot_response_latency(self, ax):
-    #     data = self.response_latency()
-    #     if data is None:
-    #         return
-    #     x = range(len(data))
-    #     ax.plot(x, data, 'k-')
-    #
-    # def plot_timecourse(self, ax):
-    #     data = self.timecourse
-    #     if data is None:
-    #         return
-    #     x = range(len(data))
-    #     ax.plot(x, data, 'k-')
-
     def __str__(self):
         return f'{self.name}: {self.animalline} {self.stimulation} {self.treatment} {self.genotype}'
 
@@ -817,11 +787,56 @@ class FPIExperiment:
             result.append('No all_pixelsj')
         return result
 
+    def peak_response(self):
+        '''
+        Compute the frame and the value of the max df/f
+        We use the avg_df of the datastore
+        :return: (int, float)
+        '''
+        df = self.response
+        frame = np.argmax(df)
+        val = np.max(df)
+        return frame, val
+
+    def baseline_value(self, no_baseline = 30):
+        '''
+        :param no_baseline: Where does the baseline stops
+        :return: int, float
+        '''
+        return no_baseline, self.response[no_baseline]
+
+    def halfwidth(self, no_baseline = 30):
+        response_curve = self.response
+        base_frame, baseline_val = self.baseline_value()
+        FPIExperiment.log_tuple('Baseline frame:', (base_frame, baseline_val))
+        peak_frame, peak_val = self.peak_response()
+        FPIExperiment.log_tuple('Peak frame:', (peak_frame, peak_val))
+        half_val = (peak_val - baseline_val)/2
+
+        med_line = np.zeros_like(response_curve[no_baseline:])
+        med_line[()] = half_val
+
+        idx = np.argwhere(np.diff(np.sign(response_curve[no_baseline:] - med_line))).flatten()
+        return idx + no_baseline, half_val
+
+
+    @staticmethod
+    def find_nearest(array, value):
+        array = np.asarray(array)
+        ids = (np.abs(array - value)).argmin()
+        return ids
+
+    @staticmethod
+    def log_tuple(msg, tup):
+        print(f'{msg}: {tup[0]}: {tup[1]}')
+
+
+
+
 
 if __name__ == '__main__':
     root = app_config.base_dir
     manager = ExperimentManager(root)
-    manager.filterLine('PTEN')
-    manager.clear_filters()
-    for item in manager.to_tuple():
-        print(item)
+    exp = '20190924_1613'
+    live = manager.get_experiment(exp)
+    print(live.halfwidth())
