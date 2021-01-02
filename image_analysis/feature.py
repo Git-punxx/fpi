@@ -2,30 +2,65 @@ import numpy as np
 import cv2 as cv
 from PIL import Image
 import matplotlib.pyplot as plt
+import h5py
 
 
-def process_image(exp_values: np.ndarray, percent: float) -> tuple:
-    roi = np.where(exp_values > exp_values.max() * percent/100., exp_values, 0.)
-    total_pixels = np.count_nonzero(roi)
-    return roi, total_pixels
+#TODO 1. Identify island and find their contour/convex https://github.com/tirthajyoti/Scikit-image-processing/blob/master/Finding_contours.ipynb
+#TODO Be able to select an island
+#TODO 2. Create a mask using the selected island
+#TODO 3. Overlay a tinted mask over animated frames from the average stack and update the timeline. Be able to export a selected region of frames
 
-def create_mask(df, threshold):
-    print(f'Creating mask with threshold {threshold}')
-    mask = df > df.max() * threshold/100.
-    total_pixels = np.count_nonzero(mask)
-    return mask, total_pixels
+fname = 'F:\Data\datastore_20190924_1613_0.h5'
 
+def load_data(fname):
+    with h5py.File(fname) as f:
+        avg_stack = f['df']['resp_map'][()]
+        stack = f['df']['stack'][()]
+        timeline = f['df']['avg_df'][()]
+    return avg_stack, stack, timeline
+
+def pil_to_cv(img):
+    cv = np.array(img)
+    return cv[:, :, ::-1].copy()
+
+
+def normalize(arr):
+    min_val = arr.min()
+    arr = arr - min_val
+    arr = np.uint8(arr*255/arr.max())
+    return arr
+
+def find_contours(arr):
+    # Use binary images -> apply canny edge detection or threshold
+    # Copy the source image because findContours modifies it
+    # Object should be white and background should be black
+    arr = normalize(arr)
+    imgray = cv.cvtColor(arr, cv.COLOR_BGR2GRAY)
+    ret, thres = cv.threshold(imgray, 127, 255, 0)
+    image, contours = cv.findContours(thres, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    img = cv.drawContours(imgray, contours, -1, (0, 255, 0), 3)
+    plt.imshow(img)
+    plt.show()
+
+def image_threshold(df: np.ndarray, threshold: float) :
+    mask = create_mask(df, threshold)
+    resp = np.where(mask, df, 0)
+    total_pixel = np.count_nonzero(mask)
+    return resp, total_pixel
+
+
+def create_mask(arr, threshold):
+    return arr > arr.max() * (threshold/100.)
 
 def masked_response(norm_stack, mask):
-    print(f'Creating masked response')
     x, y, z = norm_stack.shape
     mask = np.tile(mask, [z, 1, 1])
-    print(mask.T.shape)
     df = np.where(mask.T, norm_stack, np.nan)
-    print(f'Total non zero in df: {np.count_nonzero(df)}')
     df_avg = np.nanmean(df, axis = (0,1))
     return df_avg
 
 
 if __name__ == '__main__':
-    df = np.array([])
+    image, frame_stack, timeline = load_data(fname)
+    img = Image.fromarray(image).convert('RGB')
+    find_contours(img)

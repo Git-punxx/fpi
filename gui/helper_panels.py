@@ -53,7 +53,7 @@ class OperationPanel(wx.Panel):
             wx.MessageBox('Not a valid percentage. It should be a value between 0 and 100', 'Invalid percentage')
             return
         threshold = float(percent)
-        mask, total_pixels = create_mask(self.exp.resp_map, threshold)
+        mask = create_mask(self.exp.resp_map, threshold)
         response = masked_response(self.exp.stack, mask)
         self.reponse = response
         plt.plot(response, label = 'Mean Response Per Frame')
@@ -71,7 +71,7 @@ class OperationPanel(wx.Panel):
         except Exception:
             wx.MessageBox('Not a valid percentage. It should be a value between 0 and 100', 'Invalid percentage')
             return
-        processed, total_pixels = process_image(self.exp.resp_map, float(percent))
+        processed, total_pixels = image_threshold(self.exp.resp_map, float(percent))
         self.total_pixels.SetLabel(f'Total Pixels: {str(total_pixels)}')
         self.Fit()
         parent = self.GetParent()
