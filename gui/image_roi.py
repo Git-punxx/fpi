@@ -9,8 +9,6 @@ from gui.custom_events import *
 
 def PIL2wx(image):
     width, height = image.size
-    print(width, height)
-    print(len(image.tobytes()))
     return wx.Bitmap.FromBuffer(width, height, image.tobytes())
 
 def wx2PIL(bitmap):
@@ -38,7 +36,8 @@ class ImageControl(wx.Panel):
         self.end = None
 
         self.buffer = None
-        self.image = image
+        self.image: wx.Image = image
+        self._original = None
         width, height = self.image.GetSize()
         self.SetMinSize((width, height))
 
@@ -65,18 +64,21 @@ class ImageControl(wx.Panel):
     @staticmethod
     def fromarray(parent, nparray):
         #im = Image.fromarray(np.uint8(cm.viridis(nparray)*255))
-        print(nparray.shape)
         data = nparray.copy()
+        wxim = PIL2wx(ImageControl.PIL_image_from_array(nparray))
+        ctrl = ImageControl(parent = parent, image = wxim, style = wx.BORDER_RAISED)
+        ctrl.data = data
+        return ctrl
+
+    @staticmethod
+    def PIL_image_from_array(nparray):
         nparray -= nparray.min()
         nparray /= nparray.max()
         nparray = cm.viridis(nparray)
         nparray *= 255
 
         im = Image.fromarray(np.uint8(nparray)).convert('RGB')
-        wxim = PIL2wx(im)
-        ctrl = ImageControl(parent = parent, image = wxim, style = wx.BORDER_RAISED)
-        ctrl.data = data
-        return ctrl
+        return  im
 
     def InitBuffer(self):
         '''
@@ -86,7 +88,6 @@ class ImageControl(wx.Panel):
         '''
         w, h = self.GetClientSize()
         scaled = self.image.ConvertToImage()
-
         # Here maybe we could have preallocated a large enough bitmap
         # and use GetSubBitmap(rect)
         if self.rescale:
@@ -116,7 +117,11 @@ class ImageControl(wx.Panel):
 
     def OnLeftUp(self, event):
         self.ReleaseMouse()
-        x, y, w, h = self.roi_to_rect()
+        try:
+            x, y, w, h = self.roi_to_rect()
+        except TypeError:
+            pass
+
         #TODO Create an event about roi change
 
         # Generate the event
@@ -140,10 +145,13 @@ class ImageControl(wx.Panel):
                     dc.DrawRectangle(*self.start, dx, dy)
 
     def roi_to_rect(self):
-        dx = abs(self.end[0] - self.start[0])
-        dy = abs(self.end[1] - self.start[1])
-        startx, starty = (min(self.start[0], self.end[0]), min(self.start[1], self.end[1]))
-        return (startx, starty, dx, dy)
+        try:
+            dx = abs(self.end[0] - self.start[0])
+            dy = abs(self.end[1] - self.start[1])
+            startx, starty = (min(self.start[0], self.end[0]), min(self.start[1], self.end[1]))
+            return (startx, starty, dx, dy)
+        except TypeError:
+            return
 
     def roi_to_slice(self):
         dx = abs(self.end[0] - self.start[0])
@@ -183,9 +191,21 @@ class ImageControl(wx.Panel):
     def bitmap_region(self):
         return self.buffer.GetSubBitmap(wx.Rect(*self.roi_to_rect()))
             
+    def set_image(self, image: Image):
+        wxim = PIL2wx(image)
+        self._original = self.image
+        self.image = wxim
+        self.InitBuffer()
+        self.Refresh()
+        self.Update()
 
 
-    
+    def reset_image(self):
+        self.image = self._original
+        self.InitBuffer()
+        self.Refresh()
+        self.Update()
+
     
 class MyFrame(wx.Frame):
     def __init__(self, *args, **kwargs):

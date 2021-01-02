@@ -41,7 +41,7 @@ def categorize(experiment_list, filter = AnimalLine.__name__.lower()):
         # Get the enum value of the experiment that corresponds to the applied filter. This is the same name with the FPIExperiment attribute.
         filter_attr = getattr(exp, applied_filter.__name__.lower())
         filter_enum = getattr(applied_filter, filter_attr.upper())
-        genotype_str = getattr(Genotype, exp.genotype)
+        genotype_str = getattr(Genotype, exp.genotype.upper())
 
         filter_dict[filter_enum][genotype_str].append(exp)
     return filter_dict
@@ -53,7 +53,6 @@ def clear_data(genotype_dict):
             continue
         else:
             for key, item in filter.copy().items():
-                print(item)
                 if item is None:
                     del genotype_dict[gen_key][key]
 

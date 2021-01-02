@@ -9,6 +9,7 @@ import numpy as np
 import gui.image_roi
 from gui.custom_events import *
 from gui.animator import animate, export_frames
+from gui.helper_panels import *
 
 
 class DetailsPanel(wx.Dialog):
@@ -25,7 +26,10 @@ class DetailsPanel(wx.Dialog):
 
 
         self.details_panel= wx.Panel(self, style = wx.BORDER_RAISED)
-        self.image_panel = self.load_image()
+        self.roi_panel = FixedROIPanel(parent = self, exp=self._experiment)
+        self.operation_panel = OperationPanel(self, exp = self._experiment)
+
+        self.image_panel = self.build_image_panel()
 
         self._file_lbl = wx.StaticText(self.details_panel, label = 'Filename', style = wx.ALIGN_RIGHT)
         self._file_txt = wx.StaticText(self.details_panel, label = self._experiment.name)
@@ -135,6 +139,13 @@ class DetailsPanel(wx.Dialog):
 
         self.im_sizer.Add(footer_sizer, 0, wx.EXPAND)
 
+        operation_sizer = wx.BoxSizer(wx.VERTICAL)
+
+        operation_sizer.Add(self.roi_panel, 0, wx.EXPAND | wx.ALL, 5)
+        operation_sizer.Add(self.operation_panel, 0, wx.EXPAND | wx.ALL, 5)
+
+        self.im_sizer.Add(operation_sizer, 0, wx.EXPAND)
+
         main_sizer = wx.BoxSizer(wx.HORIZONTAL)
         main_sizer.Add(self.details_panel, 0, wx.EXPAND | wx.ALL, 2)
         main_sizer.Add(self.im_sizer, 1, wx.EXPAND | wx.ALL, 2)
@@ -171,7 +182,13 @@ class DetailsPanel(wx.Dialog):
     def update_stats(self):
         self._max_df_txt.SetLabel(f'{self._experiment.max_df}')
 
-    def load_image(self):
+    def set_image(self, image):
+        self.image_panel.set_image(image)
+
+    def reset_image(self):
+        self.image_panel.reset_image()
+
+    def build_image_panel(self):
         im = self._experiment.resp_map
         image_panel = gui.image_roi.ImageControl.fromarray(self, im)
         return image_panel

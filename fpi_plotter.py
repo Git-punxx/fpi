@@ -43,7 +43,6 @@ class FPIPlotter:
         print('Created axes')
         if no_subplots > 1:
             for ax, gen in zip(axes, genotype_dict.keys()):
-                print(genotype_dict[gen].values())
                 if len(genotype_dict[gen].values()) == 0:
                     continue
                 vals = genotype_dict[gen].values()
