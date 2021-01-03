@@ -593,6 +593,7 @@ class PlotNotebook(wx.Panel):
         return page
 
 class FPI(wx.App):
+    # TODO Create a panel to easily tag experiments and add them to the folder structure
     def OnInit(self):
         splash = gui.splash_screen.Splash(SPLASH_IMAGE)
         splash.CenterOnScreen()

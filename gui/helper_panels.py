@@ -4,6 +4,7 @@ from image_analysis.feature import *
 from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
+import cv2
 
 class FixedROIPanel(wx.Panel):
     def __init__(self, parent, exp, *args, **kwargs, ):
@@ -54,7 +55,7 @@ class OperationPanel(wx.Panel):
             return
         threshold = float(percent)
         mask = create_mask(self.exp.resp_map, threshold)
-        response = masked_response(self.exp.stack, mask)
+        response, *rest = masked_timeseries(self.exp.stack, mask)
         self.reponse = response
         plt.plot(response, label = 'Mean Response Per Frame')
 
@@ -65,17 +66,29 @@ class OperationPanel(wx.Panel):
 
 
     def OnSpin(self, event):
+        '''
+
+        Parameters
+        ----------
+        event
+        func: a callable use to return
+
+        Returns
+        -------
+
+        '''
         percent = self.percentage.GetValue()
         try:
             s = float(percent)
         except Exception:
             wx.MessageBox('Not a valid percentage. It should be a value between 0 and 100', 'Invalid percentage')
             return
-        processed, total_pixels = image_threshold(self.exp.resp_map, float(percent))
-        self.total_pixels.SetLabel(f'Total Pixels: {str(total_pixels)}')
+        # contours is a list of arrays, points? array([[[214, 32]]]) dtype = int32
+        contoured_image, mean_area, max_area, min_area, area_count, mask = find_contours(self.exp.resp_map, float(percent))
         self.Fit()
         parent = self.GetParent()
-        new_image = ImageControl.PIL_image_from_array(processed)
+        parent.status_bar.SetStatusText(f'Mean Area: {mean_area:.2f} - Max Area: {max_area:.2f} - Min Area: {min_area:.2f} - Area Count: {area_count}')
+        new_image = ImageControl.PIL_image_from_array(contoured_image, normalize = False)
         parent.set_image(new_image)
 
     def OnReset(self, event):

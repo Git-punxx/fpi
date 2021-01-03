@@ -10,6 +10,7 @@ import gui.image_roi
 from gui.custom_events import *
 from gui.animator import animate, export_frames
 from gui.helper_panels import *
+from image_analysis import util
 
 
 class DetailsPanel(wx.Dialog):
@@ -182,15 +183,16 @@ class DetailsPanel(wx.Dialog):
     def update_stats(self):
         self._max_df_txt.SetLabel(f'{self._experiment.max_df}')
 
-    def set_image(self, image):
+    def set_image(self, image: Image):
         self.image_panel.set_image(image)
 
     def reset_image(self):
         self.image_panel.reset_image()
 
     def build_image_panel(self):
-        im = self._experiment.resp_map
-        image_panel = gui.image_roi.ImageControl.fromarray(self, im)
+        df = self._experiment.resp_map
+        im = util.wx_fromarray(df)
+        image_panel = gui.image_roi.ImageControl(self, image = im)
         return image_panel
 
     def _analyze(self, roi = None):
@@ -257,7 +259,6 @@ class DetailsPanel(wx.Dialog):
                 self._experiment._roi = None
                 self._roi_analysis_btn.Disable()
                 self._delete_roi.Disable()
-                self.Fit()
 
     def OnRoiUpdate(self, event):
         # Delete the previous roi

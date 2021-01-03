@@ -23,6 +23,15 @@ def animate(exp):
     ani = animation.ArtistAnimation(fig, ims, interval = 50, blit = True, repeat_delay = 3000)
     plt.show()
 
+def masked_animation(stack, vmin = None, vmax = None):
+    fig, ax = plt.subplots()
+    ims = []
+    for index, frame in enumerate(stack):
+        im = ax.imshow(frame, animated = True, vmin = vmin, vmax = vmax, cmap = cm.get_cmap('viridis'))
+        ims.append([im])
+    ani = animation.ArtistAnimation(fig, ims, interval = 100, blit = True, repeat_delay = 3000)
+    plt.show()
+
 def export_frames(exp, frame_list):
     if exp._use_roi:
         s = exp.norm_stack
@@ -34,7 +43,6 @@ def export_frames(exp, frame_list):
             nparray = s[:, :, index]
             nparray -= nparray.min()
             nparray /= nparray.max()
-            nparray = cm.viridis(nparray)
             nparray *= 255
             im = Image.fromarray(np.uint8(nparray)).convert('RGB')
             path = f'../frames/{exp.name}-Frame-{index}.png'

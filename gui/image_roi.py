@@ -5,6 +5,7 @@ import sys
 from matplotlib import cm
 import random
 from gui.custom_events import *
+from image_analysis import feature as ft
 
 
 def PIL2wx(image):
@@ -27,8 +28,8 @@ def log(msg):
     sys.stdout.flush()
 
 class ImageControl(wx.Panel):
-    def __init__(self, image: Image, rescale = True,  *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, parent, image: Image, rescale = True,  *args, **kwargs):
+        super().__init__(parent, *args, **kwargs)
 
         self.rescale = rescale
 
@@ -47,7 +48,8 @@ class ImageControl(wx.Panel):
         self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
         self.Bind(wx.EVT_MOTION, self.OnMotion)
-        
+        self.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
+
          
     @staticmethod
     def FromBitmap(self, bmp):
@@ -71,12 +73,12 @@ class ImageControl(wx.Panel):
         return ctrl
 
     @staticmethod
-    def PIL_image_from_array(nparray):
-        nparray -= nparray.min()
-        nparray /= nparray.max()
-        nparray = cm.viridis(nparray)
-        nparray *= 255
-
+    def PIL_image_from_array(nparray, normalize = True, cm = 'viridis'):
+        if normalize:
+            #https: // stackoverflow.com / questions / 1735025 / how - to - normalize - a - numpy - array - to - within - a - certain - range
+            nparray -= nparray.min()
+            nparray /= nparray.max()
+            nparray *= 255
         im = Image.fromarray(np.uint8(nparray)).convert('RGB')
         return  im
 
@@ -108,6 +110,11 @@ class ImageControl(wx.Panel):
             self.InitBuffer()
         wx.BufferedPaintDC(self, self.buffer)
 
+    def OnRightDown(self, event):
+        x, y = event.GetPosition()
+        box = ft.check_hitbox(x, y)
+
+
     def OnLeftDown(self, event):
         self.InitBuffer()
         self.CaptureMouse()
@@ -129,7 +136,7 @@ class ImageControl(wx.Panel):
         wx.PostEvent(self.GetParent(), evt)
 
     def OnMotion(self, event):
-        if event.Dragging(): 
+        if event.Dragging():
             x, y = event.GetPosition()
             self.end = (x, y)
             dx = self.end[0] - self.start[0]
