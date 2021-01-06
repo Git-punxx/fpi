@@ -47,14 +47,78 @@ Traceback (most recent call last):
   File "h5py\_objects.pyx", line 55, in h5py._objects.with_phil.wrapper
   File "h5py\h5f.pyx", line 88, in h5py.h5f.open
 OSError: Unable to open file (bad object header version number)
-2020-10-22:16:50:05 :: explorer.py :: handle_exception :: line 461 :: ERROR :: Uncaught exception
+2020-10-26:11:43:09 :: explorer.py :: handle_exception :: line 457 :: ERROR :: Uncaught exception
 Traceback (most recent call last):
-  File "/Users/Ftero/PycharmProjects/fpi/intrinsic/explorer.py", line 173, in analyze
-    c_path = Path(file_path)
-  File "/usr/local/Cellar/python/3.7.6_1/Frameworks/Python.framework/Versions/3.7/lib/python3.7/pathlib.py", line 1022, in __new__
-    self = cls._from_parts(args, init=False)
-  File "/usr/local/Cellar/python/3.7.6_1/Frameworks/Python.framework/Versions/3.7/lib/python3.7/pathlib.py", line 669, in _from_parts
-    drv, root, parts = self._parse_args(args)
-  File "/usr/local/Cellar/python/3.7.6_1/Frameworks/Python.framework/Versions/3.7/lib/python3.7/pathlib.py", line 653, in _parse_args
-    a = os.fspath(a)
-TypeError: expected str, bytes or os.PathLike object, not bool
+  File "C:/Users/aa-bhaskaran/PycharmProjects/fpi/intrinsic/explorer.py", line 367, in run
+    I.save_analysis()
+  File "C:\Users\aa-bhaskaran\PycharmProjects\fpi\intrinsic\imaging.py", line 178, in save_analysis
+    analysed_grp.create_dataset('max_project', data=self.max_project())
+  File "C:\Users\aa-bhaskaran\PycharmProjects\fpi\intrinsic\imaging.py", line 216, in max_project
+    stack = self.norm_stack()
+  File "C:\Users\aa-bhaskaran\PycharmProjects\fpi\intrinsic\imaging.py", line 209, in norm_stack
+    self.average_trials()
+  File "C:\Users\aa-bhaskaran\PycharmProjects\fpi\intrinsic\imaging.py", line 194, in average_trials
+    self.avg_stack = np.zeros((frame_shape[0], frame_shape[1], max_frames))
+MemoryError: Unable to allocate 288. MiB for an array with shape (683, 683, 81) and data type float64
+2020-10-26:11:45:52 :: explorer.py :: handle_exception :: line 457 :: ERROR :: Uncaught exception
+Traceback (most recent call last):
+  File "C:/Users/aa-bhaskaran/PycharmProjects/fpi/intrinsic/explorer.py", line 283, in select_file
+    self.max_slider.setMaximum(int(1000*self.S.resp.max()))
+  File "C:\Users\aa-bhaskaran\PycharmProjects\fpi\intrinsic\imaging.py", line 266, in resp
+    return gauss_filt(self.file['df']['max_project'][()], 3)
+  File "h5py\_objects.pyx", line 54, in h5py._objects.with_phil.wrapper
+  File "h5py\_objects.pyx", line 55, in h5py._objects.with_phil.wrapper
+  File "C:\Users\aa-bhaskaran\AppData\Local\Programs\Python\Python38-32\lib\site-packages\h5py\_hl\group.py", line 264, in __getitem__
+    oid = h5o.open(self.id, self._e(name), lapl=self._lapl)
+  File "h5py\_objects.pyx", line 54, in h5py._objects.with_phil.wrapper
+  File "h5py\_objects.pyx", line 55, in h5py._objects.with_phil.wrapper
+  File "h5py\h5o.pyx", line 190, in h5py.h5o.open
+KeyError: "Unable to open object (object 'max_project' doesn't exist)"
+2020-10-26:11:46:02 :: explorer.py :: handle_exception :: line 457 :: ERROR :: Uncaught exception
+Traceback (most recent call last):
+  File "C:/Users/aa-bhaskaran/PycharmProjects/fpi/intrinsic/explorer.py", line 306, in data_changed
+    self.roi_moved()
+  File "C:/Users/aa-bhaskaran/PycharmProjects/fpi/intrinsic/explorer.py", line 341, in roi_moved
+    ((xs, xe), (ys, ye)), _ = self.roi.getArraySlice(self.S.avg_stack, self.resp_item,
+  File "C:\Users\aa-bhaskaran\PycharmProjects\fpi\intrinsic\imaging.py", line 338, in avg_stack
+    return self.stack
+  File "C:\Users\aa-bhaskaran\PycharmProjects\fpi\intrinsic\imaging.py", line 334, in stack
+    return self.file['df']['stack'][()]
+  File "h5py\_objects.pyx", line 54, in h5py._objects.with_phil.wrapper
+  File "h5py\_objects.pyx", line 55, in h5py._objects.with_phil.wrapper
+  File "C:\Users\aa-bhaskaran\AppData\Local\Programs\Python\Python38-32\lib\site-packages\h5py\_hl\dataset.py", line 562, in __getitem__
+    arr = numpy.ndarray(mshape, new_dtype, order='C')
+MemoryError: Unable to allocate 285. MiB for an array with shape (683, 683, 80) and data type float64
+2020-10-26:11:53:49 :: explorer.py :: handle_exception :: line 457 :: ERROR :: Uncaught exception
+Traceback (most recent call last):
+  File "C:/Users/aa-bhaskaran/PycharmProjects/fpi/intrinsic/explorer.py", line 286, in select_file
+    self.roi_moved()
+  File "C:/Users/aa-bhaskaran/PycharmProjects/fpi/intrinsic/explorer.py", line 341, in roi_moved
+    ((xs, xe), (ys, ye)), _ = self.roi.getArraySlice(self.S.avg_stack, self.resp_item,
+  File "C:\Users\aa-bhaskaran\PycharmProjects\fpi\intrinsic\imaging.py", line 338, in avg_stack
+    return self.stack
+  File "C:\Users\aa-bhaskaran\PycharmProjects\fpi\intrinsic\imaging.py", line 334, in stack
+    return self.file['df']['stack'][()]
+  File "h5py\_objects.pyx", line 54, in h5py._objects.with_phil.wrapper
+  File "h5py\_objects.pyx", line 55, in h5py._objects.with_phil.wrapper
+  File "C:\Users\aa-bhaskaran\AppData\Local\Programs\Python\Python38-32\lib\site-packages\h5py\_hl\dataset.py", line 562, in __getitem__
+    arr = numpy.ndarray(mshape, new_dtype, order='C')
+MemoryError: Unable to allocate 285. MiB for an array with shape (683, 683, 80) and data type float64
+2020-10-26:12:00:08 :: explorer.py :: handle_exception :: line 457 :: ERROR :: Uncaught exception
+Traceback (most recent call last):
+  File "C:/Users/aa-bhaskaran/PycharmProjects/fpi/intrinsic/explorer.py", line 367, in run
+    I.save_analysis()
+  File "C:\Users\aa-bhaskaran\PycharmProjects\fpi\intrinsic\imaging.py", line 178, in save_analysis
+    analysed_grp.create_dataset('max_project', data=self.max_project())
+  File "C:\Users\aa-bhaskaran\PycharmProjects\fpi\intrinsic\imaging.py", line 216, in max_project
+    stack = self.norm_stack()
+  File "C:\Users\aa-bhaskaran\PycharmProjects\fpi\intrinsic\imaging.py", line 211, in norm_stack
+    self._norm_stack = normalize_stack(self.avg_stack, self.n_baseline)
+  File "C:\Users\aa-bhaskaran\PycharmProjects\fpi\intrinsic\imaging.py", line 515, in normalize_stack
+    y = np.nanmean(stack, (0, 1))[1:n_baseline]
+  File "<__array_function__ internals>", line 5, in nanmean
+  File "C:\Users\aa-bhaskaran\AppData\Local\Programs\Python\Python38-32\lib\site-packages\numpy\lib\nanfunctions.py", line 939, in nanmean
+    arr, mask = _replace_nan(a, 0)
+  File "C:\Users\aa-bhaskaran\AppData\Local\Programs\Python\Python38-32\lib\site-packages\numpy\lib\nanfunctions.py", line 109, in _replace_nan
+    a = np.array(a, subok=True, copy=True)
+MemoryError: Unable to allocate 285. MiB for an array with shape (683, 683, 80) and data type float64

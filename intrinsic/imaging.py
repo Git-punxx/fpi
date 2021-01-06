@@ -531,9 +531,12 @@ def normalize_stack(stack, n_baseline=30):
 def find_resp(avg_stack, n_baseline=30, pvalue=0.05):
     t = np.arange(0, avg_stack.shape[2])
     sw = stim(t, t_on=n_baseline, tau_on=5, tau_off=15)
+
     reg = np.hstack((np.zeros(n_baseline), sw[n_baseline:]))
     reg = (reg - reg.min()) / (reg.max() - reg.min())
     reg *= avg_stack[..., n_baseline:].max()
+
+
     resp = np.zeros((avg_stack.shape[0], avg_stack.shape[1]))
     for row, r_slice in enumerate(avg_stack):
         for col, c_slice in enumerate(r_slice):
@@ -571,8 +574,10 @@ def resp_map(norm_stack, n_baseline=30, n_stim=30):
     r = find_resp(norm_stack)
     # Keep only the top 5% pixels
     z = r > np.percentile(r, 95)
+
     im_resp = np.zeros(r.shape)
     im_resp[z] = r[z]
+
     mask = np.ones(r.shape)
     # mask[100:-100,100:-100] = 1
     im_resp = im_resp * mask
