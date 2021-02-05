@@ -17,6 +17,7 @@ import sys
 import shlex
 import gui.splash_screen
 import subprocess
+from light_analyzer import analyze
 
 from intrinsic.explorer import ViewerIntrinsic
 
@@ -33,6 +34,7 @@ STATUS_BAR_TEXT = '{:<40} | Total experiments selected: {:<2} | Working dir: {}'
 
 ID_OPEN_PANOPLY = wx.NewId()
 ID_OPEN_INSTRINSIC = wx.NewId()
+ID_ANALYZE = wx.NewId()
 SPLASH_IMAGE = '../assets/splash.jpg'
 ICON = '../assets/eukaryote.ico'
 
@@ -423,6 +425,7 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
     def CreateContextMenu(self, menu):
         menu.Append(ID_OPEN_PANOPLY, 'Open in Panoply')
         menu.Append(ID_OPEN_INSTRINSIC, 'Choose Range of Interest')
+        menu.Append(ID_ANALYZE, 'Complete analysis')
 
     @register(ID_OPEN_PANOPLY)
     def OpenPanoply(self):
@@ -442,6 +445,19 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         window = ViewerIntrinsic(root = os.path.dirname(exp._path))
         window.show()
         qApp.exec_()
+
+    @register(ID_ANALYZE)
+    def Analyze(self):
+        item = self.current_selection[0]
+        exp = self.GetTopLevelParent().gatherer.get_experiment(item)
+        with wx.BusyInfo(f'Analyzing datastore {exp._path}'):
+            try:
+                analyze(exp._path)
+            except Exception as e:
+                dlg = wx.MessageBox(f'Failed to perform analyisis: {e}', 'Analysis failed')
+                dlg.ShowModal()
+                dlg.Destroy()
+
 
     def HandleContextAction(self, event):
         evt_id = event.GetId()

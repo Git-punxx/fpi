@@ -3,6 +3,7 @@ import subprocess
 from gui.dialogs import *
 from app_config import config_manager as app_config
 import intrinsic
+from gui.dialogs import Preferences
 
 
 
@@ -12,6 +13,7 @@ ID_CHECK_FOLDERS = wx.NewId()
 ID_CREATE_FOLDERS = wx.NewId()
 ID_CONFIG_RESPONSE_PLOT = wx.NewId()
 ID_SET_DATABASE_DIR = wx.NewId()
+ID_PREFERENCES = wx.NewId()
 
 
 # Event ids
@@ -49,7 +51,8 @@ edit_menu = [(wx.ID_COPY, 'Copy\tCtrl+c'),
 options_menu = [(ID_CREATE_FOLDERS, 'Create folder structure'),
                 (ID_CHECK_FOLDERS, 'Check folder structure'),
                 (ID_CONFIG_RESPONSE_PLOT, 'Configure response plot'),
-                (ID_SET_DATABASE_DIR, 'Set experiments folder')
+                (ID_SET_DATABASE_DIR, 'Set experiments folder'),
+                (ID_PREFERENCES, 'Preferences..')
                  ]
 
 intrincic_menu = [(ID_INTRINSIC_ANALYSIS, 'Intrinsic analysis')]
@@ -109,6 +112,10 @@ def SetDataPath(parent):
         # here we should check if the directory contains the proper data structure
         # if not we should offer to create it
         app_config.base_dir = path
+        parent = parent.GetParent()
+        parent.gatherer.scan()
+        parent.exp_list.clear()
+        parent.exp_list.add_rows(parent.gatherer.to_tuple())
     else:
         ErrorDialog('Could not set requested path')
 
@@ -121,6 +128,10 @@ def RunIntrinsic(parent):
     print('Running intrinsic')
     subprocess.run(['python', '../intrinsic/explorer.py'])
 
+@register(ID_PREFERENCES)
+def LaunchPreferences(parent):
+    with Preferences(None, 'Preferences') as dlg:
+        dlg.ShowModal()
 
 
 
