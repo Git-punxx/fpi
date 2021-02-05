@@ -4,6 +4,7 @@ from gui.dialogs import *
 from app_config import config_manager as app_config
 import intrinsic
 from gui.dialogs import Preferences
+import matplotlib.pyplot as plt
 
 
 
@@ -14,6 +15,7 @@ ID_CREATE_FOLDERS = wx.NewId()
 ID_CONFIG_RESPONSE_PLOT = wx.NewId()
 ID_SET_DATABASE_DIR = wx.NewId()
 ID_PREFERENCES = wx.NewId()
+ID_STATS = wx.NewId()
 
 
 # Event ids
@@ -55,6 +57,8 @@ options_menu = [(ID_CREATE_FOLDERS, 'Create folder structure'),
                 (ID_PREFERENCES, 'Preferences..')
                  ]
 
+plot_menu = [(ID_STATS, 'Plot total stats')]
+
 intrincic_menu = [(ID_INTRINSIC_ANALYSIS, 'Intrinsic analysis')]
 
 class FPIMenuBar(wx.MenuBar):
@@ -69,10 +73,12 @@ class FPIMenuBar(wx.MenuBar):
         global edit_menu
         global options_menu
         global intrincic_menu
+        global plot_menu
         self.FileMenu(file_menu)
         self.EditMenu(edit_menu)
         self.OptionsMenu(options_menu)
         self.AnalysisMenu(intrincic_menu)
+        self.PlotMenu(plot_menu)
 
     def OnMenu(self, event):
         try:
@@ -99,6 +105,12 @@ class FPIMenuBar(wx.MenuBar):
             optionsm.Append(item_id, description)
         self.Append(optionsm, 'Options')
 
+    def PlotMenu(self, items):
+        plotm = wx.Menu()
+        for item_id, description in items:
+            plotm.Append(item_id, description)
+        self.Append(plotm, 'Plot')
+
     def AnalysisMenu(self, items):
         analysism = wx.Menu()
         for item_id, description in items:
@@ -112,6 +124,7 @@ def SetDataPath(parent):
         # here we should check if the directory contains the proper data structure
         # if not we should offer to create it
         app_config.base_dir = path
+        print(parent)
         parent = parent.GetParent()
         parent.gatherer.scan()
         parent.exp_list.clear()
@@ -135,5 +148,25 @@ def LaunchPreferences(parent):
 
 
 
+@register(ID_STATS)
+def TotalStats(parent):
+    gatherer = parent.GetTopLevelParent().gatherer
+    attributes = ['max_df', 'mean_baseline', 'peak_latency']
+    experiments = [exp for exp in gatherer]
+    boxplot_dict = {attr: [] for attr in attributes}
+    for exp in experiments:
+        for attr in attributes:
+            boxplot_dict[attr].append(getattr(gatherer.get_experiment(exp), attr))
 
+    fig, axes = plt.subplots(1, len(attributes))
+    for ax, (attr, value_list) in zip(axes, boxplot_dict.items()):
+        ax.boxplot(value_list)
+        ax.set_title(attr)
 
+    plt.show()
+    '''    
+    axes.boxplot(genotype_dict[gen].values(), labels=[gen.name for gen in genotype_dict[gen].keys()],
+                 patch_artist=True)
+    axes.set_xlabel(gen.name)
+    axes.grid(True, alpha=0.1)
+    '''

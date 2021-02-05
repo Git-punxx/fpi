@@ -42,7 +42,6 @@ def categorize(experiment_list, filter = AnimalLine.__name__.lower()):
         filter_attr = getattr(exp, applied_filter.__name__.lower())
         filter_enum = getattr(applied_filter, filter_attr.upper())
         genotype_str = getattr(Genotype, exp.genotype.upper())
-
         filter_dict[filter_enum][genotype_str].append(exp)
     return filter_dict
 

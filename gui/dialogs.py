@@ -71,7 +71,7 @@ class Preferences(wx.Dialog):
 
         self.footer_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.footer_sizer.Add(apply_button, 0, wx.ALIGN_LEFT)
-        self.footer_sizer.Add(cancel_button, 0, wx.ALIGN_RIGHT)
+        self.footer_sizer.Add(cancel_button, 0)
 
         self.main_sizer = wx.BoxSizer(wx.VERTICAL)
         self.main_sizer.Add(self.grid, 1, wx.EXPAND | wx.ALL, 5)

@@ -81,6 +81,7 @@ class MainFrame(wx.Frame):
         self.area_button = wx.Button(self, label='Plot Area')
 
 
+
         # Bindings
         self.Bind(wx.EVT_BUTTON, self.OnPeakValue, self.peak_value_btn)
         self.Bind(wx.EVT_BUTTON, self.OnResponse, self.response_btn)
