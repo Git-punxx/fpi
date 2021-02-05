@@ -133,7 +133,6 @@ Stimulation = Enum('Stimulation', list(map(lambda x: x.upper(), config_manager.s
 Genotype = Enum('Genotype', list(map(lambda x: x.upper(), config_manager.genotypes)))
 
 
-
 def base_dir():
     return config['Paths']['DataBaseDir']
 
@@ -179,15 +178,9 @@ def create_folders():
 
 def test_module():
     import re
-    print(animal_lines())
-    print(genotypes())
-    print(stimulations())
-    print(base_dir())
-    print(categories())
 
     text = 'datastore_20200404_6789_response_0.csv'
     patt = name_pattern()
-    print(patt)
     m = re.search(patt, text)
     if m is not None:
         print(m.group(0)[1:])
