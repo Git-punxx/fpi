@@ -1,1 +1,48 @@
-{"paths": {"databasedir": "C:\\Users\\spyros\\Documents\\PythonProjects\\bi\\fpi\\Data", "csv": "C:\\Users\\\u0392\u03b1\u03c3\u03af\u03bb\u03b7\u03c2\\Documents\\MyProjects\\data\\Data\\csv"}, "categories": {"animalline": ["PTEN", "Shank3B", "FMKO"], "stimulation": ["hindpaw", "whiskers"], "treatment": ["DMSO", "BMS", "No"], "genotype": ["KO", "WT", "Heterogenous"]}, "metadata": {"experimentnames": "_[0-9]*_[0-9]*", "filetypes": ["csv", "h5"]}, "grid": {"show": true, "color": "grey", "linewidth": 0.5}, "responseplot": {"fmt": "k-", "linewdith": 0.5, "marker": "o", "markersize": 12, "linestyle": "continuous", "linewidth": 0.5, "alpha": 1}}
+{
+  "paths": {
+    "databasedir": "C:\\databases\\fpi",
+    "csv": "C:\\Users\\\u0392\u03b1\u03c3\u03af\u03bb\u03b7\u03c2\\Documents\\MyProjects\\data\\Data\\csv"
+  },
+  "categories": {
+    "animalline": [
+      "PTEN",
+      "Shank3B",
+      "FMKO"
+    ],
+    "stimulation": [
+      "hindpaw",
+      "whiskers"
+    ],
+    "treatment": [
+      "DMSO",
+      "BMS",
+      "No"
+    ],
+    "genotype": [
+      "KO",
+      "WT",
+      "Heterogenous"
+    ]
+  },
+  "metadata": {
+    "experimentnames": "_[0-9]*_[0-9]*",
+    "filetypes": [
+      "csv",
+      "h5"
+    ]
+  },
+  "grid": {
+    "show": true,
+    "color": "grey",
+    "linewidth": 0.5
+  },
+  "responseplot": {
+    "fmt": "k-",
+    "linewdith": 0.5,
+    "marker": "o",
+    "markersize": 12,
+    "linestyle": "continuous",
+    "linewidth": 0.5,
+    "alpha": 1
+  }
+}
