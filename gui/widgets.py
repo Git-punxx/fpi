@@ -17,7 +17,7 @@ import sys
 import shlex
 import gui.splash_screen
 import subprocess
-from light_analyzer import analyze
+from light_analyzer import analyze, completion_report
 
 from intrinsic.explorer import ViewerIntrinsic
 
@@ -450,6 +450,12 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
     def Analyze(self):
         item = self.current_selection[0]
         exp = self.GetTopLevelParent().gatherer.get_experiment(item)
+        complete = completion_report(exp._path)
+        print(f'Stage {complete} experiment')
+        if complete >= 2:
+            res = wx.MessageBox('Experiment already analyzed. Repeat analysis?', 'Experiment analyzed', style = wx.YES_NO | wx.ICON_QUESTION)
+            if res == 8: # The No ID.
+                return
         with wx.BusyInfo(f'Analyzing datastore {exp._path}'):
             try:
                 analyze(exp._path)
