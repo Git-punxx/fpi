@@ -223,9 +223,7 @@ class HD5Parser(FPIParser):
         with h5py.File(self._path, 'r') as datastore:
             # here we need to see if we will use 'response' or 'resp_map'
             try:
-                print('Reading from datastore: ')
                 ys, ye, xs, xe = datastore['roi']['roi_range']
-                print(slice(xs, xe), slice(ys, ye))
                 return (slice(xs, xe), slice(ys, ye))
             except Exception as e:
                 return (slice(None), slice(None))
@@ -237,7 +235,7 @@ class HD5Parser(FPIParser):
                 data = datastore[self.root]['avg_df'][()]
                 return data
             except Exception as e:
-                print('Exception in response method')
+                print(f'Exception in response method. {self._path} needs analysis')
                 print(e)
                 return None
 
@@ -370,7 +368,6 @@ class HD5Parser(FPIParser):
     def resp_map(self):
         with h5py.File(self._path, 'r') as datastore:
             x_slice, y_slice = self.range()
-            print(f'Searching resp_map for {self.root} at {x_slice}, {y_slice}')
             try:
                 if self.root == 'df':
                     resp_map = datastore[self.root]['resp_map'][()][x_slice, y_slice]
@@ -458,7 +455,6 @@ class ExperimentManager:
 
 
     def scan(self):
-        print('Scanning...')
         for path, dirs, files in os.walk(self.root):
             file_paths = [os.path.join(path, file) for file in files if file.endswith('h5')]
             [self._exp_paths.add(file) for file in file_paths]
@@ -684,16 +680,34 @@ class FPIExperiment:
         return self._peak_latency + 30
 
     @property
-    def response_latency(self, ratio=0.3, n_baseline=30):
-        # returns frames. Find 5 syneomena pou na plhroun th sun8hkh 1 + 0.3 * basekube <  frmaw
+    def onset_threshold(self, ratio = 0.3, n_baseline = 30):
         data = self.response
         print(f'Respnse threshold: {abs((1 + ratio) * self.mean_baseline)}')
         if data is None:
             return
-        latency = np.array([index for index, val in enumerate(data[31:], n_baseline + 1) if
-                   val > abs((1 + ratio) * self.mean_baseline)])
+        if self.mean_baseline > 0:
+            threshold = self.mean_baseline * (1 + ratio)
+        elif self.mean_baseline < 0:
+            threshold = self.mean_baseline * (1 - ratio)
+        else:
+            # TODO If mean baseline is zero Think about it
+            raise ValueError('Mean baseline error')
+        return threshold
 
-        return latency[0]
+    @property
+    def onset_latency(self, ratio=0.3, n_baseline=30):
+        # returns frames. Find 5 syneomena pou na plhroun th sun8hkh 1 + 0.3 * basekube <  frmaw
+        try:
+            data = self.response
+            latency = np.array([index for index, val in enumerate(data[31:], n_baseline + 1) if
+                       val > self.onset_threshold])
+            if latency is None or len(latency) == 0:
+                print(f'{self._path} returns None latency')
+                return None
+            return latency[0]
+        except Exception as e:
+            print('Exception in onset_latency (fpi)')
+            return None
 
     @property
     def no_trials(self):

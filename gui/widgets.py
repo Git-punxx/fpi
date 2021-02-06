@@ -79,7 +79,7 @@ class MainFrame(wx.Frame):
         self.peak_button = wx.Button(self, label='BoxPlot Peak Latencies')
         self.anat_button = wx.Button(self, label='Plot Anat')
         self.area_button = wx.Button(self, label='Plot Area')
-
+        self.onset_button = wx.Button(self, label='Plot Onset Threshold')
 
 
         # Bindings
@@ -89,6 +89,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnPeakLatency, self.peak_button)
         self.Bind(wx.EVT_BUTTON, self.OnAnat, self.anat_button)
         self.Bind(wx.EVT_BUTTON, self.OnArea, self.area_button)
+        self.Bind(wx.EVT_BUTTON, self.OnOnsetThreshold, self.onset_button)
 
         self.Bind(wx.EVT_MENU, self.OnMenu)
 
@@ -107,6 +108,7 @@ class MainFrame(wx.Frame):
         footer_sizer.Add(self.response_btn, 0)
         footer_sizer.Add(self.peak_value_btn, 0)
         footer_sizer.Add(self.latency_button)
+        footer_sizer.Add(self.onset_button)
         footer_sizer.Add(self.peak_button)
         footer_sizer.Add(self.anat_button)
         footer_sizer.Add(self.area_button)
@@ -130,8 +132,7 @@ class MainFrame(wx.Frame):
         pub.subscribe(self.OnChoicesChanged, CHOICES_CHANGED)
 
     def setup(self):
-        if not os.path.exists(app_config.base_dir):
-            path = SetDataPath(self)
+
         # here we should pop a
         try:
             self.gatherer = ExperimentManager(app_config.base_dir)
@@ -141,6 +142,8 @@ class MainFrame(wx.Frame):
                                   wx.OK | wx.ICON_ERROR) as dlg:
                 dlg.ShowModal()
                 exit(1)
+        if not os.path.exists(app_config.base_dir):
+            path = SetDataPath(self)
 
     def OnMenu(self, event):
         evt_id = event.GetId()
@@ -200,7 +203,7 @@ class MainFrame(wx.Frame):
             ErrorDialog("You must select more than one experiment for boxplots")
             return
         with wx.BusyInfo('Plotting OnSet latency'):
-            self.plotter.add(exp, 'Response_latency', choice)
+            self.plotter.add(exp, 'Onset_latency', choice)
         self.exp_list.DeleteSelection()
 
     def OnPeakLatency(self, event):
@@ -229,6 +232,18 @@ class MainFrame(wx.Frame):
             self.plotter.add(exp, 'Peak_Value', choice)
         self.exp_list.DeleteSelection()
 
+    def OnOnsetThreshold(self, event):
+        choice = self.boxplot_choices.GetSelection()
+        selected = self.exp_list.GetSelection()
+        if not selected:
+            return
+        exp = self.gatherer.filterSelected(selected)
+        if len(exp) <= 1:
+            ErrorDialog("You must select more than one experiment for boxplots")
+            return
+        with wx.BusyInfo('Plotting peak value'):
+            self.plotter.add(exp, 'Onset_threshold', choice)
+        self.exp_list.DeleteSelection()
 
     def OnAnat(self, event):
         selected = self.exp_list.GetSelection()

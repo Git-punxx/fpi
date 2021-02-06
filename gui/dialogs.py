@@ -83,6 +83,7 @@ class Preferences(wx.Dialog):
             dlg.ShowModal()
             path = dlg.GetPath()
             self.base_dir_path.SetValue(path)
+            dlg.Destroy()
 
     def OnApply(self, event):
         root_path = self.base_dir_path.GetValue()

@@ -67,19 +67,30 @@ class FPIPlotter:
         ax.grid(True, alpha = 0.1)
         ax.set_xlabel('Frame')
         ax.set_ylabel(f'Response (avg_df)')
-        values = [(exp.response[2:-1], exp.name, exp.resp_map.shape) for exp in experiments]
-        for data, name, shape in values:
-            plt = ax.plot(range(3, 81), data, label = name, linewidth = 2)
-            plt[0].set_label(f'{name}: {shape}')
 
+        try:
+            values = [(exp.response[1:80], exp.name, exp.resp_map.shape) for exp in experiments]
+            for data, name, shape in values:
+                plt = ax.plot(range(1, 80), data, label = name, linewidth = 2)
+                plt[0].set_label(f'{name}: {shape}')
+        except ValueError as e:
+            print(f'######################## {name} cannot be plotted')
+            print(e)
+            print(f'Data length: {len(data)}')
+        '''
         half_duration, half_val= experiments[0].halfwidth()
         print('Halfwith')
         print(half_duration, half_val)
-        start, end = half_duration
-        half_line= np.zeros(end - start + 10)
-        half_line[()] = half_val
-        ax.plot(np.arange(start - 5, end + 5), half_line)
+        try:
+            start, end = half_duration
+            half_line= np.zeros(end - start)
+            half_line[()] = half_val
+            ax.plot(np.arange(start, end), half_line)
+        except ValueError as e:
+            print('Could not compute halfwitdth')
+            print(e)
         # Plot the halwidth line
+        '''
         ax.legend()
 
     @register('baseline')
@@ -123,9 +134,9 @@ class FPIPlotter:
         fpi_util.clear_data(genotype_dict)
         self._plot_dict(genotype_dict)
 
-    @register('response_latency')
+    @register('onset_latency')
     def plot_onset_latency(self, experiments, choice):
-        #TODO Check this functions because it causes an exception
+
         filter_dict = fpi_util.categorize(experiments, choice)
 
         # Get the actual data from the fpiexperiment and assign them to the genotype categories
@@ -134,7 +145,26 @@ class FPIPlotter:
         for base_filter, genotypes in filter_dict.items():
             for genotype, exp_list in genotypes.items():
                 genotype_dict[genotype][base_filter] = []
-                genotype_dict[genotype][base_filter] = [exp.response_latency for exp in exp_list if exp.response_latency is not None]
+                genotype_dict[genotype][base_filter] = [exp.onset_latency for exp in exp_list if exp.onset_latency is not None]
+
+        fpi_util.clear_data(genotype_dict)
+        # Compute the positions of the boxplots
+
+        self._plot_dict(genotype_dict)
+
+    @register('onset_threshold')
+    def plot_onset_latency(self, experiments, choice):
+
+        filter_dict = fpi_util.categorize(experiments, choice)
+
+        # Get the actual data from the fpiexperiment and assign them to the genotype categories
+        genotype_dict = defaultdict(dict)
+        genotype_dict.update((k, {}) for k in [item for item in Genotype])
+        for base_filter, genotypes in filter_dict.items():
+            for genotype, exp_list in genotypes.items():
+                genotype_dict[genotype][base_filter] = []
+                genotype_dict[genotype][base_filter] = [exp.onset_threshold for exp in exp_list if
+                                                        exp.onset_threshold is not None]
 
         fpi_util.clear_data(genotype_dict)
         # Compute the positions of the boxplots
@@ -153,7 +183,7 @@ class FPIPlotter:
         for base_filter, genotypes in filter_dict.items():
             for genotype, exp_list in genotypes.items():
                 genotype_dict[genotype][base_filter] = []
-                genotype_dict[genotype][base_filter] = [exp.peak_latency for exp in exp_list if exp.peak_latency is not None]
+                genotype_dict[genotype][base_filter] = [exp.max_df for exp in exp_list if exp.max_df is not None]
         fpi_util.clear_data(genotype_dict)
         self._plot_dict(genotype_dict)
 
