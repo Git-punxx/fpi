@@ -391,6 +391,7 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         self.Fit()
 
         pub.subscribe(self.update, EXPERIMENT_LIST_CHANGED)
+        pub.subscribe(self.update, CHOICES_CHANGED)
 
     def OnActivate(self, event):
         item = self.list.GetItem(event.GetIndex())

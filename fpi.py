@@ -535,8 +535,10 @@ class ExperimentManager:
 
 
     def filterSelected(self, selected):
+        print(len(selected))
         self.filtered = list(self._experiments.keys())
         self.filtered = [filtered for filtered in self.filtered if filtered in selected]
+        print(self.to_tuple())
         return self.to_tuple()
 
     def clear_filters(self):
