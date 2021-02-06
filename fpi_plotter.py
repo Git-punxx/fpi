@@ -47,9 +47,7 @@ class FPIPlotter:
                     continue
                 vals = genotype_dict[gen].values()
                 labels = [gen.name for gen in genotype_dict[gen].keys()]
-                print(vals)
-                print(labels)
-                ax.boxplot(genotype_dict[gen].values(), labels = [gen.name for gen in genotype_dict[gen].keys()], patch_artist = True)
+                ax.boxplot(vals, labels = [gen.name for gen in genotype_dict[gen].keys()], patch_artist = True)
                 ax.set_xlabel(gen.name)
                 ax.grid(True, alpha = 0.1)
         else:
@@ -158,7 +156,6 @@ class FPIPlotter:
                 genotype_dict[genotype][base_filter] = [exp.peak_latency for exp in exp_list if exp.peak_latency is not None]
         fpi_util.clear_data(genotype_dict)
         self._plot_dict(genotype_dict)
-        path = config_manager.csv_dir
 
     @register('anat')
     def plot_anat(self, experiment, choice):

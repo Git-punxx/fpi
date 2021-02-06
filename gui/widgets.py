@@ -16,8 +16,9 @@ from gui.util import BoxPlotChoices
 import sys
 import shlex
 import gui.splash_screen
-from gui.custom_events import *
-from gui.animator import animate
+import subprocess
+from light_analyzer import analyze, completion_report
+
 from intrinsic.explorer import ViewerIntrinsic
 
 CHOICES_CHANGED = 'choices.changed'
@@ -33,6 +34,7 @@ STATUS_BAR_TEXT = '{:<40} | Total experiments selected: {:<2} | Working dir: {}'
 
 ID_OPEN_PANOPLY = wx.NewId()
 ID_OPEN_INSTRINSIC = wx.NewId()
+ID_ANALYZE = wx.NewId()
 SPLASH_IMAGE = '../assets/splash.jpg'
 ICON = '../assets/eukaryote.ico'
 
@@ -68,20 +70,16 @@ class MainFrame(wx.Frame):
         self.filter = FilterPanel(self, style = wx.BORDER_RAISED)
         self.plotter = PlotNotebook(self)
 
+        self.boxplot_choices = BoxPlotChoices(self, style = wx.BORDER_RAISED)
 
 
-        # Footer panel
-        self.footer_panel = wx.Panel(self)
-        self.boxplot_choices = BoxPlotChoices(self.footer_panel, style = wx.BORDER_RAISED)
+        self.response_btn = wx.Button(self, label='Plot Response')
+        self.peak_value_btn = wx.Button(self, label='BoxPlot Peak Values')
+        self.latency_button = wx.Button(self, label='BoxPlot Onset Latencies')
+        self.peak_button = wx.Button(self, label='BoxPlot Peak Latencies')
+        self.anat_button = wx.Button(self, label='Plot Anat')
+        self.area_button = wx.Button(self, label='Plot Area')
 
-        self.response_btn = wx.Button(self.footer_panel, label='Plot Response')
-        self.peak_value_btn = wx.Button(self.footer_panel, label='BoxPlot Peak Values')
-        self.latency_button = wx.Button(self.footer_panel, label='BoxPlot Onset Latencies')
-        self.peak_button = wx.Button(self.footer_panel, label='BoxPlot Peak Latencies')
-        self.areadf_button = wx.Button(self.footer_panel, label='Plot Area DF')
-        self.area_button = wx.Button(self.footer_panel, label='Plot Area')
-        self.animate_button = wx.Button(self.footer_panel, label='Animate')
-        self.roi_tick = wx.CheckBox(self.footer_panel, label = 'Use ROIs')
 
 
         # Bindings
@@ -89,14 +87,10 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnResponse, self.response_btn)
         self.Bind(wx.EVT_BUTTON, self.OnResponseLatency, self.latency_button)
         self.Bind(wx.EVT_BUTTON, self.OnPeakLatency, self.peak_button)
-        self.Bind(wx.EVT_BUTTON, self.OnAreaDF, self.areadf_button)
+        self.Bind(wx.EVT_BUTTON, self.OnAnat, self.anat_button)
         self.Bind(wx.EVT_BUTTON, self.OnArea, self.area_button)
-        self.Bind(wx.EVT_BUTTON, self.OnAnimate, self.animate_button)
 
         self.Bind(wx.EVT_MENU, self.OnMenu)
-        self.Bind(wx.EVT_IDLE, self.OnActivate)
-
-        self.Bind(wx.EVT_CHECKBOX, self.OnTick)
 
         # Layout
         header_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -109,18 +103,13 @@ class MainFrame(wx.Frame):
 
 
         footer_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        footer_sizer.Add(self.boxplot_choices, 0, wx.ALL, 5)
-        footer_sizer.Add(self.response_btn, 0, wx.ALL, 5)
-        footer_sizer.Add(self.peak_value_btn, 0, wx.ALL, 5)
-        footer_sizer.Add(self.latency_button, 0, wx.ALL, 5)
-        footer_sizer.Add(self.peak_button, 0, wx.ALL, 5)
-        footer_sizer.Add(self.areadf_button, 0, wx.ALL, 5)
-        footer_sizer.Add(self.area_button, 0, wx.ALL, 5)
-        footer_sizer.Add(self.animate_button, 0, wx.ALL, 5)
-        footer_sizer.Add(self.roi_tick, 0, wx.ALL, 5)
-
-        self.footer_panel.SetSizer(footer_sizer)
-        self.Fit()
+        footer_sizer.Add(self.boxplot_choices, 0, wx.EXPAND)
+        footer_sizer.Add(self.response_btn, 0)
+        footer_sizer.Add(self.peak_value_btn, 0)
+        footer_sizer.Add(self.latency_button)
+        footer_sizer.Add(self.peak_button)
+        footer_sizer.Add(self.anat_button)
+        footer_sizer.Add(self.area_button)
 
         exp_sizer = wx.BoxSizer(wx.SB_HORIZONTAL)
         exp_sizer.Add(header_sizer, 0, wx.EXPAND)
@@ -128,7 +117,7 @@ class MainFrame(wx.Frame):
 
         main_sizer = wx.BoxSizer(wx.VERTICAL)
         main_sizer.Add(exp_sizer, 1, wx.EXPAND | wx.ALL, 2)
-        main_sizer.Add(self.footer_panel, 0, wx.EXPAND | wx.ALL, 2)
+        main_sizer.Add(footer_sizer, 0, wx.EXPAND | wx.ALL, 2)
         self.SetSizer(main_sizer)
         self.Fit()
 
@@ -147,7 +136,7 @@ class MainFrame(wx.Frame):
         try:
             self.gatherer = ExperimentManager(app_config.base_dir)
         except Exception as e:
-            print(e)
+            explain(e)
             with wx.MessageDialog(self, 'Something is wrong with the FPI configuration file', 'Configuration error',
                                   wx.OK | wx.ICON_ERROR) as dlg:
                 dlg.ShowModal()
@@ -156,28 +145,6 @@ class MainFrame(wx.Frame):
     def OnMenu(self, event):
         evt_id = event.GetId()
 
-    def OnTick(self, event):
-        val = self.roi_tick.GetValue()
-        self.gatherer.use_roi = val
-        print(f'Setting roi switch to {val}')
-
-    def OnAnimate(self, event):
-        choice = self.boxplot_choices.GetSelection()
-        selected = self.exp_list.GetSelection()
-        if not selected:
-            return
-        # Return the experiments that correspond to the selected items
-        experiments = self.gatherer.filterSelected(selected)
-        # Choose the first one
-        exp = self.gatherer.get_experiment(experiments[0].name)
-        self.SetStatusText(f'Beginning animation of {exp.name}')
-        animate(exp)
-        self.SetStatusText(f'Finished animation of {exp.name}')
-
-    def OnActivate(self, event):
-        pass
-        #if self.exp_list is not None:
-        #    self.exp_list.mark_items()
 
     def OnLineChange(self, args):
         res = self.gatherer.filterLine(args)
@@ -263,19 +230,14 @@ class MainFrame(wx.Frame):
         self.exp_list.DeleteSelection()
 
 
-    def OnAreaDF(self, event):
-        choice = self.boxplot_choices.GetSelection()
+    def OnAnat(self, event):
         selected = self.exp_list.GetSelection()
         if not selected:
             return
         exp = self.gatherer.filterSelected(selected)
-        if len(exp) <= 1:
-            ErrorDialog("You must select more than one experiment for boxplots")
-            return
-        with wx.BusyInfo('Plotting area df'):
-            self.plotter.add(exp, 'areadf', choice)
+        with wx.BusyInfo('Plotting anat image'):
+            self.plotter.add(exp, 'anat')
         self.exp_list.DeleteSelection()
-
 
     def OnArea(self, event):
         choice = self.boxplot_choices.GetSelection()
@@ -397,7 +359,6 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
     def __init__(self, parent, *args, **kwargs):
         wx.Panel.__init__(self, parent, *args, **kwargs)
         PopupMenuMixin.__init__(self)
-        self.length = 0
 
         #TODO Change the style of the row if the experiment has a ROI
         self.list = wx.ListCtrl(self, -1, style=wx.LC_REPORT | wx.LC_VRULES | wx.LC_HRULES)
@@ -408,7 +369,6 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         self.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.OnDeselect)
         self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnActivate)
         self.Bind(wx.EVT_MENU, self.HandleContextAction)
-
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.list, 1, wx.EXPAND)
@@ -440,15 +400,13 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         status_text = 'Experiment {} deselected'.format(text)
         self.GetParent().SetStatusText(STATUS_BAR_TEXT.format(status_text, len(self.current_selection), os.getenv('FPI_PATH')))
 
-
     def clear(self):
         self.list.DeleteAllItems()
 
     def update(self, choices):
-        self.length = len(choices)
+        print('Received message')
         self.clear()
         self.add_rows(choices)
-        self.mark_items()
 
     def add_columns(self, columns):
         self.list.InsertColumn(0, 'Experiment')
@@ -458,7 +416,6 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
     def add_rows(self, data):
         for row in data:
             self.list.Append(row)
-            self.length += 1
 
     def GetSelection(self):
         return self.current_selection
@@ -469,38 +426,7 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
     def CreateContextMenu(self, menu):
         menu.Append(ID_OPEN_PANOPLY, 'Open in Panoply')
         menu.Append(ID_OPEN_INSTRINSIC, 'Choose Range of Interest')
-
-    def mark_items(self):
-        '''
-        For every experiment in the list check:
-        1. If it has a roi
-        2. If it has a resp map
-        Mark it
-        :return: None
-        '''
-        if self.list is None:
-            return
-        for index in range(self.list.GetItemCount()):
-            item = self.list.GetItem(index)
-            exp_name = item.GetText()
-            if exp_name == '':
-                break
-
-            exp = self.GetTopLevelParent().gatherer.get_experiment(exp_name)
-            # Load it
-            if exp.is_roi_analyzed():
-                self.list.SetItemBackgroundColour(index, wx.Colour(240, 240, 240))
-                self.list.SetItemTextColour(index, wx.Colour(0, 0, 200))
-            elif exp.roi_range is not None:
-                self.list.SetItemBackgroundColour(index, wx.Colour(240, 240, 240))
-                self.list.SetItemTextColour(index, wx.Colour(0, 200, 0))
-            elif exp.resp_map is not None:
-                self.list.SetItemBackgroundColour(index, wx.Colour(240, 240, 240))
-                self.list.SetItemTextColour(index, wx.Colour(255, 0, 0))
-            else:
-                self.list.SetItemBackgroundColour(index, wx.Colour(240, 240, 240))
-                self.list.SetItemTextColour(index, wx.Colour(0, 0, 0))
-        self.Refresh()
+        menu.Append(ID_ANALYZE, 'Complete analysis')
 
     @register(ID_OPEN_PANOPLY)
     def OpenPanoply(self):
@@ -520,6 +446,25 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         window = ViewerIntrinsic(root = os.path.dirname(exp._path))
         window.show()
         qApp.exec_()
+
+    @register(ID_ANALYZE)
+    def Analyze(self):
+        item = self.current_selection[0]
+        exp = self.GetTopLevelParent().gatherer.get_experiment(item)
+        complete = completion_report(exp._path)
+        print(f'Stage {complete} experiment')
+        if complete >= 2:
+            res = wx.MessageBox('Experiment already analyzed. Repeat analysis?', 'Experiment analyzed', style = wx.YES_NO | wx.ICON_QUESTION)
+            if res == 8: # The No ID.
+                return
+        with wx.BusyInfo(f'Analyzing datastore {exp._path}'):
+            try:
+                analyze(exp._path)
+            except Exception as e:
+                dlg = wx.MessageBox(f'Failed to perform analyisis: {e}', 'Analysis failed')
+                dlg.ShowModal()
+                dlg.Destroy()
+
 
     def HandleContextAction(self, event):
         evt_id = event.GetId()
@@ -593,7 +538,6 @@ class PlotNotebook(wx.Panel):
         return page
 
 class FPI(wx.App):
-    # TODO Create a panel to easily tag experiments and add them to the folder structure
     def OnInit(self):
         splash = gui.splash_screen.Splash(SPLASH_IMAGE)
         splash.CenterOnScreen()

@@ -458,6 +458,7 @@ class ExperimentManager:
 
 
     def scan(self):
+        print('Scanning...')
         for path, dirs, files in os.walk(self.root):
             file_paths = [os.path.join(path, file) for file in files if file.endswith('h5')]
             [self._exp_paths.add(file) for file in file_paths]
@@ -666,7 +667,7 @@ class FPIExperiment:
         parser = fpiparser(self._path, self.get_root())
         if self._max_project is None:
             self._max_project = parser.max_project()
-        return self._max_prroject
+        return self._max_project
 
     @property
     def peak_latency(self):
@@ -680,7 +681,7 @@ class FPIExperiment:
             peak = np.argmax(response_region)
             peak_value = np.max(response_region)
             self._peak_latency = peak
-        return self._peak_latency
+        return self._peak_latency + 30
 
     @property
     def response_latency(self, ratio=0.3, n_baseline=30):
@@ -692,7 +693,7 @@ class FPIExperiment:
         latency = np.array([index for index, val in enumerate(data[31:], n_baseline + 1) if
                    val > abs((1 + ratio) * self.mean_baseline)])
 
-        return latency[:10]
+        return latency[0]
 
     @property
     def no_trials(self):
@@ -812,11 +813,11 @@ class FPIExperiment:
         peak_frame, peak_val = self.peak_response()
         FPIExperiment.log_tuple('Peak frame:', (peak_frame, peak_val))
         half_val = (peak_val - baseline_val)/2
-
         med_line = np.zeros_like(response_curve[no_baseline:])
         med_line[()] = half_val
 
         idx = np.argwhere(np.diff(np.sign(response_curve[no_baseline:] - med_line))).flatten()
+        print(f'Response value at {idx + no_baseline} = {response_curve[idx + no_baseline]}')
         return idx + no_baseline, half_val
 
 
