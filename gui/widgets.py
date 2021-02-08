@@ -1,5 +1,5 @@
 import wx
-import time
+import subprocess
 import wx.lib.agw.aui as aui
 import matplotlib as mpl
 from PyQt5 import QtWidgets
@@ -18,6 +18,7 @@ import shlex
 import gui.splash_screen
 import subprocess
 from light_analyzer import analyze, completion_report
+from app_config import config_manager as app_config
 
 from intrinsic.explorer import ViewerIntrinsic
 
@@ -35,6 +36,7 @@ STATUS_BAR_TEXT = '{:<40} | Total experiments selected: {:<2} | Working dir: {}'
 ID_OPEN_PANOPLY = wx.NewId()
 ID_OPEN_INSTRINSIC = wx.NewId()
 ID_ANALYZE = wx.NewId()
+ID_OPEN_IN_FOLDER = wx.NewId()
 SPLASH_IMAGE = '../assets/splash.jpg'
 ICON = '../assets/eukaryote.ico'
 
@@ -130,7 +132,8 @@ class MainFrame(wx.Frame):
         pub.subscribe(self.OnStimChange, STIMULUS_CHANGED)
         pub.subscribe(self.OnClear, CLEAR_FILTERS)
         pub.subscribe(self.OnChoicesChanged, CHOICES_CHANGED)
-
+        if not os.path.exists(app_config.base_dir):
+            SetDataPath(self)
     def setup(self):
 
         # here we should pop a
@@ -142,8 +145,7 @@ class MainFrame(wx.Frame):
                                   wx.OK | wx.ICON_ERROR) as dlg:
                 dlg.ShowModal()
                 exit(1)
-        if not os.path.exists(app_config.base_dir):
-            path = SetDataPath(self)
+
 
     def OnMenu(self, event):
         evt_id = event.GetId()
@@ -336,39 +338,54 @@ class FilterPanel(wx.Panel):
         self.stim_choice.SetItems(items)
 
     def OnLineChoice(self, choices):
+        status_text = 'Experiment {} selected'
         selection = self.animal_line_choice.GetStringSelection()
         all = self.GetChoices()
         #pub.sendMessage(LINE_CHANGED, args=selection)
         pub.sendMessage(CHOICES_CHANGED, selections=all)
+        self.clear_selection()
 
     def OnStimChoice(self, event):
+        status_text = 'Experiment {} selected'
         all = self.GetChoices()
         selection = self.stim_choice.GetStringSelection()
         #pub.sendMessage(STIMULUS_CHANGED, args=selection)
         pub.sendMessage(CHOICES_CHANGED, selections=all)
+        self.clear_selection()
+        self.GetParent().SetStatusText(STATUS_BAR_TEXT.format(status_text, len(self.current_selection), os.getenv('FPI_PATH')))
 
     def OnTreatChoice(self, event):
+        status_text = 'Experiment {} selected'
         all = self.GetChoices()
         selection = self.treat_choice.GetStringSelection()
         #pub.sendMessage(TREATMENT_CHANGED, args=selection)
         pub.sendMessage(CHOICES_CHANGED, selections=all)
+        self.clear_selection()
+        self.GetParent().SetStatusText(STATUS_BAR_TEXT.format(status_text, len(self.current_selection), os.getenv('FPI_PATH')))
 
     def OnGenChoice(self, event):
+        status_text = 'Experiment {} selected'
         all = self.GetChoices()
         selection = self.gen_choice.GetStringSelection()
         #pub.sendMessage(GENOTYPE_CHANGED, args=selection)
         pub.sendMessage(CHOICES_CHANGED, selections=all)
+        self.clear_selection()
+        self.GetParent().SetStatusText(STATUS_BAR_TEXT.format(status_text, len(self.current_selection), os.getenv('FPI_PATH')))
 
     def OnClear(self, event):
+        status_text = 'Experiment {} selected'
         self.animal_line_choice.SetSelection(-1)
         self.treat_choice.SetSelection(-1)
         self.stim_choice.SetSelection(-1)
         self.gen_choice.SetSelection(-1)
-
         pub.sendMessage(CLEAR_FILTERS, args=None)
+        self.GetParent().SetStatusText(STATUS_BAR_TEXT.format(status_text, len(self.current_selection), os.getenv('FPI_PATH')))
 
     def GetChoices(self):
         return [choice.GetStringSelection() for choice in self.choices]
+
+    def clear_selection(self):
+        self.GetParent().exp_list.DeleteSelection()
 
 class FPIExperimentList(wx.Panel, PopupMenuMixin):
     def __init__(self, parent, *args, **kwargs):
@@ -391,7 +408,6 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         self.Fit()
 
         pub.subscribe(self.update, EXPERIMENT_LIST_CHANGED)
-        pub.subscribe(self.update, CHOICES_CHANGED)
 
     def OnActivate(self, event):
         item = self.list.GetItem(event.GetIndex())
@@ -443,6 +459,7 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         menu.Append(ID_OPEN_PANOPLY, 'Open in Panoply')
         menu.Append(ID_OPEN_INSTRINSIC, 'Choose Range of Interest')
         menu.Append(ID_ANALYZE, 'Complete analysis')
+        menu.Append(ID_OPEN_IN_FOLDER, 'Open in folder')
 
     @register(ID_OPEN_PANOPLY)
     def OpenPanoply(self):
@@ -480,6 +497,15 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
                 dlg = wx.MessageBox(f'Failed to perform analyisis: {e}', 'Analysis failed')
                 dlg.ShowModal()
                 dlg.Destroy()
+
+    @register(ID_OPEN_IN_FOLDER)
+    def OpenInFolder(self):
+        args = app_config.file_explorer()
+        selection = self.current_selection[0]
+        if selection is not None:
+            exp = self.GetTopLevelParent().gatherer.get_experiment(selection)
+            args.append(os.path.dirname(exp._path))
+            subprocess.call(args)
 
 
     def HandleContextAction(self, event):

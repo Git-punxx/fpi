@@ -61,6 +61,14 @@ class ConfigManager:
     def create_folders(self):
         raise NotImplementedError
 
+    def file_explorer(self):
+        if self.is_mac():
+            return ['open']
+        elif self.is_win():
+            return ['explorer.exe']
+        else:
+            return None
+
 class JSONConfigManager(ConfigManager):
     def __init__(self, configuration_file):
         ConfigManager.__init__(self, configuration_file)

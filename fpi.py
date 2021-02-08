@@ -455,6 +455,7 @@ class ExperimentManager:
 
 
     def scan(self):
+        print(self.root)
         for path, dirs, files in os.walk(self.root):
             file_paths = [os.path.join(path, file) for file in files if file.endswith('h5')]
             [self._exp_paths.add(file) for file in file_paths]
@@ -542,6 +543,7 @@ class ExperimentManager:
         return self.to_tuple()
 
     def clear_filters(self):
+        print('Clearing selection')
         self.filtered = list(self._experiments.keys())
         return self.to_tuple()
 
