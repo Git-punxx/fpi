@@ -117,6 +117,12 @@ class JSONConfigManager(ConfigManager):
     def categories(self):
         return self._json['categories']
 
+    @property
+    def data_export_dir(self):
+        base_dir = os.path.dirname(self.base_dir)
+        return base_dir + '/data_exports'
+
+
     def folder_structure(self):
         base = self.base_dir
         structure = [['Data']]

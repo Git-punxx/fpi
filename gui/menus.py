@@ -17,7 +17,11 @@ ID_CONFIG_RESPONSE_PLOT = wx.NewId()
 ID_SET_DATABASE_DIR = wx.NewId()
 ID_PREFERENCES = wx.NewId()
 ID_STATS = wx.NewId()
-ID_EXPORT = wx.NewId()
+
+ID_EXPORT_PEAK_VALUES = wx.NewId()
+ID_EXPORT_ONSET_LATENCY = wx.NewId()
+ID_EXPORT_ONSET_THRESHOLD = wx.NewId()
+ID_EXPORT_PEAK_LATENCY = wx.NewId()
 
 # Event ids
 ID_PLOT_MEAN_BASELINE = wx.NewId()
@@ -63,7 +67,10 @@ plot_menu = [(ID_STATS, 'Plot total stats'),
 
 intrincic_menu = [(ID_INTRINSIC_ANALYSIS, 'Intrinsic analysis')]
 
-export_menu = [(ID_EXPORT, 'Export')]
+export_menu = [(ID_EXPORT_PEAK_VALUES, 'Export peak values'),
+               (ID_EXPORT_PEAK_LATENCY, 'Export peak latency'),
+               (ID_EXPORT_ONSET_LATENCY, 'Export Onset Latency'),
+               (ID_EXPORT_ONSET_THRESHOLD, 'Export Onset Threshold')]
 
 class FPIMenuBar(wx.MenuBar):
     def __init__(self):
@@ -183,14 +190,45 @@ def TotalStats(parent):
     axes.grid(True, alpha=0.1)
     '''
 
-@register(ID_EXPORT)
-def Export(parent):
+@register(ID_EXPORT_PEAK_VALUES)
+def ExportPeakValue(parent):
     exp_list = parent.GetTopLevelParent().exp_list
     gatherer = parent.GetTopLevelParent().gatherer
     selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
 
-    for exp in selected:
-        print(f'Exporting exp {exp._path}')
+    peak_value = {exp.name: exp.max_df for exp in selected}
+    save_series('peak_value', peak_value)
+
+
+@register(ID_EXPORT_PEAK_LATENCY)
+def ExportPeakLatency(parent):
+    exp_list = parent.GetTopLevelParent().exp_list
+    gatherer = parent.GetTopLevelParent().gatherer
+    selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
+
+    peak_latency = {exp.name: exp.peak_latency for exp in selected}
+
+    save_series('peak_latency', peak_latency)
+
+
+@register(ID_EXPORT_ONSET_LATENCY)
+def ExportOnsetLatency(parent):
+    exp_list = parent.GetTopLevelParent().exp_list
+    gatherer = parent.GetTopLevelParent().gatherer
+    selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
+
+    onset_latency = {exp.name: exp.onset_latency for exp in selected}
+    save_series('onset_latency', onset_latency)
+
+@register(ID_EXPORT_ONSET_THRESHOLD)
+def ExportOnsetThreshold(parent):
+    exp_list = parent.GetTopLevelParent().exp_list
+    gatherer = parent.GetTopLevelParent().gatherer
+    selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
+
+    onset_threshold = {exp.name: exp.onset_threshold for exp in selected}
+
+    save_series('onset_threshold', onset_threshold)
 
 @register(ID_MEAN_RESPONSE)
 def MeanResponse(parent):
@@ -206,3 +244,8 @@ def MeanResponse(parent):
     plt.ylabel('dF/F')
     plt.show()
 
+def save_series(fname, series: dict):
+    fname = app_config.data_export_dir + '/' + fname + '.csv'
+    with open(fname, 'w') as fd:
+        for key, val in series.items():
+            fd.write(f'{key},{val}\n')

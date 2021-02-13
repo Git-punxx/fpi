@@ -15,7 +15,7 @@ from app_config import config_manager as mgr
 
 
 class ViewerIntrinsic(QtWidgets.QMainWindow):
-    def __init__(self, root = mgr.base_dir):
+    def __init__(self, root = '/Volumes/Data/Vasiliki/'):
         super().__init__()
         # Read color map from here : http://www.kennethmoreland.com/color-advice/
         self.cl = np.loadtxt('../intrinsic/extended-black-body-table-byte-0256.csv', delimiter=',', skiprows=1)
