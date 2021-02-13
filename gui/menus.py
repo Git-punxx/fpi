@@ -5,6 +5,7 @@ from app_config import config_manager as app_config
 import intrinsic
 from gui.dialogs import Preferences
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 
@@ -16,12 +17,12 @@ ID_CONFIG_RESPONSE_PLOT = wx.NewId()
 ID_SET_DATABASE_DIR = wx.NewId()
 ID_PREFERENCES = wx.NewId()
 ID_STATS = wx.NewId()
-
+ID_EXPORT = wx.NewId()
 
 # Event ids
 ID_PLOT_MEAN_BASELINE = wx.NewId()
 
-
+ID_MEAN_RESPONSE = wx.NewId()
 
 # Analysis ids
 ID_INTRINSIC_ANALYSIS = wx.NewId()
@@ -57,9 +58,12 @@ options_menu = [(ID_CREATE_FOLDERS, 'Create folder structure'),
                 (ID_PREFERENCES, 'Preferences..')
                  ]
 
-plot_menu = [(ID_STATS, 'Plot total stats')]
+plot_menu = [(ID_STATS, 'Plot total stats'),
+             (ID_MEAN_RESPONSE, 'Plot Mean Response')]
 
 intrincic_menu = [(ID_INTRINSIC_ANALYSIS, 'Intrinsic analysis')]
+
+export_menu = [(ID_EXPORT, 'Export')]
 
 class FPIMenuBar(wx.MenuBar):
     def __init__(self):
@@ -74,11 +78,13 @@ class FPIMenuBar(wx.MenuBar):
         global options_menu
         global intrincic_menu
         global plot_menu
+        global export_menu
         self.FileMenu(file_menu)
         self.EditMenu(edit_menu)
         self.OptionsMenu(options_menu)
         self.AnalysisMenu(intrincic_menu)
         self.PlotMenu(plot_menu)
+        self.ExportMenu(export_menu)
 
     def OnMenu(self, event):
         try:
@@ -116,6 +122,12 @@ class FPIMenuBar(wx.MenuBar):
         for item_id, description in items:
             analysism.Append(item_id, description)
         self.Append(analysism, 'Intrinsic Analysis')
+
+    def ExportMenu(self, items):
+        export_menu = wx.Menu()
+        for item_id, description in items:
+            export_menu.Append(item_id, description)
+        self.Append(export_menu, 'Export')
 
 @register(ID_SET_DATABASE_DIR)
 def SetDataPath(parent):
@@ -170,3 +182,27 @@ def TotalStats(parent):
     axes.set_xlabel(gen.name)
     axes.grid(True, alpha=0.1)
     '''
+
+@register(ID_EXPORT)
+def Export(parent):
+    exp_list = parent.GetTopLevelParent().exp_list
+    gatherer = parent.GetTopLevelParent().gatherer
+    selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
+
+    for exp in selected:
+        print(f'Exporting exp {exp._path}')
+
+@register(ID_MEAN_RESPONSE)
+def MeanResponse(parent):
+    exp_list = parent.GetTopLevelParent().exp_list
+    gatherer = parent.GetTopLevelParent().gatherer
+    selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
+    response_stack = np.array([exp.response for exp in selected])
+    res = response_stack.mean(axis = 0)
+
+    plt.plot(res)
+    plt.title('Mean response')
+    plt.xlabel('Frames')
+    plt.ylabel('dF/F')
+    plt.show()
+

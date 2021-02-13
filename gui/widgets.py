@@ -132,8 +132,7 @@ class MainFrame(wx.Frame):
         pub.subscribe(self.OnStimChange, STIMULUS_CHANGED)
         pub.subscribe(self.OnClear, CLEAR_FILTERS)
         pub.subscribe(self.OnChoicesChanged, CHOICES_CHANGED)
-        if not os.path.exists(app_config.base_dir):
-            SetDataPath(self)
+
     def setup(self):
 
         # here we should pop a
