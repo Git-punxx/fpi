@@ -197,7 +197,7 @@ def MeanResponse(parent):
     exp_list = parent.GetTopLevelParent().exp_list
     gatherer = parent.GetTopLevelParent().gatherer
     selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
-    response_stack = np.array([exp.response for exp in selected])
+    response_stack = np.array([exp.response for exp in selected if exp.response.shape == (81,)])
     res = response_stack.mean(axis = 0)
 
     plt.plot(res)
