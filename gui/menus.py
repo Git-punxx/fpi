@@ -6,7 +6,8 @@ import intrinsic
 from gui.dialogs import Preferences
 import matplotlib.pyplot as plt
 import numpy as np
-
+from fpi import HD5Parser
+import fpi
 
 
 
@@ -22,6 +23,15 @@ ID_EXPORT_PEAK_VALUES = wx.NewId()
 ID_EXPORT_ONSET_LATENCY = wx.NewId()
 ID_EXPORT_ONSET_THRESHOLD = wx.NewId()
 ID_EXPORT_PEAK_LATENCY = wx.NewId()
+
+ID_ROI_EXPORT_PEAK_VALUES = wx.NewId()
+ID_ROI_EXPORT_ONSET_LATENCY = wx.NewId()
+ID_ROI_EXPORT_ONSET_THRESHOLD = wx.NewId()
+ID_ROI_EXPORT_PEAK_LATENCY = wx.NewId()
+
+ID_EXPORT_ROI_ATTRIBUTES = wx.NewId()
+
+ID_ROI_PLOT_RESPONSE = wx.NewId()
 
 # Event ids
 ID_PLOT_MEAN_BASELINE = wx.NewId()
@@ -65,12 +75,20 @@ options_menu = [(ID_CREATE_FOLDERS, 'Create folder structure'),
 plot_menu = [(ID_STATS, 'Plot total stats'),
              (ID_MEAN_RESPONSE, 'Plot Mean Response')]
 
+roi_plot_menu = [(ID_ROI_PLOT_RESPONSE, 'Plot Response')]
+
 intrincic_menu = [(ID_INTRINSIC_ANALYSIS, 'Intrinsic analysis')]
 
-export_menu = [(ID_EXPORT_PEAK_VALUES, 'Export peak values'),
-               (ID_EXPORT_PEAK_LATENCY, 'Export peak latency'),
-               (ID_EXPORT_ONSET_LATENCY, 'Export Onset Latency'),
-               (ID_EXPORT_ONSET_THRESHOLD, 'Export Onset Threshold')]
+export_menu = [(ID_EXPORT_PEAK_VALUES, 'Peak Values'),
+               (ID_EXPORT_PEAK_LATENCY, 'Peak Latency'),
+               (ID_EXPORT_ONSET_LATENCY, 'Onset Latency'),
+               (ID_EXPORT_ONSET_THRESHOLD, 'Onset Threshold')]
+
+roi_export_menu = [(ID_ROI_EXPORT_PEAK_VALUES, 'ROI Peak Values'),
+                  (ID_ROI_EXPORT_PEAK_LATENCY, 'ROI Peak Latency'),
+                  (ID_ROI_EXPORT_ONSET_LATENCY, 'ROI Onset latency'),
+                  (ID_ROI_EXPORT_ONSET_THRESHOLD, 'ROI Onset Threshold'),
+                  (ID_EXPORT_ROI_ATTRIBUTES, 'ROI Attributes')]
 
 class FPIMenuBar(wx.MenuBar):
     def __init__(self):
@@ -136,6 +154,48 @@ class FPIMenuBar(wx.MenuBar):
             export_menu.Append(item_id, description)
         self.Append(export_menu, 'Export')
 
+
+
+class FPIImageMenu(wx.MenuBar):
+    def __init__(self):
+        super().__init__()
+        self.setup()
+
+        self.Bind(wx.EVT_MENU, self.OnMenu)
+
+    def setup(self):
+        global roi_plot_menu
+        global roi_export_menu
+        self.PlotMenu(roi_plot_menu)
+        self.ExportMenu(roi_export_menu)
+
+
+
+    def OnMenu(self, event):
+        try:
+            command_registry[event.GetId()](self)
+        except KeyError as e:
+            ErrorDialog('This action is not yet implemented')
+            print(f'Error {e}')
+
+    def PlotMenu(self, items):
+        plotm = wx.Menu()
+        for item_id, description in items:
+            plotm.Append(item_id, description)
+        self.Append(plotm, 'Plot')
+
+    def ExportMenu(self, items):
+        export_menu = wx.Menu()
+        for item_id, description in items:
+            export_menu.Append(item_id, description)
+        self.Append(export_menu, 'Export')
+
+
+class FPIIslandMenu(wx.MenuBar):
+    pass
+
+
+
 @register(ID_SET_DATABASE_DIR)
 def SetDataPath(parent):
     path = DataPathDialog(parent, 'Select experiments folder ')
@@ -192,42 +252,47 @@ def TotalStats(parent):
 
 @register(ID_EXPORT_PEAK_VALUES)
 def ExportPeakValue(parent):
-    exp_list = parent.GetTopLevelParent().exp_list
-    gatherer = parent.GetTopLevelParent().gatherer
+    root = wx.App.Get().GetRoot()
+    exp_list = root.exp_list
+    gatherer = root.gatherer
     selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
 
     peak_value = {exp.name: exp.max_df for exp in selected}
+    print(peak_value)
     save_series('peak_value', peak_value)
 
 
 @register(ID_EXPORT_PEAK_LATENCY)
 def ExportPeakLatency(parent):
-    exp_list = parent.GetTopLevelParent().exp_list
-    gatherer = parent.GetTopLevelParent().gatherer
+    root = wx.App.Get().GetRoot()
+    exp_list = root.exp_list
+    gatherer = root.gatherer
     selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
 
     peak_latency = {exp.name: exp.peak_latency for exp in selected}
-
+    print(peak_latency)
     save_series('peak_latency', peak_latency)
 
 
 @register(ID_EXPORT_ONSET_LATENCY)
 def ExportOnsetLatency(parent):
-    exp_list = parent.GetTopLevelParent().exp_list
-    gatherer = parent.GetTopLevelParent().gatherer
+    root = wx.App.Get().GetRoot()
+    exp_list = root.exp_list
+    gatherer = root.gatherer
     selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
 
     onset_latency = {exp.name: exp.onset_latency for exp in selected}
-    save_series('onset_latency', onset_latency)
+    print(onset_latency)
+    save_series('peak_latency', onset_latency)
 
 @register(ID_EXPORT_ONSET_THRESHOLD)
 def ExportOnsetThreshold(parent):
-    exp_list = parent.GetTopLevelParent().exp_list
-    gatherer = parent.GetTopLevelParent().gatherer
+    root = wx.App.Get().GetRoot()
+    exp_list = root.exp_list
+    gatherer = root.gatherer
     selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
 
     onset_threshold = {exp.name: exp.onset_threshold for exp in selected}
-
     save_series('onset_threshold', onset_threshold)
 
 @register(ID_MEAN_RESPONSE)
@@ -244,8 +309,106 @@ def MeanResponse(parent):
     plt.ylabel('dF/F')
     plt.show()
 
+
+
+@register(ID_ROI_EXPORT_PEAK_VALUES)
+def ExportRoiPeakValues(parent):
+    exp = parent.GetParent()._experiment
+    parser = HD5Parser(exp, exp._path)
+    peak_value = parser.max_df(roi = True)
+    if peak_value is None:
+        dlg = wx.MessageBox('No ROI for this experiment', 'Exception when reading ROI', style = wx.ICON_ERROR)
+        return
+    print(peak_value)
+    save_series('roi_peak_value', peak_value)
+
+
+@register(ID_ROI_EXPORT_ONSET_THRESHOLD)
+def ExportRoiThreshold(parent):
+    exp = parent.GetParent()._experiment
+    parser = HD5Parser(exp, exp._path)
+    roi_response = parser.response(roi = True)
+    if roi_response is None:
+        dlg = wx.MessageBox('No ROI for this experiment', 'Exception when reading ROI', style = wx.ICON_ERROR)
+        return
+    #TODO Fixme
+    threshold = fpi.onset_threshold(roi_response)
+    print(threshold)
+    save_series('roi_peak_threshold', threshold)
+
+
+@register(ID_ROI_EXPORT_PEAK_LATENCY)
+def ExportROIPeakLatency(parent):
+    exp = parent.GetParent()._experiment
+    parser = HD5Parser(exp, exp._path)
+    roi_response = parser.response(roi = True)
+    if roi_response is None:
+        dlg = wx.MessageBox('No ROI for this experiment', 'Exception when reading ROI', style = wx.ICON_ERROR)
+        return
+    #TODO Fixme
+    peak_latency = fpi.peak_latency(roi_response)
+    print(peak_latency)
+    save_series('roi_peak_latency', peak_latency)
+
+@register(ID_ROI_EXPORT_ONSET_LATENCY)
+def ExportROIOnsetLatency(parent):
+    exp = parent.GetParent()._experiment
+    parser = HD5Parser(exp, exp._path)
+    roi_response = parser.response(roi = True)
+    if roi_response is None:
+        dlg = wx.MessageBox('No ROI for this experiment', 'Exception when reading ROI', style = wx.ICON_ERROR)
+        return
+    #TODO Fixme
+    onset_latency = fpi.onset_latency(roi_response)
+    print(onset_latency)
+    save_series('roi_onset_latency', onset_latency)
+
+
+@register(ID_ROI_PLOT_RESPONSE)
+def PlotROIResponse(parent):
+    exp = parent.GetParent()._experiment
+    parser = HD5Parser(exp, exp._path)
+    roi_resp = parser.response(roi = True)
+    resp = parser.response()
+    plt.plot(resp, label = 'Full image response')
+    plt.plot(roi_resp, label = 'ROI response')
+    plt.legend()
+    plt.xlabel('Frames')
+    plt.ylabel('dF/f')
+    plt.show()
+
+@register(ID_EXPORT_ROI_ATTRIBUTES)
+def ExportROIAttributes(parent):
+    exp = parent.GetParent()._experiment
+    parser = HD5Parser(exp, exp._path)
+    resp = parser.response(roi = True)
+    if resp is None:
+        dlg = wx.MessageBox('No ROI for this experiment', 'Exception when reading ROI', style = wx.ICON_ERROR)
+        return
+    mean_baseline = exp.mean_baseline
+    threshold = fpi.onset_threshold(exp.mean_baseline)
+    onset_latency = fpi.onset_latency(threshold, resp)
+    peak_latency = fpi.peak_latency(resp)
+    peak_val = resp.max()
+    attrs = {'Peak value': peak_val,
+             'Peak latency': peak_latency,
+             'Mean Baseline': mean_baseline,
+            'Onset Threshold': threshold,
+            'Onset Latency': onset_latency}
+    fname = f'ROI_attrs_{exp.name}'
+    try:
+        save_series(fname, attrs)
+    except Exception as e:
+        wx.MessageBox(f'Export failed: {e}', 'Export failed', style=wx.OK | wx.ICON_ERROR)
+        return
+    wx.MessageBox(f'ROI attributes saved at {fname}.csv', 'Attributes saved', style = wx.OK | wx.ICON_INFORMATION)
+
+
+
 def save_series(fname, series: dict):
     fname = app_config.data_export_dir + '/' + fname + '.csv'
     with open(fname, 'w') as fd:
         for key, val in series.items():
             fd.write(f'{key},{val}\n')
+
+

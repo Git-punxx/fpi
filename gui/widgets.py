@@ -413,8 +413,8 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         exp_name = item.GetText()
 
         exp = self.GetTopLevelParent().gatherer.get_experiment(exp_name)
-        with DetailsPanel(parent = None, experiment = exp) as exp_dialog:
-            exp_dialog.ShowModal()
+        details_panel = DetailsPanel(parent = self, experiment = exp)
+        details_panel.ShowModal()
 
     def OnSelect(self, event):
         item = self.list.GetItem(event.GetIndex())
@@ -515,6 +515,14 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
             with wx.MessageDialog(None, 'Action not implemented', 'Not implemented', style = wx.ID_OK | wx.ICON_WARNING) as dlg:
                 resp = dlg.ShowModal()
 
+    def VisualizeStage(self):
+        items = self.current_selection
+        exp = self.GetTopLevelParent().gatherer.get_experiment
+        print(items)
+
+
+
+
 class Plot(wx.Panel):
     def __init__(self, parent, id=wx.ID_ANY, dpi = 100, experiment=None, **kwargs):
         wx.Panel.__init__(self, parent, id)
@@ -587,6 +595,9 @@ class FPI(wx.App):
         self.SetTopWindow(self.frame)
         self.frame.Show(True)
         return True
+
+    def GetRoot(self):
+        return self.frame
 
 
 if __name__ == '__main__':

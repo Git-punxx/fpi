@@ -61,6 +61,47 @@ def extract_name(path):
         res = 'Default name'
     return res
 
+def peak_latency(data):
+    # it must return a frame
+        #TODO Add 5 before and 5 after and find the mean frame integral
+    response_region = data[30:75]
+    peak = np.argmax(response_region)
+    return peak + 30
+
+def onset_threshold(mean_baseline, ratio = 0.3):
+    if mean_baseline > 0:
+        threshold = mean_baseline * (1 + ratio)
+    elif mean_baseline < 0:
+        threshold = mean_baseline * (1 - ratio)
+    else:
+        # TODO If mean baseline is zero Think about it
+        raise ValueError('Mean baseline error')
+    return threshold
+
+def onset_latency(threshold, response, ratio=0.3, n_baseline=30):
+    # returns frames. Find 5 syneomena pou na plhroun th sun8hkh 1 + 0.3 * basekube <  frmaw
+    if response is None:
+        return None
+    try:
+        latency = np.array([index for index, val in enumerate(response[n_baseline+1:], n_baseline + 1) if
+                            val > threshold])
+        if latency is None or len(latency) == 0:
+            raise ValueError('Error on onset latency. Zero or none result')
+        return latency[0]
+    except Exception as e:
+        print('Exception in onset_latency (fpi)')
+        return None
+
+
+def peak_latency(response, start = 30, end = 75):
+    # it must return a frame
+    if response is None:
+        return
+    response_region = response[start:end]
+    peak = np.argmax(response_region)
+    peak_value = np.max(response_region)
+    return peak + 30
+
 
 def fpiparser(path, root = 'df'):
     '''
@@ -209,7 +250,7 @@ class HD5Parser(FPIParser):
         FPIParser.__init__(self, experiment, path)
         self.root = root
 
-    def analyzed_roi(self):
+    def has_roi(self):
         with h5py.File(self._path, 'r') as datastore:
             if 'roi/resp_map' in datastore:
                 return True
@@ -228,18 +269,22 @@ class HD5Parser(FPIParser):
             except Exception as e:
                 return (slice(None), slice(None))
 
-    def response(self):
+    def response(self, roi = False):
         with h5py.File(self._path, 'r') as datastore:
             # here we need to see if we will use 'response' or 'resp_map'
             try:
-                data = datastore[self.root]['avg_df'][()]
-                return data
+                if not roi:
+                    data = datastore['df']['avg_df'][()]
+                    return data
+                else:
+                    data = datastore['roi']['avg_df'][()]
+                    return data
             except Exception as e:
                 print(f'Exception in response method. {self._path} needs analysis')
                 print(e)
                 return None
 
-    def stack(self):
+    def stack(self, roi = False):
         '''
         Returns the average stack from the datastore. If a roi_range is in datastore too it will return a slice
         of the stack
@@ -249,30 +294,32 @@ class HD5Parser(FPIParser):
             # here we need to see if we will use 'response' or 'resp_map'
             try:
                 x_slice, y_slice = (None, None)
-                if self.root == 'df':
-                    data = datastore[self.root]['stack'][()] # This is the stack of average frames. It is a 3D array
+                if not roi:
+                    data = datastore['df']['stack'][()] # This is the stack of average frames. It is a 3D array
                 else:
                     x_slice, y_slice = self.range()
-                    data = datastore['df']['stack'][x_slice, y_slice, :] # This is the stack of average frames. It is a 3D array
+                    data = datastore['roi']['stack'][x_slice, y_slice, :] # This is the stack of average frames. It is a 3D array
             except Exception as e:
                 print('Exception in stack method')
                 data = datastore[self.root]['stack'][()]
             return data
 
-    def norm_stack(self):
+    def norm_stack(self, roi = False):
         with h5py.File(self._path, 'r') as datastore:
             try:
                 x_slice, y_slice = (None, None)
-                if self.root == 'df':
+                if roi:
                     x_slice, y_slice = self.range()
-                data = datastore[self.root]['norm_stack'][x_slice, y_slice, :] # This is the stack of average frames. It is a 3D array
+                    data = datastore['roi']['norm_stack'][x_slice, y_slice, :] # This is the stack of average frames. It is a 3D array
+                else:
+                    data = datastore['df']['norm_stack'][()]
             except Exception as e:
                 print('Exception in norm_stack method')
                 print(e)
-                data = datastore[self.root]['norm_stack'][()]
+                return None
             return data
 
-    def timecourse(self):
+    def timecourse(self, roi = False):
         with h5py.File(self._path, 'r') as datastore:
             # Get the normalized stack
             # We need to get the normalized stack
@@ -280,11 +327,14 @@ class HD5Parser(FPIParser):
             # self.stack is returned on avg_stack()
             # which is df['stack'] in the datastore
             x_slice, y_slice = (None, None)
-            if self.root == 'df':
+            if roi:
                 x_slice, y_slice = self.range()
+                avg_stack = datastore['roi']['stack'][()]
+            else:
+                avg_stack = datastore['df']['stack'][()]
+
             try:
-                avg_stack = datastore[self.root]['stack']
-                df = normalize_stack(avg_stack)[x_slice, y_slice]
+                df = normalize_stack(avg_stack)
                 # Compute the mean
                 df_avg = df.std((0, 1))
                 df_std = df.mean((0, 1))
@@ -305,24 +355,40 @@ class HD5Parser(FPIParser):
                 print(e)
                 return
 
-    def max_df(self):
+    def max_df(self, roi = False):
         with h5py.File(self._path, 'r') as datastore:
-            try:
-                data = datastore[self.root]['max_df'][()]
-                return data
-            except Exception as e:
-                print('Exception on max_df method')
-                print(e)
+            if roi:
+                try:
+                    data = datastore['roi']['max_df'][()]
+                    return data
+                except Exception as e:
+                    print('Exception on max_df method')
+                    print(e)
+            else:
+                try:
+                    data = datastore['df']['max_df'][()]
+                    return data
+                except Exception as e:
+                    print('Exception on max_df method')
+                    print(e)
                 return None
 
-    def avg_df(self):
+    def avg_df(self, roi = False):
         with h5py.File(self._path, 'r') as datastore:
-            try:
-                avg_df = datastore[self.root]['avg_df'][()]
-                return avg_df
-            except Exception as e:
-                print('Exception on avg_df method')
-                print(e)
+            if roi:
+                try:
+                    data = datastore['roi']['avg_df'][()]
+                    return data
+                except Exception as e:
+                    print('Exception on max_df method')
+                    print(e)
+            else:
+                try:
+                    data = datastore['df']['avg_df'][()]
+                    return data
+                except Exception as e:
+                    print('Exception on avg_df method')
+                    print(e)
                 return None
 
     def max_project(self):
@@ -365,19 +431,24 @@ class HD5Parser(FPIParser):
                 print(e)
                 return None
 
-    def resp_map(self):
+    def resp_map(self, roi = False):
         with h5py.File(self._path, 'r') as datastore:
-            x_slice, y_slice = self.range()
-            try:
-                if self.root == 'df':
-                    resp_map = datastore[self.root]['resp_map'][()][x_slice, y_slice]
-                else:
-                    resp_map = datastore[self.root]['resp_map'][()]
-                return resp_map
-            except Exception as e:
-                print(f'{self._path}')
-                print(e)
+            if roi:
+                try:
+                    data = datastore['roi']['resp_map'][()]
+                    return data
+                except Exception as e:
+                    print('Exception on resp_map method')
+                    print(e)
+            else:
+                try:
+                    data = datastore['df']['resp_map'][()]
+                    return data
+                except Exception as e:
+                    print('Exception on resp_map method')
+                    print(e)
                 return None
+
 
     def roi_range(self):
         with h5py.File(self._path, 'r') as datastore:
@@ -626,10 +697,10 @@ class FPIExperiment:
         return self._area
 
     @property
-    def response(self):
+    def response(self, roi = False):
         parser = fpiparser(self._path, self.get_root())
         if self._response is None:
-            self._response = parser.response()
+            self._response = parser.response(roi)
         return self._response
 
     @property
@@ -673,45 +744,23 @@ class FPIExperiment:
     def peak_latency(self):
         # it must return a frame
         if self._peak_latency is None:
-            #TODO Add 5 before and 5 after and find the mean frame integral
-            data = self.response # average df per frame
-            if data is None:
-                return
-            response_region = data[30:75]
-            peak = np.argmax(response_region)
-            peak_value = np.max(response_region)
-            self._peak_latency = peak
-        return self._peak_latency + 30
+            self._peak_latency = peak_latency(self.response)
+        return self._peak_latency
 
     @property
     def onset_threshold(self, ratio = 0.3, n_baseline = 30):
         data = self.response
-        print(f'Respnse threshold: {abs((1 + ratio) * self.mean_baseline)}')
         if data is None:
             return
-        if self.mean_baseline > 0:
-            threshold = self.mean_baseline * (1 + ratio)
-        elif self.mean_baseline < 0:
-            threshold = self.mean_baseline * (1 - ratio)
-        else:
-            # TODO If mean baseline is zero Think about it
-            raise ValueError('Mean baseline error')
-        return threshold
+        return onset_threshold(self.mean_baseline, ratio)
 
     @property
     def onset_latency(self, ratio=0.3, n_baseline=30):
         # returns frames. Find 5 syneomena pou na plhroun th sun8hkh 1 + 0.3 * basekube <  frmaw
-        try:
-            data = self.response
-            latency = np.array([index for index, val in enumerate(data[31:], n_baseline + 1) if
-                       val > self.onset_threshold])
-            if latency is None or len(latency) == 0:
-                print(f'{self._path} returns None latency')
-                return None
-            return latency[0]
-        except Exception as e:
-            print('Exception in onset_latency (fpi)')
-            return None
+        threshold = onset_threshold(self.mean_baseline)
+        res = onset_latency(threshold, self.response)
+        return res
+
 
     @property
     def no_trials(self):
@@ -770,6 +819,13 @@ class FPIExperiment:
             self._roi = parser.range()
         return self._roi
 
+    def has_stack(self):
+        return self.stack is not None
+
+    def has_roi(self):
+        return self.roi is not None
+
+
     def clear(self):
         self._response = None
         self._timecourse = None
@@ -788,7 +844,7 @@ class FPIExperiment:
 
     def is_roi_analyzed(self):
         parser = fpiparser(self._path)
-        return parser.analyzed_roi()
+        return parser.has_roi()
 
     def check(self):
         result = []

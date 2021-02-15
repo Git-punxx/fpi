@@ -11,11 +11,15 @@ from gui.custom_events import *
 from gui.animator import animate, export_frames
 from gui.helper_panels import *
 from image_analysis import util
+from gui.menus import FPIImageMenu
 
 
-class DetailsPanel(wx.Dialog):
+class DetailsPanel(wx.Frame):
     def __init__(self, parent, experiment, *args, **kwargs):
-        wx.Dialog.__init__(self, parent, *args, **kwargs)
+        wx.Frame.__init__(self, parent, *args, style = wx.DEFAULT_FRAME_STYLE | wx.FRAME_FLOAT_ON_PARENT, **kwargs)
+
+        self.menubar = FPIImageMenu()
+        self.SetMenuBar(self.menubar)
 
         self._experiment = experiment
         self._path = self._experiment._path
@@ -163,6 +167,9 @@ class DetailsPanel(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self.OnAnimate, self._animate_button)
         self.Bind(wx.EVT_BUTTON, self.OnExport, self._export_button)
 
+        self.Bind(wx.EVT_CLOSE, self.OnClose, self)
+
+        self.Bind(wx.EVT_MENU, self.OnMenu)
         self.Bind(EVT_ROI_UPDATE, self.OnRoiUpdate)
             # self._response = None
         # self._timecourse = None
@@ -174,6 +181,19 @@ class DetailsPanel(wx.Dialog):
         # self._avg_df = None
         # self._mean_baseline = None
         # self._peak_latency = None
+
+    def OnMenu(self, event):
+        evt_id = event.GetId()
+
+    def ShowModal(self):
+        self.GetParent().Disable()
+        self.Show()
+        self.SetFocus()
+
+    def OnClose(self, event):
+        self.GetParent().Enable()
+        self.GetParent().SetFocus()
+        self.Destroy()
 
     def _datastore_structure(self):
         with h5py.File(self._path, 'r') as datastore:
@@ -298,4 +318,5 @@ class ROIPanel(wx.Panel):
 
         :return:
         """
+        pass
 
