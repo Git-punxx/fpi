@@ -353,15 +353,17 @@ def ExportROIPeakLatency(parent):
 @register(ID_ROI_EXPORT_ONSET_LATENCY)
 def ExportROIOnsetLatency(parent):
     exp = parent.GetParent()._experiment
+    mean_baseline = exp.mean_baseline
     parser = HD5Parser(exp, exp._path)
     roi_response = parser.response(roi = True)
     if roi_response is None:
         dlg = wx.MessageBox('No ROI for this experiment', 'Exception when reading ROI', style = wx.ICON_ERROR)
         return
     #TODO Fixme
-    onset_latency = fpi.onset_latency(roi_response)
+    threshold = fpi.onset_threshold(mean_baseline)
+    onset_latency = fpi.onset_latency(mean_baseline, roi_response)
     print(onset_latency)
-    save_series('roi_onset_latency', onset_latency)
+    save_series('roi_onset_latency', threshold)
 
 
 @register(ID_ROI_PLOT_RESPONSE)
