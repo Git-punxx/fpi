@@ -40,6 +40,7 @@ ID_MEAN_RESPONSE = wx.NewId()
 
 # Analysis ids
 ID_INTRINSIC_ANALYSIS = wx.NewId()
+ID_NEW_EXPERIMENT_ANALYSIS = wx.NewId()
 
 
 
@@ -77,7 +78,8 @@ plot_menu = [(ID_STATS, 'Plot total stats'),
 
 roi_plot_menu = [(ID_ROI_PLOT_RESPONSE, 'Plot Response')]
 
-intrincic_menu = [(ID_INTRINSIC_ANALYSIS, 'Intrinsic analysis')]
+intrincic_menu = [(ID_INTRINSIC_ANALYSIS, 'Intrinsic analysis'),
+                  (ID_NEW_EXPERIMENT_ANALYSIS, 'Analyze new experiment folder')]
 
 export_menu = [(ID_EXPORT_PEAK_VALUES, 'Peak Values'),
                (ID_EXPORT_PEAK_LATENCY, 'Peak Latency'),
@@ -405,7 +407,10 @@ def ExportROIAttributes(parent):
         return
     wx.MessageBox(f'ROI attributes saved at {fname}.csv', 'Attributes saved', style = wx.OK | wx.ICON_INFORMATION)
 
-
+@register(ID_NEW_EXPERIMENT_ANALYSIS)
+def NewAnalysis(parent):
+    with AnalysisPanel(None) as dlg:
+        dlg.ShowModal()
 
 def save_series(fname, series: dict):
     fname = app_config.data_export_dir + '/' + fname + '.csv'

@@ -1,7 +1,43 @@
 from intrinsic.imaging import resp_map
+from intrinsic.imaging import Intrinsic, ReducedStack
+from skimage.measure import block_reduce
 import h5py
 import numpy as np
 from app_config import config_manager as mgr
+
+
+class StrategyStack(ReducedStack):
+    def __init__(self, path, pattern, binning = 1, strategy = 'duplicate'):
+        super().__init__(path, pattern, binning)
+        self.strategy = strategy
+        self.previous_im = None
+
+    def get_pic(self, im):
+        try:
+            pic = super().get_pic(im)
+            pic = block_reduce(pic, (self.binning, self.binning), np.mean)
+            c_avg = pic.mean()
+            if self._previous_avg is not None:
+                ratio = c_avg / self._previous_avg
+                if ratio > 1.5 or ratio < .7:
+                    pic = pic / ratio
+                    self._previous_avg = c_avg / ratio
+            self._previous_avg = pic.mean()
+            self.previous_im = pic
+            return pic
+        except Exception as e:
+            print(e)
+            if self.strategy == 'duplicate':
+                return self.previous_im
+            elif self.strategy == 'average':
+                raise
+            else:
+                raise
+
+
+class ThreadedIntrinsic(Intrinsic):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 def analyze(df_file):
     with h5py.File(df_file, 'a') as ds:
