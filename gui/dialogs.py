@@ -1,7 +1,15 @@
 import wx
-from light_analyzer import ThreadedIntrinsic
+from PIL import Image
+from light_analyzer import ThreadedIntrinsic, RawAnalysisController
 from app_config import config_manager as mgr
 import traceback
+import traceback
+
+
+BUTTON_WIDTH = 20
+BUTTON_HEIGHT = 20
+MAX_IMAGES = 80
+MAX_TRIALS = 50
 
 def DataPathDialog(parent, msg):
     with wx.DirDialog(parent, msg) as dlg:
@@ -123,37 +131,48 @@ class Preferences(wx.Dialog):
 
 
 class AnalysisPanel(wx.Dialog):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, controller, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.path= wx.StaticText(self, label = 'Folder: ')
-        self.folder_input = wx.TextCtrl(self, value = '', size = (250, 25))
-        self.browse = wx.Button(self, label = 'Select Folder')
-        self.from_lbl = wx.StaticText(self, label = 'From: ')
-        self.to_lbl = wx.StaticText(self, label = 'To: ')
+        self.controller = RawAnalysisController(mgr.raw_dir)
+        self.choices = []
+        self.SetSize(MAX_IMAGES * BUTTON_WIDTH, MAX_TRIALS * BUTTON_WIDTH)
+        self.path= wx.StaticText(self, label = 'Folder: ', style = wx.ALIGN_CENTER_VERTICAL)
+        self.folder_input = wx.ComboBox(self, choices = self.choices, size = (500, 25))
+        self.browse = wx.Button(self, label = 'Select Folder', style = wx.ALIGN_CENTER_VERTICAL)
+        self.from_lbl = wx.StaticText(self, label = 'From Trial: ', style = wx.ALIGN_CENTER_VERTICAL)
+        self.to_lbl = wx.StaticText(self, label = 'To Trial: ', style = wx.ALIGN_CENTER_VERTICAL)
 
         self.from_input = wx.TextCtrl(self, value = '0', size = (40, 25))
         self.to_input = wx.TextCtrl(self, value = '-1', size = (40, 25))
 
-        self.strategy_txt = wx.StaticText(self, label = 'Strategy on corrupted photo: ')
-        self.strategy = wx.Choice(self, choices = ['Skip', 'Duplicate', 'Average'])
+        self.strategy_txt = wx.StaticText(self, label = 'Strategy on corrupted photo: ', style = wx.ALIGN_CENTER_VERTICAL)
+        self.strategy = wx.ComboBox(self, choices = ['Skip', 'Duplicate', 'Average'])
 
         self.analyze = wx.Button(self, label = 'Analyze')
 
+        ########### here we should do TrialMatric and use a controller
+        trial_tree = self.controller.trial_tree
+        trial_panel = TrialMatrix(self, trial_tree)
+        wx.MessageBox('Not a valid trial folder', 'Error on experiments folder')
+
         folder_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        folder_sizer.Add(self.path, 0)
-        folder_sizer.Add(self.folder_input, 0)
-        folder_sizer.Add(self.browse, 0)
+        folder_sizer.Add(self.path, 0, flag = wx.ALIGN_CENTER_VERTICAL)
+        folder_sizer.Add(self.folder_input, 0, flag = wx.ALIGN_CENTER_VERTICAL)
+        folder_sizer.Add(self.browse, 0, flag = wx.ALIGN_CENTER_VERTICAL)
 
 
         range_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        range_sizer.Add(self.from_lbl, 0)
-        range_sizer.Add(self.from_input, 0)
-        range_sizer.Add(self.to_lbl, 0)
-        range_sizer.Add(self.to_input, 0)
+        range_sizer.Add(self.from_lbl, 0, flag = wx.ALIGN_CENTER_VERTICAL)
+        range_sizer.Add(self.from_input, 0, flag = wx.ALIGN_CENTER_VERTICAL)
+        range_sizer.Add(self.to_lbl, 0, flag = wx.ALIGN_CENTER_VERTICAL)
+        range_sizer.Add(self.to_input, 0, flag = wx.ALIGN_CENTER_VERTICAL)
 
         strategy_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        strategy_sizer.Add(self.strategy_txt, 0)
-        strategy_sizer.Add(self.strategy, 0)
+        strategy_sizer.Add(self.strategy_txt, 0, flag = wx.ALIGN_CENTER_VERTICAL)
+        strategy_sizer.Add(self.strategy, 0, flag = wx.ALIGN_CENTER_VERTICAL)
+
+        center_sizer = wx.BoxSizer(wx.VERTICAL)
+        center_sizer.Add(trial_panel, 0, wx.EXPAND)
 
         footer_sizer = wx.BoxSizer(wx.VERTICAL)
         footer_sizer.Add(self.analyze, 0)
@@ -162,6 +181,7 @@ class AnalysisPanel(wx.Dialog):
         main_sizer.Add(folder_sizer, 0, wx.EXPAND | wx.ALL, 5)
         main_sizer.Add(range_sizer, 0, wx.EXPAND | wx.ALL, 5)
         main_sizer.Add(strategy_sizer, 0, wx.EXPAND | wx.ALL, 5)
+        main_sizer.Add(center_sizer, 1, wx.EXPAND | wx.ALL, 5)
         main_sizer.Add(footer_sizer, 0, wx.EXPAND | wx.ALL, 5)
         self.SetSizer(main_sizer)
 
@@ -188,11 +208,74 @@ class AnalysisPanel(wx.Dialog):
         with wx.DirDialog(None, 'Select trail folder', '', wx.DIRP_DIR_MUST_EXIST) as dlg:
             dlg.ShowModal()
             path = dlg.GetPath()
+            self.choices.append(path)
+            self.folder_input.Set(self.choices)
+            self.folder_input.SetSelection(-1)
             self.folder_input.SetValue(path)
+            self.controller.set_root(path)
+
+
+
+class TrialMatrix(wx.Panel):
+    def __init__(self, parent, trial_tree: dict, *args, **kwargs):
+        super().__init__(parent, *args, **kwargs)
+        self.trial_tree = trial_tree
+        self.trial_length = len(self.trial_tree.keys())
+        self.no_images = len(list(self.trial_tree.values())[0])
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.setup()
+        self.SetSizer(self.sizer)
+
+    def setup(self):
+        for trial, experiment_list in self.trial_tree.items():
+            self.sizer.Add(TrialPanel(self, trial, experiment_list))
+
+
+
+
+class TrialPanel(wx.Panel):
+    def __init__(self, parent, name, image_paths: list, *args, **kwargs):
+        super().__init__(parent, *args, style = wx.BORDER_SUNKEN, **kwargs)
+        self.image_paths = image_paths
+        self.name = name
+        self.SetSize(BUTTON_HEIGHT + 5, BUTTON_WIDTH * MAX_IMAGES)
+        self.name_txt = wx.StaticText(self, style = wx.BORDER_SUNKEN, label = self.name)
+        self.grid = wx.GridBagSizer(2, 2)
+        self.grid.Add(self.name_txt, pos = (0, 0), flag= wx.ALL | wx.ALIGN_CENTER_VERTICAL, border = 1)
+        self.SetSizer(self.grid)
+        self.setup()
+
+
+    def setup(self):
+        self.SetBackgroundColour('red')
+        for index, path in enumerate(self.image_paths, 1):
+            print(f'Installing {path}')
+            image = wx.Image(path, wx.BITMAP_TYPE_PNG)
+            # make a thumbnail and set it as image to button
+            image.Rescale(BUTTON_WIDTH, BUTTON_HEIGHT)
+            bmp = wx.Bitmap(image)
+            img = ImageButton(self, bmp, name = f'img_{index}.png', style = wx.BORDER_SUNKEN)
+            self.grid.Add(img, pos = (0, index))
+        self.Fit()
+
+
+
+class ImageButton(wx.BitmapButton):
+    def __init__(self, parent, image, *args, **kwargs):
+        super().__init__(parent, bitmap = image, *args, **kwargs)
+        self.parent = parent
+        self.image = image
+
+        self.SetToolTip(f'{parent.name}: {self.GetName()}')
+        self.Bind(wx.EVT_BUTTON, self.OnClick)
+
+    def OnClick(self, event):
+        dlg = wx.MessageBox('Success', 'Ok we did it')
+
 
 if __name__ == '__main__':
     app = wx.PySimpleApp()
-    dlg = Preferences(None)
+    dlg = AnalysisPanel(None)
     res = dlg.ShowModal()
 
 

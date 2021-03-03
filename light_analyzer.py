@@ -6,6 +6,29 @@ import numpy as np
 from app_config import config_manager as mgr
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor
+import os
+
+class RawAnalysisController:
+    def __init__(self, root_folder = None):
+        self.root = root_folder
+        self.trial_tree = root_folder
+
+    def _assemble_tree(self):
+        trial_folders = [folder for folder in os.listdir(self.root) if 'Trial_' in folder]
+        for folder in trial_folders:
+            folder_path = os.path.join(self.root, folder)
+            images = [os.path.join(folder_path, img) for img in 'img_' in img]
+            images.sort(key = lambda x: int(x.split('_')[0]))
+            self.trial_tree[folder] = images
+        return self.trial_tree
+
+    def set_root(self, path):
+        if not os.path.exists(path):
+            raise ValueError('Path is not valid')
+        self.root = path
+        self._assemble_tree()
+        print('Tree structure updated')
+
 
 
 class StrategyStack(ReducedStack):

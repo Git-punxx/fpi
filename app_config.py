@@ -143,6 +143,7 @@ class JSONConfigManager(ConfigManager):
         return paths
 
     def create_folders(self):
+        print('Creating new folder structure')
         folders = self.folder_structure()
         [os.makedirs(path, exist_ok=True) for path in folders]
 
@@ -200,6 +201,12 @@ def create_folders():
     paths = folder_structure()
     for path in paths:
         Path(path).mkdir(parents=True, exist_ok=True)
+
+def check_trials_folder(path):
+    if not os.path.exists(path):
+        return False
+    else:
+        return any(map(lambda x: 'Trial' in x, os.listdir(path)))
 
 def test_module():
     import re

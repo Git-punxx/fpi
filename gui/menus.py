@@ -2,6 +2,7 @@ import wx
 import subprocess
 from gui.dialogs import *
 from app_config import config_manager as app_config
+import app_config
 import intrinsic
 from gui.dialogs import Preferences
 import matplotlib.pyplot as plt
@@ -206,8 +207,8 @@ def SetDataPath(parent):
     if path is not None:
         # here we should check if the directory contains the proper data structure
         # if not we should offer to create it
-        app_config.base_dir = path
-        print(parent)
+        mgr.base_dir = path
+        print(f'Base dir changed to {mgr.base_dir}')
         parent = parent.GetParent()
         parent.gatherer.scan()
         parent.exp_list.clear()
@@ -218,16 +219,20 @@ def SetDataPath(parent):
 @register(ID_SET_RAW_DIR)
 def SetRawPath(parent):
     path = DataPathDialog(parent, 'Select root trials folder ')
-    if path is not None:
+    if path is not None and app_config.check_trials_folder(path):
         # here we should check if the directory contains the proper data structure
         # if not we should offer to create it
-        app_config.raw_dir = path
+        mgr.raw_dir = path
+        print(f'Raw dir changed to {mgr.raw_dir}')
     else:
-        ErrorDialog('Could not set requested path')
+        ErrorDialog('Could not set requested path. Path is invalid or it does not contain Trial folders')
 
 @register(ID_CREATE_FOLDERS)
 def CreateFolderStructure(parent):
-    app_config.create_folders()
+    with wx.MessageDialog(None, 'Do you really want to create a new folder structure', 'Warning', style= wx.YES_NO | wx.ICON_WARNING) as dlg:
+        res = dlg.ShowModal()
+        if res == wx.YES:
+            app_config.create_folders()
 
 @register(ID_INTRINSIC_ANALYSIS)
 def RunIntrinsic(parent):
@@ -421,8 +426,12 @@ def ExportROIAttributes(parent):
 
 @register(ID_NEW_EXPERIMENT_ANALYSIS)
 def NewAnalysis(parent):
-    with AnalysisPanel(None) as dlg:
-        dlg.ShowModal()
+    if not app_config.check_trials_folder(mgr.raw_dir):
+        wx.MessageBox('You must set the trials folder before trying to do any analysis. You can set it from Options -> Set root trials folder ', 'Please set trials folder from Option')
+        return
+    else:
+        with AnalysisPanel(None) as dlg:
+            dlg.ShowModal()
 
 def save_series(fname, series: dict):
     fname = app_config.data_export_dir + '/' + fname + '.csv'
