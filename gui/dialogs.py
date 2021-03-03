@@ -1,9 +1,11 @@
 import wx
-from PIL import Image
+from tqdm import tqdm
+
 from light_analyzer import ThreadedIntrinsic, RawAnalysisController
 from app_config import config_manager as mgr
 import traceback
-import traceback
+import os
+from concurrent.futures import ThreadPoolExecutor
 
 
 BUTTON_WIDTH = 20
@@ -131,9 +133,9 @@ class Preferences(wx.Dialog):
 
 
 class AnalysisPanel(wx.Dialog):
-    def __init__(self, controller, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.controller = RawAnalysisController(mgr.raw_dir)
+        #self.controller = RawAnalysisController(mgr.raw_dir)
         self.choices = []
         self.SetSize(MAX_IMAGES * BUTTON_WIDTH, MAX_TRIALS * BUTTON_WIDTH)
         self.path= wx.StaticText(self, label = 'Folder: ', style = wx.ALIGN_CENTER_VERTICAL)
@@ -151,9 +153,7 @@ class AnalysisPanel(wx.Dialog):
         self.analyze = wx.Button(self, label = 'Analyze')
 
         ########### here we should do TrialMatric and use a controller
-        trial_tree = self.controller.trial_tree
-        trial_panel = TrialMatrix(self, trial_tree)
-        wx.MessageBox('Not a valid trial folder', 'Error on experiments folder')
+        print('Trial folders analyzed. Loading. Please wait...')
 
         folder_sizer = wx.BoxSizer(wx.HORIZONTAL)
         folder_sizer.Add(self.path, 0, flag = wx.ALIGN_CENTER_VERTICAL)
@@ -171,8 +171,8 @@ class AnalysisPanel(wx.Dialog):
         strategy_sizer.Add(self.strategy_txt, 0, flag = wx.ALIGN_CENTER_VERTICAL)
         strategy_sizer.Add(self.strategy, 0, flag = wx.ALIGN_CENTER_VERTICAL)
 
-        center_sizer = wx.BoxSizer(wx.VERTICAL)
-        center_sizer.Add(trial_panel, 0, wx.EXPAND)
+        #center_sizer = wx.BoxSizer(wx.VERTICAL)
+        #center_sizer.Add(trial_panel, 0, wx.EXPAND)
 
         footer_sizer = wx.BoxSizer(wx.VERTICAL)
         footer_sizer.Add(self.analyze, 0)
@@ -181,7 +181,7 @@ class AnalysisPanel(wx.Dialog):
         main_sizer.Add(folder_sizer, 0, wx.EXPAND | wx.ALL, 5)
         main_sizer.Add(range_sizer, 0, wx.EXPAND | wx.ALL, 5)
         main_sizer.Add(strategy_sizer, 0, wx.EXPAND | wx.ALL, 5)
-        main_sizer.Add(center_sizer, 1, wx.EXPAND | wx.ALL, 5)
+        #main_sizer.Add(center_sizer, 1, wx.EXPAND | wx.ALL, 5)
         main_sizer.Add(footer_sizer, 0, wx.EXPAND | wx.ALL, 5)
         self.SetSizer(main_sizer)
 
@@ -191,6 +191,7 @@ class AnalysisPanel(wx.Dialog):
 
 
     def OnAnalyze(self, event):
+        self.Disable()
         try:
             val_from = int(self.from_input.GetValue())
             val_to = int(self.to_input.GetValue())
@@ -203,6 +204,8 @@ class AnalysisPanel(wx.Dialog):
             print(f'Exception: {e}')
             print(traceback.format_exc())
 
+        self.Enable()
+
 
     def OnBrowse(self, event):
         with wx.DirDialog(None, 'Select trail folder', '', wx.DIRP_DIR_MUST_EXIST) as dlg:
@@ -212,7 +215,7 @@ class AnalysisPanel(wx.Dialog):
             self.folder_input.Set(self.choices)
             self.folder_input.SetSelection(-1)
             self.folder_input.SetValue(path)
-            self.controller.set_root(path)
+            self.SetTitle(os.path.basename(path))
 
 
 
@@ -220,14 +223,26 @@ class TrialMatrix(wx.Panel):
     def __init__(self, parent, trial_tree: dict, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
         self.trial_tree = trial_tree
-        self.trial_length = len(self.trial_tree.keys())
-        self.no_images = len(list(self.trial_tree.values())[0])
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.setup()
         self.SetSizer(self.sizer)
 
+    @property
+    def no_trials(self):
+        return sum([1 for i in self.trial_tree.keys()])
+
+    @property
+    def no_images(self):
+        if self.no_trials == 0:
+            return 0
+        else:
+            return len(self.trial_tree['Trial_0'])
+
     def setup(self):
-        for trial, experiment_list in self.trial_tree.items():
+        print('Setting up trial matric')
+        for trial, experiment_list in tqdm(self.trial_tree.items()):
+            print(f'Trial {trial}')
+            print(experiment_list)
             self.sizer.Add(TrialPanel(self, trial, experiment_list))
 
 
@@ -245,18 +260,28 @@ class TrialPanel(wx.Panel):
         self.SetSizer(self.grid)
         self.setup()
 
+    def _load_image(self, path):
+        name = os.path.basename(path)
+        image = wx.Image(path, wx.BITMAP_TYPE_PNG)
+        image.SetOption('name', name)
+        image.Rescale(BUTTON_WIDTH, BUTTON_HEIGHT)
+        return image
+
+    def _load_images(self):
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = [executor.submit(self._load_image, path) for path in self.image_paths]
+        image_list = [future.result() for future in futures]
+        print('Loading images finsideh. Constructing gui')
+        return image_list #sorted
 
     def setup(self):
         self.SetBackgroundColour('red')
-        for index, path in enumerate(self.image_paths, 1):
-            print(f'Installing {path}')
-            image = wx.Image(path, wx.BITMAP_TYPE_PNG)
+        images = self._load_images()
+        for index, image in tqdm(enumerate(images, 1)):
             # make a thumbnail and set it as image to button
-            image.Rescale(BUTTON_WIDTH, BUTTON_HEIGHT)
             bmp = wx.Bitmap(image)
             img = ImageButton(self, bmp, name = f'img_{index}.png', style = wx.BORDER_SUNKEN)
             self.grid.Add(img, pos = (0, index))
-        self.Fit()
 
 
 

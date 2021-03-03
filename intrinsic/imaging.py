@@ -554,6 +554,7 @@ def find_resp(avg_stack, n_baseline=30, pvalue=0.05):
 
 
     resp = np.zeros((avg_stack.shape[0], avg_stack.shape[1]))
+
     for row, r_slice in tqdm(enumerate(avg_stack)):
         for col, c_slice in enumerate(r_slice):
             # cs = (c_slice - c_slice.min()) / (c_slice.max() - c_slice.min())
@@ -598,6 +599,7 @@ def resp_map(norm_stack, n_baseline=30, n_stim=30):
     # mask[100:-100,100:-100] = 1
     im_resp = im_resp * mask
     im_resp = gauss_filt(im_resp, 2)
+    ##### Warning
     im_resp = clean_response(im_resp)
     df = norm_stack[im_resp > 0, :]
 

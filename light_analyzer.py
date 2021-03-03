@@ -11,14 +11,16 @@ import os
 class RawAnalysisController:
     def __init__(self, root_folder = None):
         self.root = root_folder
-        self.trial_tree = root_folder
+        self.trial_tree = {}
+        self._assemble_tree()
 
     def _assemble_tree(self):
         trial_folders = [folder for folder in os.listdir(self.root) if 'Trial_' in folder]
         for folder in trial_folders:
             folder_path = os.path.join(self.root, folder)
-            images = [os.path.join(folder_path, img) for img in 'img_' in img]
-            images.sort(key = lambda x: int(x.split('_')[0]))
+            images = [os.path.join(folder_path, img) for img in os.listdir(folder_path) if 'img_' in img]
+            print(images)
+            images.sort(key = lambda x: int(os.path.basename(x).split('_')[1].split('.')[0]))
             self.trial_tree[folder] = images
         return self.trial_tree
 
@@ -63,17 +65,21 @@ class StrategyStack(ReducedStack):
 class ThreadedIntrinsic(Intrinsic):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, n_baseline = 2, **kwargs)
+        self._baseline = None
 
     def complete_analysis(self):
         # path to datastore: self.save_path
         self.save_analysis()
+        analyze(self.save_path)
         s = Session(self.save_path)
-        print('Exporting experiment paramters')
         s.export_resp_prm()
+
 
     def mean_baseline(self, stack):
         return stack[:self.n_baseline].mean(0)
+
     def compute_baselines(self):
+        print('Computing baselines')
         with ThreadPoolExecutor(max_workers=8) as executor:
             futures = [executor.submit(self.mean_baseline, stack) for stack in self.stacks]
 
@@ -97,6 +103,7 @@ def analyze(df_file):
             df_grp.create_dataset('avg_df', data=df.mean(0))
             df_grp.create_dataset('max_df', data=df.max(1).mean())
             df_grp.create_dataset('area', data=np.sum(r > 0))
+
 
 
 def completion_report(exp_path):

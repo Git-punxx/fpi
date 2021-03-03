@@ -310,19 +310,19 @@ class FilterPanel(wx.Panel):
 
         # Layout
         sizer = wx.GridBagSizer(vgap=5, hgap=5)
-        sizer.Add(an_line_lbl, (0, 0),flag = wx.ALL, border = 2)
+        sizer.Add(an_line_lbl, (0, 0),flag = wx.ALL | wx.ALIGN_CENTER, border = 2)
         sizer.Add(self.animal_line_choice, (1, 0),flag = wx.ALL,  border = 2)
 
-        sizer.Add(stim_lbl, (0, 1),flag = wx.ALL, border = 2)
+        sizer.Add(stim_lbl, (0, 1),flag = wx.ALL| wx.ALIGN_CENTER, border = 2)
         sizer.Add(self.stim_choice, (1, 1),flag = wx.ALL, border = 2)
 
-        sizer.Add(treat_lbl, (0, 2),flag = wx.ALL, border = 2)
+        sizer.Add(treat_lbl, (0, 2),flag = wx.ALL| wx.ALIGN_CENTER, border = 2)
         sizer.Add(self.treat_choice, (1, 2),flag = wx.ALL, border = 2)
 
-        sizer.Add(gen_lbl, (0, 3), border = 2)
+        sizer.Add(gen_lbl, (0, 3), flag = wx.ALL | wx.ALIGN_CENTER, border = 2)
         sizer.Add(self.gen_choice, (1, 3),flag = wx.ALL, border = 2)
 
-        sizer.Add(self.clear_btn, (1, 4), flag = wx.ALL, border = 4)
+        sizer.Add(self.clear_btn, (1, 4), flag = wx.ALL | wx.ALIGN_CENTER_VERTICAL, border = 4)
 
         self.SetSizer(sizer)
         self.Fit()
