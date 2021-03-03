@@ -65,7 +65,6 @@ class StrategyStack(ReducedStack):
 class ThreadedIntrinsic(Intrinsic):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, n_baseline = 2, **kwargs)
-        self._baseline = None
 
     def complete_analysis(self):
         # path to datastore: self.save_path
