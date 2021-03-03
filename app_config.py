@@ -89,6 +89,17 @@ class JSONConfigManager(ConfigManager):
         with open(self._file, 'w') as f:
             json.dump(self._json, f)
 
+
+    @property
+    def raw_dir(self):
+        return self._json['paths']['rawdir']
+
+    @raw_dir.setter
+    def raw_dir(self, path):
+        self._json['paths']['rawdir'] = path
+        with open(self._file, 'w') as f:
+            json.dump(self._json, f)
+
     @property
     def csv_dir(self):
         return self._json['paths']['csv']

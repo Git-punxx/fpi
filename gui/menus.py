@@ -16,6 +16,7 @@ ID_CHECK_FOLDERS = wx.NewId()
 ID_CREATE_FOLDERS = wx.NewId()
 ID_CONFIG_RESPONSE_PLOT = wx.NewId()
 ID_SET_DATABASE_DIR = wx.NewId()
+ID_SET_RAW_DIR = wx.NewId()
 ID_PREFERENCES = wx.NewId()
 ID_STATS = wx.NewId()
 
@@ -70,6 +71,7 @@ options_menu = [(ID_CREATE_FOLDERS, 'Create folder structure'),
                 (ID_CHECK_FOLDERS, 'Check folder structure'),
                 (ID_CONFIG_RESPONSE_PLOT, 'Configure response plot'),
                 (ID_SET_DATABASE_DIR, 'Set experiments folder'),
+                (ID_SET_RAW_DIR, 'Set root trials folder'),
                 (ID_PREFERENCES, 'Preferences..')
                  ]
 
@@ -210,6 +212,16 @@ def SetDataPath(parent):
         parent.gatherer.scan()
         parent.exp_list.clear()
         parent.exp_list.add_rows(parent.gatherer.to_tuple())
+    else:
+        ErrorDialog('Could not set requested path')
+
+@register(ID_SET_RAW_DIR)
+def SetRawPath(parent):
+    path = DataPathDialog(parent, 'Select root trials folder ')
+    if path is not None:
+        # here we should check if the directory contains the proper data structure
+        # if not we should offer to create it
+        app_config.raw_dir = path
     else:
         ErrorDialog('Could not set requested path')
 

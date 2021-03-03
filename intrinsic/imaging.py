@@ -1,3 +1,5 @@
+import sys
+
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
 from matplotlib.patches import Rectangle
@@ -27,6 +29,8 @@ from typing import Union
 from warnings import warn
 import pandas as pd
 from itertools import combinations, product
+from concurrent.futures import ThreadPoolExecutor
+
 try:
     import moviepy.editor as mpy
     MOVIE_EXPORT = True
@@ -57,6 +61,7 @@ class ReducedStack(Stack):
 
     def get_pic(self, im):
         pic = super().get_pic(im)
+        sys.stdout.flush()
         pic = block_reduce(pic, (self.binning, self.binning), np.mean)
         c_avg = pic.mean()
         if self._previous_avg is not None:
@@ -111,14 +116,12 @@ class Intrinsic(object):
             if end != -1 or start != 0:
                 end = len(self.trial_folders) if end == -1 else end
                 self.trial_folders = self.trial_folders[start:end]
-            stacks = [ReducedStack(trial, pattern, binning) for trial in self.trial_folders]
-            self.stacks = [s for s in stacks if len(s) > self.n_baseline]
+            self.create_reduced_stack(pattern, binning)
         else:
             tiff_files = self.get_tiff_list()
             if end != -1:
                 tiff_files = tiff_files[start:end]
-            self.stacks = [TiffStack(f) for f in tqdm(tiff_files, desc='Loading TIFF')]
-            self.trial_folders = [self.path]
+            self.create_tiff_stack(tiff_files)
 
         self.l_base = np.array([])
         self.baseline = np.array([])
@@ -127,6 +130,19 @@ class Intrinsic(object):
         self._resp = None
         self._norm_stack = None
         self.compute_baselines()
+
+    def create_reduced_stack(self, pattern, binning):
+        # Divide the stack creation among thrads to speed up things
+        with ThreadPoolExecutor(max_workers = 8) as executor:
+            futures = [executor.submit(ReducedStack, trial, pattern, binning) for trial in self.trial_folders]
+        stacks = [f.result() for f in futures]
+        self.stacks = [s for s in stacks if len(s) > self.n_baseline]
+        if len(self.stacks) == 0:
+            raise ValueError('Empty stacks. Do we have enough images to cover baseline?')
+
+    def create_tiff_stack(self, tiff_files):
+        self.stacks = [TiffStack(f) for f in tqdm(tiff_files, desc='Loading TIFF')]
+        self.trial_folders = [self.path]
 
     def get_tiff_list(self):
         regex = re.compile('([0-9]*)')

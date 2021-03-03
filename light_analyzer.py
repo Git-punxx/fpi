@@ -1,9 +1,11 @@
 from intrinsic.imaging import resp_map
-from intrinsic.imaging import Intrinsic, ReducedStack
+from intrinsic.imaging import Intrinsic, ReducedStack, Session
 from skimage.measure import block_reduce
 import h5py
 import numpy as np
 from app_config import config_manager as mgr
+from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor
 
 
 class StrategyStack(ReducedStack):
@@ -37,7 +39,25 @@ class StrategyStack(ReducedStack):
 
 class ThreadedIntrinsic(Intrinsic):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, n_baseline = 2, **kwargs)
+
+    def complete_analysis(self):
+        # path to datastore: self.save_path
+        self.save_analysis()
+        s = Session(self.save_path)
+        print('Exporting experiment paramters')
+        s.export_resp_prm()
+
+    def mean_baseline(self, stack):
+        return stack[:self.n_baseline].mean(0)
+    def compute_baselines(self):
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            futures = [executor.submit(self.mean_baseline, stack) for stack in self.stacks]
+
+        # self.l_base = [s[:self.n_baseline].mean(0)
+                       #for s in tqdm(self.stacks, desc='Computing baseline')]
+        self.l_base = [f.result() for f in futures]
+        self.baseline = np.mean(self.l_base, 0)
 
 def analyze(df_file):
     with h5py.File(df_file, 'a') as ds:

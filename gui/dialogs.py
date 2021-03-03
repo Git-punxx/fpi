@@ -1,6 +1,7 @@
 import wx
 from light_analyzer import ThreadedIntrinsic
 from app_config import config_manager as mgr
+import traceback
 
 def DataPathDialog(parent, msg):
     with wx.DirDialog(parent, msg) as dlg:
@@ -80,7 +81,7 @@ class Preferences(wx.Dialog):
         self.SetSizer(self.main_sizer)
 
     def OnBrowse(self, event):
-        with wx.DirDialog(None, 'Choose Root Folder', mgr.base_dir) as dlg:
+        with wx.DirDialog(None, 'Choose Root Folder', mgr.raw_dir) as dlg:
             dlg.ShowModal()
             path = dlg.GetPath()
             self.base_dir_path.SetValue(path)
@@ -175,9 +176,13 @@ class AnalysisPanel(wx.Dialog):
             val_to = int(self.to_input.GetValue())
             path = self.folder_input.GetValue()
             strategy = self.strategy.GetCurrentSelection()
-            ThreadedIntrinsic(path, val_from, val_to, strategy)
+            with wx.BusyInfo("Analyzing images...") as info:
+                analysis = ThreadedIntrinsic(path, start = val_from, end = val_to)
+                analysis.complete_analysis()
         except Exception as e:
             print(f'Exception: {e}')
+            print(traceback.format_exc())
+
 
     def OnBrowse(self, event):
         with wx.DirDialog(None, 'Select trail folder', '', wx.DIRP_DIR_MUST_EXIST) as dlg:
