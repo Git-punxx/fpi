@@ -7,6 +7,8 @@ from app_config import config_manager as mgr
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor
 import os
+import sys
+import time
 
 class RawAnalysisController:
     def __init__(self, root_folder = None):
@@ -64,18 +66,26 @@ class StrategyStack(ReducedStack):
 
 class ThreadedIntrinsic(Intrinsic):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, n_baseline = 2, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def complete_analysis(self):
         # path to datastore: self.save_path
+        print('Beginning baseline analysis')
         self.save_analysis()
+        print('Completing analysis')
         analyze(self.save_path)
-        s = Session(self.save_path)
-        s.export_resp_prm()
+        #s = Session(self.save_path)
+        #print('Exporting paremeters')
+        #s.export_resp_prm()
 
 
     def mean_baseline(self, stack):
-        return stack[:self.n_baseline].mean(0)
+        start = time.time()
+        print('Mean baseline processing...')
+        sys.stdout.flush()
+        s = stack[:self.n_baseline].mean(0)
+        print(time.time() - start)
+        return s
 
     def compute_baselines(self):
         print('Computing baselines')

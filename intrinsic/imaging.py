@@ -54,7 +54,7 @@ def img_to_uint8(img):
 
 
 class ReducedStack(Stack):
-    def __init__(self, path, pattern, binning=1):
+    def __init__(self, path, pattern, binning=3):
         super().__init__(path, pattern)
         self.binning = binning
         self._previous_avg = None
@@ -99,7 +99,7 @@ class TiffStack(Stack):
 
 class Intrinsic(object):
     def __init__(self, path: Union[str, Path], pattern=ALL_PNG,
-                 n_baseline=30, n_stim=30, n_recover=20, binning=1, exp_time=.1,
+                 n_baseline=30, n_stim=30, n_recover=20, binning=3, exp_time=.1,
                  start=0, end=-1):
         self.path = Path(path)
         self.save_path = self.path / f'datastore_{self.path.name}.h5'
@@ -207,6 +207,7 @@ class Intrinsic(object):
     def average_trials(self, start=0, end=-1):
         max_frames = max([len(s) for s in self.stacks])
         frame_shape = self.stacks[0][0].shape
+        print(frame_shape)
         self.avg_stack = np.zeros((frame_shape[0], frame_shape[1], max_frames))
         for ix_frame in tqdm(range(max_frames), desc='Average trial'):
             all_c_frame = [s[ix_frame]
