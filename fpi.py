@@ -823,7 +823,8 @@ class FPIExperiment:
         return self.stack is not None
 
     def has_roi(self):
-        return self.roi is not None
+        parser = fpiparser(self._path)
+        return parser.has_roi()
 
 
     def clear(self):

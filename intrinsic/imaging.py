@@ -3,11 +3,11 @@ from matplotlib.pyplot import figure
 from matplotlib.patches import Rectangle
 from matplotlib.cm import viridis, YlOrRd
 from matplotlib.gridspec import GridSpec
-import seaborn as sns
 from stack import Stack
 import numpy as np
 import os
 from tqdm import tqdm
+import seaborn as sns
 from skimage.measure import block_reduce
 from skimage.io import imread, imsave
 from skimage.filters import median as med_filt
