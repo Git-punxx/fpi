@@ -233,7 +233,7 @@ def CreateFolderStructure(parent):
 @register(ID_INTRINSIC_ANALYSIS)
 def RunIntrinsic(parent):
     print('Running modified_intrinsic')
-    subprocess.run(['python', '../modified_intrinsic/explorer.py'])
+    subprocess.run(['python', '../intrinsic/explorer.py'])
 
 @register(ID_PREFERENCES)
 def LaunchPreferences(parent):
