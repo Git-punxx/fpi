@@ -164,20 +164,16 @@ class ImageControl(wx.Panel):
         dx = abs(self.end[0] - self.start[0])
         dy = abs(self.end[1] - self.start[1])
 
-        print(f'Mouse down at {self.start[0]}, {self.start[1]}')
-        print(f'Mouse up at {self.end[0]}, {self.end[1]}')
 
         x_start = min(self.start[0], self.end[0])
         y_start = min(self.start[1], self.end[1])
 
-        print(f'Starting at {x_start}, {y_start}')
 
         x_start = min(self.start[0], self.end[0])
         y_start = min(self.start[1], self.end[1])
         x_end = max(self.start[0], self.end[0])
         y_end = max(self.start[1], self.end[1])
 
-        print(x_start, y_start, x_end, y_end)
 
         x_from = min(self.start[0], self.end[0])
         x_to = x_from + dx

@@ -3,7 +3,7 @@ import subprocess
 from gui.dialogs import *
 from app_config import config_manager as app_config
 import app_config
-import intrinsic
+import modified_intrinsic
 from gui.dialogs import Preferences
 import matplotlib.pyplot as plt
 import numpy as np
@@ -68,12 +68,8 @@ edit_menu = [(wx.ID_COPY, 'Copy\tCtrl+c'),
              (wx.ID_PASTE, 'Paste\tCtrl+v')
              ]
 
-options_menu = [(ID_CREATE_FOLDERS, 'Create folder structure'),
-                (ID_CHECK_FOLDERS, 'Check folder structure'),
-                (ID_CONFIG_RESPONSE_PLOT, 'Configure response plot'),
-                (ID_SET_DATABASE_DIR, 'Set experiments folder'),
-                (ID_SET_RAW_DIR, 'Set root trials folder'),
-                (ID_PREFERENCES, 'Preferences..')
+options_menu = [ (ID_SET_DATABASE_DIR, 'Set experiments folder'),
+                (ID_SET_RAW_DIR, 'Set root trials folder')
                  ]
 
 plot_menu = [(ID_STATS, 'Plot total stats'),
@@ -103,14 +99,14 @@ class FPIMenuBar(wx.MenuBar):
         self.Bind(wx.EVT_MENU, self.OnMenu)
 
     def setup(self):
-        global file_menu
-        global edit_menu
+        #global file_menu
+        #global edit_menu
         global options_menu
         global intrincic_menu
         global plot_menu
         global export_menu
-        self.FileMenu(file_menu)
-        self.EditMenu(edit_menu)
+        #self.FileMenu(file_menu)
+        #self.EditMenu(edit_menu)
         self.OptionsMenu(options_menu)
         self.AnalysisMenu(intrincic_menu)
         self.PlotMenu(plot_menu)
@@ -236,8 +232,8 @@ def CreateFolderStructure(parent):
 
 @register(ID_INTRINSIC_ANALYSIS)
 def RunIntrinsic(parent):
-    print('Running intrinsic')
-    subprocess.run(['python', '../intrinsic/explorer.py'])
+    print('Running modified_intrinsic')
+    subprocess.run(['python', '../modified_intrinsic/explorer.py'])
 
 @register(ID_PREFERENCES)
 def LaunchPreferences(parent):
@@ -426,12 +422,8 @@ def ExportROIAttributes(parent):
 
 @register(ID_NEW_EXPERIMENT_ANALYSIS)
 def NewAnalysis(parent):
-    if not app_config.check_trials_folder(mgr.raw_dir):
-        wx.MessageBox('You must set the trials folder before trying to do any analysis. You can set it from Options -> Set root trials folder ', 'Please set trials folder from Option')
-        return
-    else:
-        with AnalysisPanel(None) as dlg:
-            dlg.ShowModal()
+    with AnalysisPanel(None) as dlg:
+        dlg.ShowModal()
 
 def save_series(fname, series: dict):
     fname = app_config.data_export_dir + '/' + fname + '.csv'

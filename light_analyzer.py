@@ -1,5 +1,5 @@
-from intrinsic.imaging import resp_map
-from intrinsic.imaging import Intrinsic, ReducedStack, Session
+from modified_intrinsic.imaging import resp_map
+from modified_intrinsic.imaging import Intrinsic, ReducedStack, Session
 from skimage.measure import block_reduce
 import h5py
 import numpy as np
@@ -34,9 +34,26 @@ class RawAnalysisController:
         print('Tree structure updated')
 
 
+def get_pic(self, im):
+    pic = super().get_pic(im)
+    pic = block_reduce(pic, (self.binning, self.binning), np.mean)
+    c_avg = pic.mean()
+    if self._previous_avg is not None:
+        ratio = c_avg / self._previous_avg
+        if ratio > 1.5 or ratio < .7:
+            pic = pic / ratio
+            self._previous_avg = c_avg / ratio
+    self._previous_avg = pic.mean()
+    return pic
+
+
+def monkeypatck(func):
+    def deco(*args, **kwargs):
+        return get_pic(*args, **kwargs)
+    return deco
 
 class StrategyStack(ReducedStack):
-    def __init__(self, path, pattern, binning = 1, strategy = 'duplicate'):
+    def __init__(self, path, pattern, binning = 3, strategy = 'duplicate'):
         super().__init__(path, pattern, binning)
         self.strategy = strategy
         self.previous_im = None

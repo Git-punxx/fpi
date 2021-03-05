@@ -3,7 +3,7 @@ import concurrent.futures
 import h5py
 import os
 import datetime
-import intrinsic.imaging as intr
+import modified_intrinsic.imaging as intr
 from fpi import HDF5Writer
 import numpy as np
 import gui.image_roi

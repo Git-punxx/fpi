@@ -137,7 +137,8 @@ class AnalysisPanel(wx.Dialog):
         super().__init__(*args, **kwargs)
         #self.controller = RawAnalysisController(mgr.raw_dir)
         self.choices = []
-        self.SetSize(MAX_IMAGES * BUTTON_WIDTH, MAX_TRIALS * BUTTON_WIDTH)
+        self.SetSize(700, 200)
+        self.SetTitle('Raw Data Analysis')
         self.path= wx.StaticText(self, label = 'Folder: ', style = wx.ALIGN_CENTER_VERTICAL)
         self.folder_input = wx.ComboBox(self, choices = self.choices, size = (500, 25))
         self.browse = wx.Button(self, label = 'Select Folder', style = wx.ALIGN_CENTER_VERTICAL)
@@ -147,8 +148,8 @@ class AnalysisPanel(wx.Dialog):
         self.from_input = wx.TextCtrl(self, value = '0', size = (40, 25))
         self.to_input = wx.TextCtrl(self, value = '-1', size = (40, 25))
 
-        self.strategy_txt = wx.StaticText(self, label = 'Strategy on corrupted photo: ', style = wx.ALIGN_CENTER_VERTICAL)
-        self.strategy = wx.ComboBox(self, choices = ['Skip', 'Duplicate', 'Average'])
+        # self.strategy_txt = wx.StaticText(self, label = 'Strategy on corrupted photo: ', style = wx.ALIGN_CENTER_VERTICAL)
+        # self.strategy = wx.ComboBox(self, choices = ['Skip', 'Duplicate', 'Average'])
 
         self.analyze = wx.Button(self, label = 'Analyze')
 
@@ -167,9 +168,9 @@ class AnalysisPanel(wx.Dialog):
         range_sizer.Add(self.to_lbl, 0, flag = wx.ALIGN_CENTER_VERTICAL)
         range_sizer.Add(self.to_input, 0, flag = wx.ALIGN_CENTER_VERTICAL)
 
-        strategy_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        strategy_sizer.Add(self.strategy_txt, 0, flag = wx.ALIGN_CENTER_VERTICAL)
-        strategy_sizer.Add(self.strategy, 0, flag = wx.ALIGN_CENTER_VERTICAL)
+        # strategy_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        # strategy_sizer.Add(self.strategy_txt, 0, flag = wx.ALIGN_CENTER_VERTICAL)
+        # strategy_sizer.Add(self.strategy, 0, flag = wx.ALIGN_CENTER_VERTICAL)
 
         #center_sizer = wx.BoxSizer(wx.VERTICAL)
         #center_sizer.Add(trial_panel, 0, wx.EXPAND)
@@ -180,7 +181,7 @@ class AnalysisPanel(wx.Dialog):
         main_sizer = wx.BoxSizer(wx.VERTICAL)
         main_sizer.Add(folder_sizer, 0, wx.EXPAND | wx.ALL, 5)
         main_sizer.Add(range_sizer, 0, wx.EXPAND | wx.ALL, 5)
-        main_sizer.Add(strategy_sizer, 0, wx.EXPAND | wx.ALL, 5)
+        # main_sizer.Add(strategy_sizer, 0, wx.EXPAND | wx.ALL, 5)
         #main_sizer.Add(center_sizer, 1, wx.EXPAND | wx.ALL, 5)
         main_sizer.Add(footer_sizer, 0, wx.EXPAND | wx.ALL, 5)
         self.SetSizer(main_sizer)

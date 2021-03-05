@@ -7,7 +7,6 @@ class PopupMenuMixin:
         self.Bind(wx.EVT_CONTEXT_MENU, self.OnContextMenu)
 
     def OnContextMenu(self, event):
-        print(event)
         if self._menu is not None:
             self._menu.Destroy()
 

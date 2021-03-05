@@ -6,7 +6,7 @@ from matplotlib.patches import Rectangle
 from matplotlib.cm import viridis, YlOrRd
 from matplotlib.gridspec import GridSpec
 import seaborn as sns
-from intrinsic.stack import Stack
+from modified_intrinsic.stack import Stack
 import numpy as np
 import os
 from tqdm import tqdm
@@ -664,7 +664,7 @@ def multi_analysis(path: Union[str, Path], pattern=ALL_PNG):
         # most_common = exts.most_common(1)[0][0]
         try:
             print(folder)
-            session = Intrinsic(folder, pattern, binning=2)
+            session = Intrinsic(folder, pattern, binning=3)
             session.save_analysis()
         except ValueError:
             warn('Probably not a valid trial folder')

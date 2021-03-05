@@ -20,7 +20,7 @@ import subprocess
 from light_analyzer import analyze, completion_report
 from app_config import config_manager as app_config
 
-from intrinsic.explorer import ViewerIntrinsic
+from modified_intrinsic.explorer import ViewerIntrinsic
 
 CHOICES_CHANGED = 'choices.changed'
 LINE_CHANGED = 'line.changed'
@@ -456,7 +456,7 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
 
     def CreateContextMenu(self, menu):
         menu.Append(ID_OPEN_PANOPLY, 'Open in Panoply')
-        menu.Append(ID_OPEN_INSTRINSIC, 'Choose Range of Interest')
+        # menu.Append(ID_OPEN_INSTRINSIC, 'Choose Range of Interest')
         menu.Append(ID_ANALYZE, 'Complete analysis')
         menu.Append(ID_OPEN_IN_FOLDER, 'Open in folder')
 
