@@ -892,8 +892,11 @@ class FPIExperiment:
         med_line[()] = half_val
 
         idx = np.argwhere(np.diff(np.sign(response_curve[no_baseline:] - med_line))).flatten()
-        print(f'Response value at {idx + no_baseline} = {response_curve[idx + no_baseline]}')
-        return idx + no_baseline, half_val
+        if len(idx) < 2:
+            return (0, 0), 0
+        halfwidth_start, *_, halfwidth_end = idx
+        print(f'Response value at {halfwidth_start + no_baseline} to {halfwidth_end} = {response_curve[idx + no_baseline]}')
+        return (halfwidth_start + no_baseline, halfwidth_end + no_baseline), half_val
 
 
     @staticmethod

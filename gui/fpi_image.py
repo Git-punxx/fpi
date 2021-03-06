@@ -67,14 +67,14 @@ class DetailsPanel(wx.Frame):
         self._image_txt  = wx.StaticText(self.details_panel, label = f'{self.image_panel.image_size}')
 
         self._max_df_lbl = wx.StaticText(self.details_panel, label = 'Max DF')
-        self._max_df_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.max_df}')
+        self._max_df_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.max_df:5.8f}')
 
 
         self._mean_baseline_lbl = wx.StaticText(self.details_panel, label = 'Baseline Mean')
-        self._mean_baseline_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.mean_baseline}')
+        self._mean_baseline_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.mean_baseline:5.8f}')
 
         self._halfwidth_lbl = wx.StaticText(self.details_panel, label = 'Halfwitdh Mean')
-        self._halfwidth_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.halfwidth()[0]} - {self._experiment.halfwidth()[1]}')
+        self._halfwidth_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.halfwidth()[0]} - {self._experiment.halfwidth()[1]:5.8f}')
 
         self._roi_lbl = wx.StaticText(self.details_panel, label = 'Roi Range')
         self._roi_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.roi_range}')

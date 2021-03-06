@@ -129,8 +129,6 @@ class ImageControl(wx.Panel):
         except TypeError:
             pass
 
-        #TODO Create an event about roi change
-
         # Generate the event
         evt = UpdatedROI(id = EVT_ROI_UPDATE, roi = self.roi_to_slice())
         wx.PostEvent(self.GetParent(), evt)

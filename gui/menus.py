@@ -386,8 +386,14 @@ def PlotROIResponse(parent):
     parser = HD5Parser(exp, exp._path)
     roi_resp = parser.response(roi = True)
     resp = parser.response()
-    plt.plot(resp, label = 'Full image response')
-    plt.plot(roi_resp, label = 'ROI response')
+    if resp is None:
+        wx.MessageBox('No response for this experiment', 'Plot failed')
+        return
+    else:
+        plt.plot(resp, label='Full image response')
+
+    if roi_resp is not None:
+        plt.plot(roi_resp, label = 'ROI response')
     plt.legend()
     plt.xlabel('Frames')
     plt.ylabel('dF/f')

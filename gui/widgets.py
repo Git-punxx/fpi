@@ -33,10 +33,10 @@ EXPERIMENT_LIST_CHANGED = 'experiments.list.changed'
 
 STATUS_BAR_TEXT = '{:<40} | Total experiments selected: {:<2} | Working dir: {}'
 
-ID_OPEN_PANOPLY = wx.ID_ANY
-ID_OPEN_INSTRINSIC = wx.ID_ANY
-ID_ANALYZE = wx.ID_ANY
-ID_OPEN_IN_FOLDER = wx.ID_ANY
+ID_OPEN_PANOPLY = wx.NewId()
+ID_OPEN_INSTRINSIC = wx.NewId()
+ID_ANALYZE = wx.NewId()
+ID_OPEN_IN_FOLDER = wx.NewId()
 SPLASH_IMAGE = '../assets/splash_2.png'
 ICON = '../assets/eukaryote.ico'
 
@@ -512,7 +512,7 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         try:
             command_registry[evt_id](self)
         except KeyError:
-            with wx.MessageDialog(None, 'Action not implemented', 'Not implemented', style = wx.ID_OK | wx.ICON_WARNING) as dlg:
+            with wx.MessageDialog(None, 'Action not implemented', 'Not implemented', style = wx.OK | wx.ICON_WARNING) as dlg:
                 resp = dlg.ShowModal()
 
     def VisualizeStage(self):
