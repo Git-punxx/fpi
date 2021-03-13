@@ -4,6 +4,7 @@ from image_analysis.feature import *
 from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
+from fpi import HD5Parser
 import cv2
 
 class FixedROIPanel(wx.Panel):
@@ -94,3 +95,60 @@ class OperationPanel(wx.Panel):
     def OnReset(self, event):
         parent = self.GetParent()
         parent.reset_image()
+
+
+class ROIOperationPanel(OperationPanel):
+    def __init__(self, parent, exp):
+        super().__init__(parent, exp)
+        self.parser = HD5Parser(exp, exp._path)
+        self.response = self.parser.response(roi = True)
+
+    def OnTimecourse(self, event):
+        self.OnSpin(event)
+        percent = self.percentage.GetValue()
+        try:
+            s = float(percent)
+        except Exception:
+            wx.MessageBox('Not a valid percentage. It should be a value between 0 and 100', 'Invalid percentage')
+            return
+        threshold = float(percent)
+        mask = create_mask(self.parser.resp_map(roi = True), threshold)
+        try:
+            response, *rest = masked_timeseries(self.GetParent().parser.stack(roi = True), mask)
+        except Exception as e:
+            wx.MessageBox('Could not plot timecourse. Saved roi in datastore and currently selected roi on window do not match. Maybe you changed the ROI and need to repeat analysis?', 'Plot failed')
+            return
+        self.reponse = response
+        plt.plot(response, label = 'Mean Response Per Frame')
+
+        # plt.plot(np.trim_zeros(timecourse[:, 2]), label = 'Std Deviation')
+        plt.legend()
+        plt.grid()
+        plt.show()
+
+    def OnSpin(self, event):
+        percent = self.percentage.GetValue()
+        try:
+            s = float(percent)
+        except Exception:
+            wx.MessageBox('Not a valid percentage. It should be a value between 0 and 100', 'Invalid percentage')
+            return
+        # contours is a list of arrays, points? array([[[214, 32]]]) dtype = int32
+        contoured_image, mean_area, max_area, min_area, area_count, mask = find_contours(self.parser.resp_map(roi = True), float(percent))
+        self.Fit()
+        parent = self.GetParent()
+        parent.status_bar.SetStatusText(
+            f'Mean Area: {mean_area:.2f} - Max Area: {max_area:.2f} - Min Area: {min_area:.2f} - Area Count: {area_count}')
+        new_image = ImageControl.PIL_image_from_array(contoured_image, normalize=False)
+        parent.set_image(new_image)
+
+
+    def OnSave(self,event):
+        if self.response is not None:
+            with wx.DirDialog(None, 'Choose save folder') as dlg:
+                dlg.ShowModal()
+                percentage = self.percentage.GetValue()
+                save_path = dlg.GetPath()
+                file_name = f'{save_path}/ROI-Response-{percentage}%-{self.exp.name}.csv'
+                np.savetxt(file_name, self.response)
+                wx.MessageBox(f'Data saved to {file_name}', 'Save succesful', wx.OK | wx.ICON_INFORMATION)

@@ -6,6 +6,7 @@ from matplotlib import cm
 import random
 from gui.custom_events import *
 from image_analysis import feature as ft
+from fpi import HD5Parser
 
 
 def PIL2wx(image):

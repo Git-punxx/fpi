@@ -19,11 +19,14 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 
-def load_data(fname):
+def load_data(fname, roi):
+    root = 'df'
+    if roi:
+        root = 'roi'
     with h5py.File(fname) as f:
-        avg_stack = f['df']['resp_map'][()]
-        stack = f['df']['stack'][()]
-        timeline = f['df']['avg_df'][()]
+        avg_stack = f[root]['resp_map'][()]
+        stack = f[root]['stack'][()]
+        timeline = f[root]['avg_df'][()]
     return avg_stack, stack, timeline
 
 def pil_to_cv(img):
@@ -117,8 +120,8 @@ def masked_timeseries(norm_stack: np.ndarray, mask: np.ndarray):
 
     '''
     x, y, z = norm_stack.shape
-    mask = np.tile(mask, [z, 1, 1])
-    df = np.where(mask.T != 0, norm_stack, np.nan)
+    mask = np.stack((mask,) * z, axis = 2)
+    df = np.where(mask != 0, norm_stack, np.full([x, y, z], np.nan))
 
     # Build the timeseries
     df_avg = np.nanmean(df, axis = (0,1))
@@ -128,7 +131,7 @@ def masked_timeseries(norm_stack: np.ndarray, mask: np.ndarray):
     vmax = df.max()
     return df_avg, vmin, vmax
 
-def build_masked_frames(threshold: int):
+def build_masked_frames(threshold: int, roi = False):
     '''
     This function loads the norm_stack, the resp_map and the response from the datastore
     It then computes the masked timeseries, the min and max value of the resulting stack
@@ -140,7 +143,7 @@ def build_masked_frames(threshold: int):
     -------
 
     '''
-    avg_stack, stack, timeline = load_data(fname)
+    avg_stack, stack, timeline = load_data(fname, roi)
     *rest, mask = find_contours(avg_stack, threshold)
 
     # The avg contains nans
@@ -161,8 +164,8 @@ def test_frame_ani():
         plt.show()
 
 
-def play_animation():
-    stack, vmin, vmax, frames = build_masked_frames(20)
+def play_animation(roi = False):
+    stack, vmin, vmax, frames = build_masked_frames(20, roi)
     for frame in stack:
         print(frame.size)
         cv.imshow('Some title', pil_to_cv(frame))

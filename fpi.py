@@ -3,6 +3,7 @@ from fpi_util import explain
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import numpy as np
 import os
+import sys
 import h5py
 from collections import namedtuple
 from abc import abstractmethod
@@ -436,6 +437,8 @@ class HD5Parser(FPIParser):
             if roi:
                 try:
                     data = datastore['roi']['resp_map'][()]
+                    print('Fetching ROI data with shape {}', data.shape)
+                    sys.stdout.flush()
                     return data
                 except Exception as e:
                     print('Exception on resp_map method')
@@ -443,6 +446,7 @@ class HD5Parser(FPIParser):
             else:
                 try:
                     data = datastore['df']['resp_map'][()]
+                    print('Fetching normal data with shape {}', data.shape)
                     return data
                 except Exception as e:
                     print('Exception on resp_map method')
@@ -460,7 +464,7 @@ class HD5Parser(FPIParser):
 
 
 
-class HDF5Writer:
+class HDF5RoiWriter:
     def __init__(self, path):
         self._path = path
 

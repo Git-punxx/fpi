@@ -131,7 +131,8 @@ class JSONConfigManager(ConfigManager):
     @property
     def data_export_dir(self):
         base_dir = os.path.dirname(self.base_dir)
-        return base_dir + '/data_exports'
+        exports_dir =base_dir + '/data_exports'
+        return exports_dir
 
 
     def folder_structure(self):

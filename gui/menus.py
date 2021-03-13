@@ -11,6 +11,8 @@ from fpi import HD5Parser
 import fpi
 
 
+mgr = app_config.config_manager
+
 
 # Create a bunch of Id's to use
 ID_CHECK_FOLDERS = wx.NewId()
@@ -328,18 +330,24 @@ def MeanResponse(parent):
 @register(ID_ROI_EXPORT_PEAK_VALUES)
 def ExportRoiPeakValues(parent):
     exp = parent.GetParent()._experiment
+    if not exp.has_roi():
+        wx.MessageBox("you need to analyze the experiment before export")
+        return
     parser = HD5Parser(exp, exp._path)
     peak_value = parser.max_df(roi = True)
     if peak_value is None:
         dlg = wx.MessageBox('No ROI for this experiment', 'Exception when reading ROI', style = wx.ICON_ERROR)
         return
     print(peak_value)
-    save_series('roi_peak_value', peak_value)
+    save_series(f'{exp.name}-roi_peak_value', peak_value)
 
 
 @register(ID_ROI_EXPORT_ONSET_THRESHOLD)
 def ExportRoiThreshold(parent):
     exp = parent.GetParent()._experiment
+    if not exp.has_roi():
+        wx.MessageBox("you need to analyze the experiment before export")
+        return
     parser = HD5Parser(exp, exp._path)
     roi_response = parser.response(roi = True)
     if roi_response is None:
@@ -348,12 +356,15 @@ def ExportRoiThreshold(parent):
     #TODO Fixme
     threshold = fpi.onset_threshold(roi_response)
     print(threshold)
-    save_series('roi_peak_threshold', threshold)
+    save_series(f'{exp.name}-roi_peak_threshold', threshold)
 
 
 @register(ID_ROI_EXPORT_PEAK_LATENCY)
 def ExportROIPeakLatency(parent):
     exp = parent.GetParent()._experiment
+    if not exp.has_roi():
+        wx.MessageBox("you need to analyze the experiment before export")
+        return
     parser = HD5Parser(exp, exp._path)
     roi_response = parser.response(roi = True)
     if roi_response is None:
@@ -362,11 +373,14 @@ def ExportROIPeakLatency(parent):
     #TODO Fixme
     peak_latency = fpi.peak_latency(roi_response)
     print(peak_latency)
-    save_series('roi_peak_latency', peak_latency)
+    save_series(f'{exp.name}-roi_peak_latency', peak_latency)
 
 @register(ID_ROI_EXPORT_ONSET_LATENCY)
 def ExportROIOnsetLatency(parent):
     exp = parent.GetParent()._experiment
+    if not exp.has_roi():
+        wx.MessageBox("you need to analyze the experiment before export")
+        return
     mean_baseline = exp.mean_baseline
     parser = HD5Parser(exp, exp._path)
     roi_response = parser.response(roi = True)
@@ -377,12 +391,15 @@ def ExportROIOnsetLatency(parent):
     threshold = fpi.onset_threshold(mean_baseline)
     onset_latency = fpi.onset_latency(mean_baseline, roi_response)
     print(onset_latency)
-    save_series('roi_onset_latency', threshold)
+    save_series(f'{exp.name}-roi_onset_latency', threshold)
 
 
 @register(ID_ROI_PLOT_RESPONSE)
 def PlotROIResponse(parent):
     exp = parent.GetParent()._experiment
+    if not exp.has_roi():
+        wx.MessageBox("you need to analyze the experiment before export")
+        return
     parser = HD5Parser(exp, exp._path)
     roi_resp = parser.response(roi = True)
     resp = parser.response()
@@ -391,9 +408,6 @@ def PlotROIResponse(parent):
         return
     else:
         plt.plot(resp, label='Full image response')
-
-    if roi_resp is not None:
-        plt.plot(roi_resp, label = 'ROI response')
     plt.legend()
     plt.xlabel('Frames')
     plt.ylabel('dF/f')
@@ -402,6 +416,9 @@ def PlotROIResponse(parent):
 @register(ID_EXPORT_ROI_ATTRIBUTES)
 def ExportROIAttributes(parent):
     exp = parent.GetParent()._experiment
+    if not exp.has_roi():
+        wx.MessageBox("you need to analyze the experiment before export")
+        return
     parser = HD5Parser(exp, exp._path)
     resp = parser.response(roi = True)
     if resp is None:
@@ -431,9 +448,17 @@ def NewAnalysis(parent):
         dlg.ShowModal()
 
 def save_series(fname, series: dict):
-    fname = app_config.data_export_dir + '/' + fname + '.csv'
-    with open(fname, 'w') as fd:
-        for key, val in series.items():
-            fd.write(f'{key},{val}\n')
+    print(series)
+    if not os.path.exists(mgr.data_export_dir):
+        os.mkdir(mgr.data_export_dir)
+    fname = mgr.data_export_dir + '/' + fname + '.csv'
+
+    if type(series) == dict:
+        with open(fname, 'w') as fd:
+            for key, val in series.items():
+                fd.write(f'{key},{val}\n')
+    else:
+        with open(fname, 'w') as fd:
+            np.savetxt(fd, np.array(series))
 
 
