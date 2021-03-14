@@ -1,5 +1,10 @@
 from app_config import config_manager, AnimalLine, Treatment, Stimulation, Genotype
+import traceback
+import sys
 
+
+def explain(exc):
+    traceback.print_tb(sys.exc_info()[2])
 
 def categorize(experiment_list, filter = AnimalLine.__name__.lower()):
     """
@@ -11,6 +16,7 @@ def categorize(experiment_list, filter = AnimalLine.__name__.lower()):
     :param choice:
     :return:
     """
+    print(filter)
     if filter == AnimalLine.__name__.lower() or filter == '':
         # get the animal filter enum from the configuration
         applied_filter = AnimalLine
@@ -33,8 +39,10 @@ def categorize(experiment_list, filter = AnimalLine.__name__.lower()):
     # Finally add the experiments based on their attribues (enum values)
     for exp in experiment_list:
         # Get the enum value of the experiment that corresponds to the applied filter. This is the same name with the FPIExperiment attribute.
-        f = getattr(exp, applied_filter.__name__.lower())
-        filter_dict[getattr(applied_filter, f)][getattr(Genotype, exp.genotype)].append(exp)
+        filter_attr = getattr(exp, applied_filter.__name__.lower())
+        filter_enum = getattr(applied_filter, filter_attr.upper())
+        genotype_str = getattr(Genotype, exp.genotype.upper())
+        filter_dict[filter_enum][genotype_str].append(exp)
     return filter_dict
 
 def clear_data(genotype_dict):
@@ -44,7 +52,7 @@ def clear_data(genotype_dict):
             continue
         else:
             for key, item in filter.copy().items():
-                if not any(item):
+                if item is None:
                     del genotype_dict[gen_key][key]
 
 

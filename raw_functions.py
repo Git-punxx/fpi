@@ -1,4 +1,7 @@
 import numpy as np
+import matplotlib.pyplot as plt
+
+
 def parse_responses(fname):
     y = []
     with open(fname) as f:
@@ -27,7 +30,7 @@ def parse_timecourse(fname):
 def metadata(x):
     mean = np.mean(x)
     std = np.std(x)
-    return (mean, std)
+    return mean, std
 
 
 def plot_std(x, y):
@@ -65,7 +68,7 @@ def response_latency(data, ratio=0.3):
     for index, value in enumerate(data[31:50], 31):
         if value > abs((1 + ratio) * mean_baseline):
             res['Response Latency'].append((index, value))
-    return (res['Response Latency'][0], res['Peak latency'])
+    return res['Response Latency'][0], res['Peak latency']
 
 
 def run_latency(fname):

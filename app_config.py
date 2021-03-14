@@ -1,5 +1,6 @@
 import configparser
 import os
+from sys import platform
 from itertools import product
 from pathlib import Path
 import json
@@ -12,6 +13,15 @@ FPI_CONFIG_JSON = os.path.join(os.path.dirname(__file__), 'fpi_config.json')
 class ConfigManager:
     def __init__(self, configuration_file):
         self._file = configuration_file
+
+    def is_linux(self):
+        return True if platform.startswith('linux') else False
+
+    def is_mac(self):
+        return True if platform.startswith('darwin') else False
+
+    def is_win(self):
+        return True if platform.startswith('win32') else False
 
     @property
     def base_dir(self):
@@ -51,11 +61,23 @@ class ConfigManager:
     def create_folders(self):
         raise NotImplementedError
 
+    def file_explorer(self):
+        if self.is_mac():
+            return ['open']
+        elif self.is_win():
+            return ['explorer.exe']
+        else:
+            return None
+
 class JSONConfigManager(ConfigManager):
     def __init__(self, configuration_file):
         ConfigManager.__init__(self, configuration_file)
         with open(self._file, 'r') as f:
             self._json = json.load(f)
+        self.update_env()
+
+    def update_env(self):
+        os.environ['FPI_PATH'] = self.base_dir
 
     @property
     def base_dir(self):
@@ -64,6 +86,17 @@ class JSONConfigManager(ConfigManager):
     @base_dir.setter
     def base_dir(self, path):
         self._json['paths']['databasedir'] = path
+        with open(self._file, 'w') as f:
+            json.dump(self._json, f)
+
+
+    @property
+    def raw_dir(self):
+        return self._json['paths']['rawdir']
+
+    @raw_dir.setter
+    def raw_dir(self, path):
+        self._json['paths']['rawdir'] = path
         with open(self._file, 'w') as f:
             json.dump(self._json, f)
 
@@ -95,6 +128,13 @@ class JSONConfigManager(ConfigManager):
     def categories(self):
         return self._json['categories']
 
+    @property
+    def data_export_dir(self):
+        base_dir = os.path.dirname(self.base_dir)
+        exports_dir =base_dir + '/data_exports'
+        return exports_dir
+
+
     def folder_structure(self):
         base = self.base_dir
         structure = [['Data']]
@@ -104,6 +144,7 @@ class JSONConfigManager(ConfigManager):
         return paths
 
     def create_folders(self):
+        print('Creating new folder structure')
         folders = self.folder_structure()
         [os.makedirs(path, exist_ok=True) for path in folders]
 
@@ -117,7 +158,6 @@ AnimalLine = Enum('AnimalLine', list(map(lambda x: x.upper(), config_manager.ani
 Treatment = Enum('Treatment', list(map(lambda x: x.upper(), config_manager.treatments)))
 Stimulation = Enum('Stimulation', list(map(lambda x: x.upper(), config_manager.stimulations)))
 Genotype = Enum('Genotype', list(map(lambda x: x.upper(), config_manager.genotypes)))
-
 
 
 def base_dir():
@@ -163,17 +203,17 @@ def create_folders():
     for path in paths:
         Path(path).mkdir(parents=True, exist_ok=True)
 
+def check_trials_folder(path):
+    if not os.path.exists(path):
+        return False
+    else:
+        return any(map(lambda x: 'Trial' in x, os.listdir(path)))
+
 def test_module():
     import re
-    print(animal_lines())
-    print(genotypes())
-    print(stimulations())
-    print(base_dir())
-    print(categories())
 
     text = 'datastore_20200404_6789_response_0.csv'
     patt = name_pattern()
-    print(patt)
     m = re.search(patt, text)
     if m is not None:
         print(m.group(0)[1:])

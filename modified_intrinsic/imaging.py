@@ -1,13 +1,15 @@
+import sys
+
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
 from matplotlib.patches import Rectangle
 from matplotlib.cm import viridis, YlOrRd
 from matplotlib.gridspec import GridSpec
-from stack import Stack
+import seaborn as sns
+from modified_intrinsic.stack import Stack
 import numpy as np
 import os
 from tqdm import tqdm
-import seaborn as sns
 from skimage.measure import block_reduce
 from skimage.io import imread, imsave
 from skimage.filters import median as med_filt
@@ -27,6 +29,8 @@ from typing import Union
 from warnings import warn
 import pandas as pd
 from itertools import combinations, product
+from concurrent.futures import ThreadPoolExecutor
+
 try:
     import moviepy.editor as mpy
     MOVIE_EXPORT = True
@@ -50,13 +54,14 @@ def img_to_uint8(img):
 
 
 class ReducedStack(Stack):
-    def __init__(self, path, pattern, binning=1):
+    def __init__(self, path, pattern, binning=3):
         super().__init__(path, pattern)
         self.binning = binning
         self._previous_avg = None
 
     def get_pic(self, im):
         pic = super().get_pic(im)
+        sys.stdout.flush()
         pic = block_reduce(pic, (self.binning, self.binning), np.mean)
         c_avg = pic.mean()
         if self._previous_avg is not None:
@@ -94,7 +99,7 @@ class TiffStack(Stack):
 
 class Intrinsic(object):
     def __init__(self, path: Union[str, Path], pattern=ALL_PNG,
-                 n_baseline=30, n_stim=30, n_recover=20, binning=1, exp_time=.1,
+                 n_baseline=30, n_stim=30, n_recover=20, binning=3, exp_time=.1,
                  start=0, end=-1):
         self.path = Path(path)
         self.save_path = self.path / f'datastore_{self.path.name}.h5'
@@ -111,14 +116,12 @@ class Intrinsic(object):
             if end != -1 or start != 0:
                 end = len(self.trial_folders) if end == -1 else end
                 self.trial_folders = self.trial_folders[start:end]
-            stacks = [ReducedStack(trial, pattern, binning) for trial in self.trial_folders]
-            self.stacks = [s for s in stacks if len(s) > self.n_baseline]
+            self.create_reduced_stack(pattern, binning)
         else:
             tiff_files = self.get_tiff_list()
             if end != -1:
                 tiff_files = tiff_files[start:end]
-            self.stacks = [TiffStack(f) for f in tqdm(tiff_files, desc='Loading TIFF')]
-            self.trial_folders = [self.path]
+            self.create_tiff_stack(tiff_files)
 
         self.l_base = np.array([])
         self.baseline = np.array([])
@@ -127,6 +130,19 @@ class Intrinsic(object):
         self._resp = None
         self._norm_stack = None
         self.compute_baselines()
+
+    def create_reduced_stack(self, pattern, binning):
+        # Divide the stack creation among thrads to speed up things
+        with ThreadPoolExecutor(max_workers = 8) as executor:
+            futures = [executor.submit(ReducedStack, trial, pattern, binning) for trial in self.trial_folders]
+        stacks = [f.result() for f in futures]
+        self.stacks = [s for s in stacks if len(s) > self.n_baseline]
+        if len(self.stacks) == 0:
+            raise ValueError('Empty stacks. Do we have enough images to cover baseline?')
+
+    def create_tiff_stack(self, tiff_files):
+        self.stacks = [TiffStack(f) for f in tqdm(tiff_files, desc='Loading TIFF')]
+        self.trial_folders = [self.path]
 
     def get_tiff_list(self):
         regex = re.compile('([0-9]*)')
@@ -191,6 +207,7 @@ class Intrinsic(object):
     def average_trials(self, start=0, end=-1):
         max_frames = max([len(s) for s in self.stacks])
         frame_shape = self.stacks[0][0].shape
+        print(frame_shape)
         self.avg_stack = np.zeros((frame_shape[0], frame_shape[1], max_frames))
         for ix_frame in tqdm(range(max_frames), desc='Average trial'):
             all_c_frame = [s[ix_frame]
@@ -531,11 +548,15 @@ def normalize_stack(stack, n_baseline=30):
 def find_resp(avg_stack, n_baseline=30, pvalue=0.05):
     t = np.arange(0, avg_stack.shape[2])
     sw = stim(t, t_on=n_baseline, tau_on=5, tau_off=15)
+
     reg = np.hstack((np.zeros(n_baseline), sw[n_baseline:]))
     reg = (reg - reg.min()) / (reg.max() - reg.min())
     reg *= avg_stack[..., n_baseline:].max()
+
+
     resp = np.zeros((avg_stack.shape[0], avg_stack.shape[1]))
-    for row, r_slice in enumerate(avg_stack):
+
+    for row, r_slice in tqdm(enumerate(avg_stack)):
         for col, c_slice in enumerate(r_slice):
             # cs = (c_slice - c_slice.min()) / (c_slice.max() - c_slice.min())
             # cs -= cs[:n_baseline].mean()
@@ -571,12 +592,15 @@ def resp_map(norm_stack, n_baseline=30, n_stim=30):
     r = find_resp(norm_stack)
     # Keep only the top 5% pixels
     z = r > np.percentile(r, 95)
+
     im_resp = np.zeros(r.shape)
     im_resp[z] = r[z]
+
     mask = np.ones(r.shape)
     # mask[100:-100,100:-100] = 1
     im_resp = im_resp * mask
     im_resp = gauss_filt(im_resp, 2)
+    ##### Warning
     im_resp = clean_response(im_resp)
     df = norm_stack[im_resp > 0, :]
 
@@ -640,7 +664,7 @@ def multi_analysis(path: Union[str, Path], pattern=ALL_PNG):
         # most_common = exts.most_common(1)[0][0]
         try:
             print(folder)
-            session = Intrinsic(folder, pattern, binning=2)
+            session = Intrinsic(folder, pattern, binning=3)
             session.save_analysis()
         except ValueError:
             warn('Probably not a valid trial folder')

@@ -1,4 +1,4 @@
-from imaging import Session, Intrinsic, MOVIE_EXPORT, overlay
+from modified_intrinsic.imaging import Session, Intrinsic, MOVIE_EXPORT, overlay
 import sys
 from PyQt5 import QtGui, QtWidgets, QtCore
 import pyqtgraph as pg
@@ -7,28 +7,28 @@ from skimage.filters import gaussian as gauss_filt
 from skimage.io import imsave
 from pathlib import Path
 from typing import Optional
-from h5_tools import *
+from modified_intrinsic.h5_tools import *
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+from app_config import config_manager as mgr
 
 
 class ViewerIntrinsic(QtWidgets.QMainWindow):
-    def __init__(self):
+    def __init__(self, root = '/Volumes/Data/Vasiliki/'):
         super().__init__()
         # Read color map from here : http://www.kennethmoreland.com/color-advice/
-        self.cl = np.loadtxt('../intrinsic/extended-black-body-table-byte-0256.csv', delimiter=',', skiprows=1)
+        self.cl = np.loadtxt('../modified_intrinsic/extended-black-body-table-byte-0256.csv', delimiter=',', skiprows=1)
         self.cmap = [QtGui.qRgb(*x[1:]) for x in self.cl]
         self.cl = np.vstack((np.ones(self.cl.shape[0]), self.cl[:, 1:].transpose())).transpose()
         self.c_data = np.array([])
         self._c_slice = 0
         self.S: Optional[Session] = None
         # File model
-        home = str(Path.home())
         self.file_model = QtWidgets.QFileSystemModel()
         self.file_model.setFilter(QtCore.QDir.AllDirs | QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot )
         self.file_model.setNameFilters(["*.h5"])
-        self.file_model.setRootPath(home)
+        self.file_model.setRootPath(root)
 
         self.main_widget = QtWidgets.QWidget(self)
         # Layouts
@@ -47,6 +47,7 @@ class ViewerIntrinsic(QtWidgets.QMainWindow):
         # Widgets
         self.tree = QtWidgets.QTreeView(self)
         self.tree.setModel(self.file_model)
+        self.tree.setRootIndex(self.file_model.index(root))
         self.tree.hideColumn(1)
         self.tree.hideColumn(2)
         self.tree.hideColumn(3)
@@ -162,12 +163,15 @@ class ViewerIntrinsic(QtWidgets.QMainWindow):
 
         self.statusBar().showMessage('Ready!', 1500)
 
-    def analyze(self):
+    def analyze(self, file_path = None):
         if self.S is not None:
             self.S.close()
             self.S = None
         # c_item = self.tree.model().itemData(self.tree.currentIndex())[0]
-        c_path = Path(self.file_model.filePath(self.tree.currentIndex()))
+        if file_path is None:
+            c_path = Path(self.file_model.filePath(self.tree.currentIndex()))
+        else:
+            c_path = Path(file_path)
         if not c_path.is_dir():
             return
         # Get all children directories
@@ -208,19 +212,32 @@ class ViewerIntrinsic(QtWidgets.QMainWindow):
         self.statusBar().showMessage(f'Data saved to {save_path}', 5000)
 
     def export_tc(self):
+        print('Exporting Timecourse...')
         if self.S is None:
             return
         ((xs, xe), (ys, ye)), _ = self.roi.getArraySlice(self.S.avg_stack, self.resp_item,
                                                          returnSlice=False)
-        self.S.export_timecourse(xs, xe, ys, ye, self.S.dt)
-        roi_grp = get_group(self.S.file, 'roi')
-        last_roi = get_dataset(roi_grp, 'roi_num', -1)[()]
-        new_roi = last_roi + 1
-        write_dataset(roi_grp, 'roi_num', new_roi)
-        c_roi_gp = get_group(roi_grp, f'roi_{new_roi}')
-        write_dataset(c_roi_gp, 'coords', (xs, xe, ys, ye))
-        write_dataset(c_roi_gp, 'values', self.S.norm_stack[xs:xe, ys:ye, :])
-        self.S.file.flush()
+        try:
+            self.S.export_timecourse(xs, xe, ys, ye, self.S.dt)
+            roi_grp = get_group(self.S.file, 'roi')
+
+            #roi_grp.attrs.create('range', ([xs, xe, ys, ye]))
+            #print(roi_grp.attrs.keys())
+            #sys.stdout.flush()
+            write_roi_range(roi_grp, (xs, xe), (ys, ye), self.S.norm_stack[xs:xe, ys:ye, :])
+            sys.stdout.flush()
+            #last_roi = get_dataset(roi_grp, 'roi_num', -1)[()]
+            #new_roi = last_roi + 1
+            #write_dataset(roi_grp, 'roi_num', new_roi)
+            #c_roi_gp = get_group(roi_grp, f'roi_{new_roi}')
+            #write_dataset(c_roi_gp, 'coords', (xs, xe, ys, ye))
+            #write_dataset(c_roi_gp, 'values', self.S.norm_stack[xs:xe, ys:ye, :])
+        except Exception as e:
+            print(e)
+            sys.stdout.flush()
+        finally:
+            self.S.file.flush()
+
 
     def export_resp(self):
         if self.S is None:
@@ -351,6 +368,8 @@ class AnalysisThread(QtCore.QThread):
         self.kwargs = kwargs
 
     def run(self) -> None:
+        print('Running analysis thread')
+        sys.stdout.flush()
         I = Intrinsic(self.datapath, **self.kwargs)
         I.save_analysis()
 

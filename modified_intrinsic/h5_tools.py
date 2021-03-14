@@ -1,5 +1,6 @@
 import h5py
 from typing import Union
+import numpy as np
 
 
 def write_dataset(gp: h5py.Group, dset_name: str, data):
@@ -78,3 +79,27 @@ def get_dataset(gp: Union[h5py.File, h5py.Group], name: str, default_value=None)
         return gp[name]
     except KeyError:
         return default_value
+
+def write_roi_range(roi_grp, x_range, y_range, stack):
+    '''
+    we will create a dataset called roi_range if that does not exit in the roi grp
+    '''
+    try:
+        range_ds = roi_grp.create_dataset('roi_range', data = np.array([0,0,0,0]))
+        range_ds[:] = [*x_range, *y_range]
+    except Exception as e:
+        print('Exception in write_roi')
+        print(e)
+        range_ds = roi_grp['roi_range']
+        range_ds[:] = [*x_range, *y_range]
+
+
+    
+       
+
+    
+
+    
+
+
+
