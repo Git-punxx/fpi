@@ -258,6 +258,15 @@ class HD5Parser(FPIParser):
             else:
                 return False
 
+    def is_analysis_complete(self):
+        with h5py.File(self._path, 'r') as datastore:
+            if 'df/resp_map' in datastore:
+                return True
+            else:
+                return False
+
+
+
     def parser_type(self):
         return 'hdf5'
 
@@ -555,8 +564,6 @@ class ExperimentManager:
                 pass
 
         self.filtered = list(self._experiments.keys())
-        print('Updating list')
-        print('-----------------------------------------')
         pub.sendMessage(EXPERIMENT_LIST_CHANGED, choices=self.to_tuple())
 
     def check_if_valid(self, experiment_path):
@@ -850,6 +857,10 @@ class FPIExperiment:
     def is_roi_analyzed(self):
         parser = fpiparser(self._path)
         return parser.has_roi()
+
+    def is_analysis_complete(self):
+        parser = fpiparser(self._path)
+        return parser.is_analysis_complete()
 
     def check(self):
         result = []

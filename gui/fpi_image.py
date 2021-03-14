@@ -202,6 +202,7 @@ class DetailsPanel(wx.Frame):
     def OnClose(self, event):
         self.GetParent().Enable()
         self.GetParent().SetFocus()
+        self.GetParent().VisualizeStage()
         self.Destroy()
 
     def _datastore_structure(self):
@@ -297,12 +298,12 @@ class DetailsPanel(wx.Frame):
         print(f'Updating ROI')
 
         writer = HDF5RoiWriter(self._experiment._path)
-        print(event.roi)
         writer.write_roi(event.roi)
         self._experiment._roi = event.roi
         self._roi_analysis_btn.Enable()
         self._delete_roi.Enable()
         self._roi_txt.SetLabel(f'{self._experiment.roi_range}')
+        event.Skip()
 
     def OnOpenROI(self, event):
         with ROIDialog(self, self._experiment) as dlg:

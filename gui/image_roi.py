@@ -207,6 +207,7 @@ class ImageControl(wx.Panel):
         self.InitBuffer()
         self.Refresh()
         self.Update()
+        self.Bind(EVT_ROI_UPDATE, self.OnRoiUpdate)
 
     
 class MyFrame(wx.Frame):

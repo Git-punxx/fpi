@@ -13,6 +13,7 @@ from fpi_plotter import FPIPlotter
 from gui.fpi_image import DetailsPanel
 from gui.popups import PopupMenuMixin
 from gui.util import BoxPlotChoices
+from gui.custom_events import *
 import sys
 import shlex
 import gui.splash_screen
@@ -21,6 +22,13 @@ from light_analyzer import analyze, completion_report
 from app_config import config_manager as app_config
 
 from modified_intrinsic.explorer import ViewerIntrinsic
+
+COLOR_ROI_DEFINED = "BLUE"
+COLOR_ROI_ANALYZED = "GREEN"
+COLOR_ANALYSIS_COMPLETE = "BLACK"
+COLOR_INITIAL_STAGE = "RED"
+
+
 
 CHOICES_CHANGED = 'choices.changed'
 LINE_CHANGED = 'line.changed'
@@ -68,6 +76,7 @@ class MainFrame(wx.Frame):
         self.exp_list = FPIExperimentList(self, style = wx.BORDER_RAISED)
         self.exp_list.add_columns(app_config.categories)
         self.exp_list.add_rows(self.gatherer.to_tuple())
+        self.exp_list.VisualizeStage()
 
         self.filter = FilterPanel(self, style = wx.BORDER_RAISED)
         self.plotter = PlotNotebook(self)
@@ -79,7 +88,6 @@ class MainFrame(wx.Frame):
         self.peak_value_btn = wx.Button(self, label='BoxPlot Peak Values')
         self.latency_button = wx.Button(self, label='BoxPlot Onset Latencies')
         self.peak_button = wx.Button(self, label='BoxPlot Peak Latencies')
-        self.anat_button = wx.Button(self, label='Plot Anat')
         self.area_button = wx.Button(self, label='Plot Area')
         self.onset_button = wx.Button(self, label='Plot Onset Threshold')
 
@@ -89,10 +97,9 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnResponse, self.response_btn)
         self.Bind(wx.EVT_BUTTON, self.OnResponseLatency, self.latency_button)
         self.Bind(wx.EVT_BUTTON, self.OnPeakLatency, self.peak_button)
-        self.Bind(wx.EVT_BUTTON, self.OnAnat, self.anat_button)
         self.Bind(wx.EVT_BUTTON, self.OnArea, self.area_button)
         self.Bind(wx.EVT_BUTTON, self.OnOnsetThreshold, self.onset_button)
-
+        self.Bind(EVT_ROI_UPDATE, self.OnRoiUpdate)
         self.Bind(wx.EVT_MENU, self.OnMenu)
 
         # Layout
@@ -112,7 +119,6 @@ class MainFrame(wx.Frame):
         footer_sizer.Add(self.latency_button)
         footer_sizer.Add(self.onset_button)
         footer_sizer.Add(self.peak_button)
-        footer_sizer.Add(self.anat_button)
         footer_sizer.Add(self.area_button)
 
         exp_sizer = wx.BoxSizer(wx.SB_HORIZONTAL)
@@ -272,6 +278,10 @@ class MainFrame(wx.Frame):
         res = self.gatherer.clear_filters()
         self.exp_list.update(res)
 
+    def OnRoiUpdate(self, event):
+        print('Trying to refresh the colors of the list')
+        self.exp_list.VisualizeStage()
+        self.Refresh()
 
 class FilterPanel(wx.Panel):
     def __init__(self, parent, *args, **kwargs):
@@ -435,9 +445,9 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
         self.list.DeleteAllItems()
 
     def update(self, choices):
-        print('Received message')
         self.clear()
         self.add_rows(choices)
+        self.VisualizeStage()
 
     def add_columns(self, columns):
         self.list.InsertColumn(0, 'Experiment')
@@ -456,7 +466,6 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
 
     def CreateContextMenu(self, menu):
         menu.Append(ID_OPEN_PANOPLY, 'Open in Panoply')
-        # menu.Append(ID_OPEN_INSTRINSIC, 'Choose Range of Interest')
         menu.Append(ID_ANALYZE, 'Complete analysis')
         menu.Append(ID_OPEN_IN_FOLDER, 'Open in folder')
 
@@ -515,10 +524,42 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
             with wx.MessageDialog(None, 'Action not implemented', 'Not implemented', style = wx.OK | wx.ICON_WARNING) as dlg:
                 resp = dlg.ShowModal()
 
+    def color_item(self, list_item_idx, color):
+        self.list.SetItemTextColour(list_item_idx, wx.Colour(color))
+
     def VisualizeStage(self):
-        items = self.current_selection
-        exp = self.GetTopLevelParent().gatherer.get_experiment
-        print(items)
+        gatherer = self.GetTopLevelParent().gatherer
+        no_items = self.list.GetItemCount()
+        for item in range(no_items):
+            list_item = self.list.GetItem(item)
+            exp = gatherer.get_experiment(list_item.GetText())
+
+
+            # Paint them all red initially
+            self.color_item(item, COLOR_INITIAL_STAGE)
+
+            has_roi_analyzed = exp.has_roi()
+            has_roi_range = True
+            if exp.roi_range is None:
+                has_roi_range = False
+            analysis_complete = exp.is_analysis_complete()
+
+            if not analysis_complete:
+                continue
+            else:
+                self.color_item(item, COLOR_ANALYSIS_COMPLETE)
+
+            if not has_roi_range:
+                continue
+            else:
+                self.color_item(item, COLOR_ROI_DEFINED)
+
+            if not has_roi_analyzed:
+                continue
+            else:
+                print('It has roi analyzed')
+                self.color_item(item, COLOR_ROI_ANALYZED)
+
 
 
 

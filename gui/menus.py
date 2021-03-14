@@ -27,11 +27,13 @@ ID_EXPORT_PEAK_VALUES = wx.NewId()
 ID_EXPORT_ONSET_LATENCY = wx.NewId()
 ID_EXPORT_ONSET_THRESHOLD = wx.NewId()
 ID_EXPORT_PEAK_LATENCY = wx.NewId()
+ID_EXPORT_HALFWIDTH = wx.NewId()
 
 ID_ROI_EXPORT_PEAK_VALUES = wx.NewId()
 ID_ROI_EXPORT_ONSET_LATENCY = wx.NewId()
 ID_ROI_EXPORT_ONSET_THRESHOLD = wx.NewId()
 ID_ROI_EXPORT_PEAK_LATENCY = wx.NewId()
+ID_ROI_EXPORT_HALFWIDTH = wx.NewId()
 
 ID_EXPORT_ROI_ATTRIBUTES = wx.NewId()
 
@@ -272,10 +274,11 @@ def ExportPeakValue(parent):
     exp_list = root.exp_list
     gatherer = root.gatherer
     selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
+    exp_names = [exp.name for exp in selected]
 
     peak_value = {exp.name: exp.max_df for exp in selected}
-    print(peak_value)
-    save_series('peak_value', peak_value)
+    save_series(f'peak_values', peak_value)
+    wx.MessageBox(f'Peak values for {exp_names} saved...')
 
 
 @register(ID_EXPORT_PEAK_LATENCY)
@@ -284,10 +287,11 @@ def ExportPeakLatency(parent):
     exp_list = root.exp_list
     gatherer = root.gatherer
     selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
+    exp_names = [exp.name for exp in selected]
 
     peak_latency = {exp.name: exp.peak_latency for exp in selected}
-    print(peak_latency)
     save_series('peak_latency', peak_latency)
+    wx.MessageBox(f'Peak latency values for {exp_names} saved...')
 
 
 @register(ID_EXPORT_ONSET_LATENCY)
@@ -298,8 +302,9 @@ def ExportOnsetLatency(parent):
     selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
 
     onset_latency = {exp.name: exp.onset_latency for exp in selected}
-    print(onset_latency)
+    exp_names = [exp.name for exp in selected]
     save_series('peak_latency', onset_latency)
+    wx.MessageBox(f'Onset latency values for {exp_names} saved...')
 
 @register(ID_EXPORT_ONSET_THRESHOLD)
 def ExportOnsetThreshold(parent):
@@ -309,7 +314,21 @@ def ExportOnsetThreshold(parent):
     selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
 
     onset_threshold = {exp.name: exp.onset_threshold for exp in selected}
+    exp_names = [exp.name for exp in selected]
     save_series('onset_threshold', onset_threshold)
+    wx.MessageBox(f'Onset threshold values for {exp_names} saved...')
+
+@register(ID_EXPORT_HALFWIDTH)
+def ExportHalfwidth(parent):
+    root = wx.App.Get().GetRoot()
+    exp_list = root.exp_list
+    gatherer = root.gatherer
+    selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
+
+    onset_threshold = {exp.name: exp.halfwdith for exp in selected}
+    exp_names = [exp.name for exp in selected]
+    save_series('halfwidth', onset_threshold)
+    wx.MessageBox(f'Halfwidth values for {exp_names} saved...')
 
 @register(ID_MEAN_RESPONSE)
 def MeanResponse(parent):
@@ -447,8 +466,7 @@ def NewAnalysis(parent):
     with AnalysisPanel(None) as dlg:
         dlg.ShowModal()
 
-def save_series(fname, series: dict):
-    print(series)
+def save_series(fname, series):
     if not os.path.exists(mgr.data_export_dir):
         os.mkdir(mgr.data_export_dir)
     fname = mgr.data_export_dir + '/' + fname + '.csv'
@@ -457,8 +475,10 @@ def save_series(fname, series: dict):
         with open(fname, 'w') as fd:
             for key, val in series.items():
                 fd.write(f'{key},{val}\n')
+    elif type(series) == list:
+        np.savetxt(fname, np.array(series))
     else:
-        with open(fname, 'w') as fd:
-            np.savetxt(fd, np.array(series))
+        wx.MessageBox('Export failed.')
+        return
 
 
