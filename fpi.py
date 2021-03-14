@@ -354,11 +354,16 @@ class HD5Parser(FPIParser):
             except Exception as e:
                 return
 
-    def area(self):
+    def area(self, roi = False):
         with h5py.File(self._path, 'r') as datastore:
+            if roi:
+                root = 'roi'
+            else:
+                root = 'df'
             x_slice, y_slice = self.range()
             try:
-                area = datastore[self.root]['area'][()]
+                area = datastore[root]['area'][()]
+                print(area)
                 return area
             except Exception as e:
                 print('Exception in all_pixel method')
@@ -690,6 +695,11 @@ class FPIExperiment:
         parser = fpiparser(self._path)
         return parser.range()
 
+    def roi_area(self):
+        if self.has_roi():
+            parser = fpiparser(self._path)
+            area = parser.area(roi = True)
+
     def get_root(self):
         return 'roi' if self._use_roi else 'df'
 
@@ -701,11 +711,16 @@ class FPIExperiment:
         return self._roi
 
     @property
-    def area(self):
+    def area(self, roi = False):
         parser = fpiparser(self._path, self.get_root())
         if self._area is None:
             self._area = parser.area()
         return self._area
+
+    def roi_area(self):
+        parser = fpiparser(self._path, self.get_root())
+        return parser.area(roi = True)
+
 
     @property
     def response(self, roi = False):
@@ -898,15 +913,21 @@ class FPIExperiment:
 
     def halfwidth(self, no_baseline = 30):
         response_curve = self.response
+
         base_frame, baseline_val = self.baseline_value()
-        FPIExperiment.log_tuple('Baseline frame:', (base_frame, baseline_val))
+        print(base_frame, baseline_val)
         peak_frame, peak_val = self.peak_response()
-        FPIExperiment.log_tuple('Peak frame:', (peak_frame, peak_val))
+        print(peak_frame, peak_val)
+
         half_val = (peak_val - baseline_val)/2
+
         med_line = np.zeros_like(response_curve[no_baseline:])
         med_line[()] = half_val
 
         idx = np.argwhere(np.diff(np.sign(response_curve[no_baseline:] - med_line))).flatten()
+        print(base_frame)
+        print(peak_frame)
+        print(idx)
         if len(idx) < 2:
             return (0, 0), 0
         halfwidth_start, *_, halfwidth_end = idx

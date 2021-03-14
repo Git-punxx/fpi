@@ -12,6 +12,7 @@ from gui.animator import animate, export_frames
 from gui.helper_panels import *
 from image_analysis import util
 from gui.menus import FPIImageMenu
+import matplotlib.pyplot as plt
 
 
 class DetailsPanel(wx.Frame):
@@ -79,11 +80,16 @@ class DetailsPanel(wx.Frame):
         self._roi_lbl = wx.StaticText(self.details_panel, label = 'Roi Range')
         self._roi_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.roi_range}')
 
+        self._roi_area_lbl = wx.StaticText(self.details_panel, label = "Roi Area")
+        self._roi_area_txt = wx.StaticText(self.details_panel, label = f"{self._experiment.roi_area()}")
+
+
         self._roi_analysis_btn = wx.Button(self.details_panel, label = 'Analyze Range of Interest')
         self._delete_roi = wx.Button(self.details_panel, label = 'Delete Range of interest')
         self._animate_button = wx.Button(self.details_panel, label = 'Animate')
         self._export_button = wx.Button(self.details_panel, label = 'Export Frames')
         self._roi_image_button = wx.Button(self.details_panel, label = 'Open ROI Image')
+        self._colormap_button = wx.Button(self.details_panel, label = 'Open Colormapped Image')
 
 
         sizer = wx.GridBagSizer(hgap = 5, vgap = 5)
@@ -127,14 +133,18 @@ class DetailsPanel(wx.Frame):
         sizer.Add(self._roi_lbl, (12, 0))
         sizer.Add(self._roi_txt, (12, 1))
 
-        sizer.Add(self._halfwidth_lbl, (13, 0))
-        sizer.Add(self._halfwidth_txt, (13, 1))
+        sizer.Add(self._roi_area_lbl, (13, 0))
+        sizer.Add(self._roi_area_txt, (13, 1))
 
-        sizer.Add(self._roi_analysis_btn, (15, 0), flag = wx.EXPAND)
-        sizer.Add(self._delete_roi, (16, 0), flag = wx.EXPAND)
-        sizer.Add(self._animate_button, (17, 0), flag = wx.EXPAND)
-        sizer.Add(self._export_button, (18, 0), flag = wx.EXPAND)
-        sizer.Add(self._roi_image_button, (19, 0), flag = wx.EXPAND)
+        sizer.Add(self._halfwidth_lbl, (14, 0))
+        sizer.Add(self._halfwidth_txt, (14, 1))
+
+        sizer.Add(self._roi_analysis_btn, (16, 0), flag = wx.EXPAND)
+        sizer.Add(self._delete_roi, (17, 0), flag = wx.EXPAND)
+        sizer.Add(self._animate_button, (18, 0), flag = wx.EXPAND)
+        sizer.Add(self._export_button, (19, 0), flag = wx.EXPAND)
+        sizer.Add(self._roi_image_button, (20, 0), flag = wx.EXPAND)
+        sizer.Add(self._colormap_button, (21, 0), flag = wx.EXPAND)
 
 
 
@@ -175,6 +185,7 @@ class DetailsPanel(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnAnimate, self._animate_button)
         self.Bind(wx.EVT_BUTTON, self.OnExport, self._export_button)
         self.Bind(wx.EVT_BUTTON, self.OnOpenROI, self._roi_image_button)
+        self.Bind(wx.EVT_BUTTON, self.OnColormapButton, self._colormap_button)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose, self)
 
@@ -190,6 +201,12 @@ class DetailsPanel(wx.Frame):
         # self._avg_df = None
         # self._mean_baseline = None
         # self._peak_latency = None
+
+    def OnColormapButton(self, event):
+        img = self._experiment.resp_map
+        plt.imshow(img)
+        plt.show()
+
 
     def OnMenu(self, event):
         evt_id = event.GetId()

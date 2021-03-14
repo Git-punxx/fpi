@@ -471,7 +471,11 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
 
     @register(ID_OPEN_PANOPLY)
     def OpenPanoply(self):
-        item = self.current_selection[0]
+        try:
+            item = self.current_selection[0]
+        except Exception:
+            wx.MessageBox('Select an experiment first')
+            return
         exp = self.GetTopLevelParent().gatherer.get_experiment(item)
         if sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
             os.system('open ' + shlex.quote(exp._path))
@@ -480,7 +484,11 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
 
     @register(ID_OPEN_INSTRINSIC)
     def OpenIntrinsic(self):
-        item = self.current_selection[0]
+        try:
+            item = self.current_selection[0]
+        except Exception:
+            wx.MessageBox('Select an experiment first')
+            return
         exp = self.GetTopLevelParent().gatherer.get_experiment(item)
         print(f'Dir: {os.path.dirname(exp._path)}')
         qApp = QtWidgets.QApplication(sys.argv)
@@ -490,7 +498,12 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
 
     @register(ID_ANALYZE)
     def Analyze(self):
-        item = self.current_selection[0]
+        try:
+            item = self.current_selection[0]
+        except Exception:
+            wx.MessageBox('Select an experiment first')
+            return
+
         exp = self.GetTopLevelParent().gatherer.get_experiment(item)
         complete = completion_report(exp._path)
         print(f'Stage {complete} experiment')
@@ -509,7 +522,12 @@ class FPIExperimentList(wx.Panel, PopupMenuMixin):
     @register(ID_OPEN_IN_FOLDER)
     def OpenInFolder(self):
         args = app_config.file_explorer()
-        selection = self.current_selection[0]
+        try:
+            selection = self.current_selection[0]
+        except Exception:
+            wx.MessageBox('Select an experiment first')
+            return
+
         if selection is not None:
             exp = self.GetTopLevelParent().gatherer.get_experiment(selection)
             args.append(os.path.dirname(exp._path))

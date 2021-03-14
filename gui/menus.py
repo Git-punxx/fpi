@@ -23,12 +23,14 @@ ID_SET_RAW_DIR = wx.NewId()
 ID_PREFERENCES = wx.NewId()
 ID_STATS = wx.NewId()
 
+ID_EXPORT_RESPONSE = wx.NewId()
 ID_EXPORT_PEAK_VALUES = wx.NewId()
 ID_EXPORT_ONSET_LATENCY = wx.NewId()
 ID_EXPORT_ONSET_THRESHOLD = wx.NewId()
 ID_EXPORT_PEAK_LATENCY = wx.NewId()
 ID_EXPORT_HALFWIDTH = wx.NewId()
 
+ID_ROI_EXPORT_RESPONSE = wx.NewId()
 ID_ROI_EXPORT_PEAK_VALUES = wx.NewId()
 ID_ROI_EXPORT_ONSET_LATENCY = wx.NewId()
 ID_ROI_EXPORT_ONSET_THRESHOLD = wx.NewId()
@@ -84,15 +86,19 @@ roi_plot_menu = [(ID_ROI_PLOT_RESPONSE, 'Plot Response')]
 intrincic_menu = [(ID_INTRINSIC_ANALYSIS, 'Intrinsic analysis'),
                   (ID_NEW_EXPERIMENT_ANALYSIS, 'Analyze new experiment folder')]
 
-export_menu = [(ID_EXPORT_PEAK_VALUES, 'Peak Values'),
+export_menu = [(ID_EXPORT_RESPONSE, 'Reponse'),
+                (ID_EXPORT_PEAK_VALUES, 'Peak Values'),
                (ID_EXPORT_PEAK_LATENCY, 'Peak Latency'),
                (ID_EXPORT_ONSET_LATENCY, 'Onset Latency'),
-               (ID_EXPORT_ONSET_THRESHOLD, 'Onset Threshold')]
+               (ID_EXPORT_ONSET_THRESHOLD, 'Onset Threshold'),
+               (ID_EXPORT_HALFWIDTH, 'Halfwidth')]
 
-roi_export_menu = [(ID_ROI_EXPORT_PEAK_VALUES, 'ROI Peak Values'),
+roi_export_menu = [(ID_ROI_EXPORT_RESPONSE, 'ROI Response'),
+                    (ID_ROI_EXPORT_PEAK_VALUES, 'ROI Peak Values'),
                   (ID_ROI_EXPORT_PEAK_LATENCY, 'ROI Peak Latency'),
                   (ID_ROI_EXPORT_ONSET_LATENCY, 'ROI Onset latency'),
                   (ID_ROI_EXPORT_ONSET_THRESHOLD, 'ROI Onset Threshold'),
+                  (ID_ROI_EXPORT_HALFWIDTH, 'ROI Halfwdith'),
                   (ID_EXPORT_ROI_ATTRIBUTES, 'ROI Attributes')]
 
 class FPIMenuBar(wx.MenuBar):
@@ -268,6 +274,19 @@ def TotalStats(parent):
     axes.grid(True, alpha=0.1)
     '''
 
+@register(ID_EXPORT_RESPONSE)
+def ExportPeakValue(parent):
+    root = wx.App.Get().GetRoot()
+    exp_list = root.exp_list
+    gatherer = root.gatherer
+    selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
+    exp_names = [exp.name for exp in selected]
+
+    response = {exp.name: exp.response for exp in selected}
+    save_series(f'aggregated_response', response)
+    wx.MessageBox(f'Response values for {exp_names} saved...')
+
+
 @register(ID_EXPORT_PEAK_VALUES)
 def ExportPeakValue(parent):
     root = wx.App.Get().GetRoot()
@@ -303,7 +322,7 @@ def ExportOnsetLatency(parent):
 
     onset_latency = {exp.name: exp.onset_latency for exp in selected}
     exp_names = [exp.name for exp in selected]
-    save_series('peak_latency', onset_latency)
+    save_series('onset_latency', onset_latency)
     wx.MessageBox(f'Onset latency values for {exp_names} saved...')
 
 @register(ID_EXPORT_ONSET_THRESHOLD)
@@ -325,9 +344,9 @@ def ExportHalfwidth(parent):
     gatherer = root.gatherer
     selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
 
-    onset_threshold = {exp.name: exp.halfwdith for exp in selected}
+    halfwidth = {exp.name: exp.halfwidth() for exp in selected}
     exp_names = [exp.name for exp in selected]
-    save_series('halfwidth', onset_threshold)
+    save_series('halfwidth', halfwidth)
     wx.MessageBox(f'Halfwidth values for {exp_names} saved...')
 
 @register(ID_MEAN_RESPONSE)
@@ -345,6 +364,18 @@ def MeanResponse(parent):
     plt.show()
 
 
+@register(ID_ROI_EXPORT_RESPONSE)
+def ExportRoiResponse(parent):
+    exp = parent.GetParent()._experiment
+    if not exp.has_roi():
+        wx.MessageBox("you need to analyze the experiment before export")
+        return
+    parser = HD5Parser(exp, exp._path)
+    roi_response = parser.response(roi = True)
+    if roi_response is None:
+        dlg = wx.MessageBox('No ROI for this experiment', 'Exception when reading ROI', style = wx.ICON_ERROR)
+        return
+    save_series(f'{exp.name}-roi_response', roi_response)
 
 @register(ID_ROI_EXPORT_PEAK_VALUES)
 def ExportRoiPeakValues(parent):
@@ -357,7 +388,6 @@ def ExportRoiPeakValues(parent):
     if peak_value is None:
         dlg = wx.MessageBox('No ROI for this experiment', 'Exception when reading ROI', style = wx.ICON_ERROR)
         return
-    print(peak_value)
     save_series(f'{exp.name}-roi_peak_value', peak_value)
 
 
@@ -374,7 +404,6 @@ def ExportRoiThreshold(parent):
         return
     #TODO Fixme
     threshold = fpi.onset_threshold(roi_response)
-    print(threshold)
     save_series(f'{exp.name}-roi_peak_threshold', threshold)
 
 
@@ -391,7 +420,6 @@ def ExportROIPeakLatency(parent):
         return
     #TODO Fixme
     peak_latency = fpi.peak_latency(roi_response)
-    print(peak_latency)
     save_series(f'{exp.name}-roi_peak_latency', peak_latency)
 
 @register(ID_ROI_EXPORT_ONSET_LATENCY)
@@ -409,7 +437,6 @@ def ExportROIOnsetLatency(parent):
     #TODO Fixme
     threshold = fpi.onset_threshold(mean_baseline)
     onset_latency = fpi.onset_latency(mean_baseline, roi_response)
-    print(onset_latency)
     save_series(f'{exp.name}-roi_onset_latency', threshold)
 
 
@@ -426,7 +453,7 @@ def PlotROIResponse(parent):
         wx.MessageBox('No response for this experiment', 'Plot failed')
         return
     else:
-        plt.plot(resp, label='Full image response')
+        plt.plot(resp, label='ROI image response')
     plt.legend()
     plt.xlabel('Frames')
     plt.ylabel('dF/f')
@@ -458,6 +485,7 @@ def ExportROIAttributes(parent):
         save_series(fname, attrs)
     except Exception as e:
         wx.MessageBox(f'Export failed: {e}', 'Export failed', style=wx.OK | wx.ICON_ERROR)
+        print(e)
         return
     wx.MessageBox(f'ROI attributes saved at {fname}.csv', 'Attributes saved', style = wx.OK | wx.ICON_INFORMATION)
 
@@ -477,8 +505,10 @@ def save_series(fname, series):
                 fd.write(f'{key},{val}\n')
     elif type(series) == list:
         np.savetxt(fname, np.array(series))
+    elif type(series) == np.ndarray:
+        np.savetxt(fname, series)
     else:
-        wx.MessageBox('Export failed.')
+        wx.MessageBox(f'Export failed. Unexpected series type: {type(series)}, Value: {series}')
         return
 
 
