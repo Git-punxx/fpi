@@ -28,7 +28,7 @@ class ViewerIntrinsic(QtWidgets.QMainWindow):
         self.file_model = QtWidgets.QFileSystemModel()
         self.file_model.setFilter(QtCore.QDir.AllDirs | QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot )
         self.file_model.setNameFilters(["*.h5"])
-        self.file_model.setRootPath(home)
+        self.file_model.setRootPath('/Volumes/Data/Vasiliki/')
 
         self.main_widget = QtWidgets.QWidget(self)
         # Layouts

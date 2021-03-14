@@ -197,7 +197,6 @@ class AnalysisPanel(wx.Dialog):
             val_from = int(self.from_input.GetValue())
             val_to = int(self.to_input.GetValue())
             path = self.folder_input.GetValue()
-            strategy = self.strategy.GetCurrentSelection()
             with wx.BusyInfo("Analyzing images...") as info:
                 analysis = ThreadedIntrinsic(path, start = val_from, end = val_to)
                 analysis.complete_analysis()

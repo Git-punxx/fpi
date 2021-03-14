@@ -97,10 +97,12 @@ class Intrinsic(object):
                  n_baseline=30, n_stim=30, n_recover=20, binning=1, exp_time=.1,
                  start=0, end=-1):
         self.path = Path(path)
+        print(path)
         self.save_path = self.path / f'datastore_{self.path.name}.h5'
         if start != 0 or end != -1:
             self.save_path = self.path / f'datastore_{self.path.name}_{start}-{end}.h5'
         self.pattern = pattern
+        print(pattern)
         self.n_baseline = n_baseline
         self.n_stim = n_stim
         self.n_recover = n_recover
@@ -146,6 +148,7 @@ class Intrinsic(object):
 
     @staticmethod
     def get_trial_folders(path: Union[str, Path]):
+        print('In get_trial_folders')
         path = Path(path)
         regex = re.compile('([0-9]*)')
 

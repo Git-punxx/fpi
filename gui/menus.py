@@ -280,7 +280,7 @@ def ExportPeakValue(parent):
     exp_list = root.exp_list
     gatherer = root.gatherer
     selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
-    exp_names = [exp.name for exp in selected]
+    exp_names = [exp.name for exp in se/lected]
 
     response = {exp.name: exp.response for exp in selected}
     save_series(f'aggregated_response', response)
