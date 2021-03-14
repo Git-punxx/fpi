@@ -915,9 +915,7 @@ class FPIExperiment:
         response_curve = self.response
 
         base_frame, baseline_val = self.baseline_value()
-        print(base_frame, baseline_val)
         peak_frame, peak_val = self.peak_response()
-        print(peak_frame, peak_val)
 
         half_val = (peak_val - baseline_val)/2
 
@@ -925,14 +923,11 @@ class FPIExperiment:
         med_line[()] = half_val
 
         idx = np.argwhere(np.diff(np.sign(response_curve[no_baseline:] - med_line))).flatten()
-        print(base_frame)
-        print(peak_frame)
-        print(idx)
         if len(idx) < 2:
             return (0, 0), 0
         halfwidth_start, *_, halfwidth_end = idx
         print(f'Response value at {halfwidth_start + no_baseline} to {halfwidth_end} = {response_curve[idx + no_baseline]}')
-        return (halfwidth_start + no_baseline, halfwidth_end + no_baseline), half_val
+        return halfwidth_end - halfwidth_start
 
 
     @staticmethod

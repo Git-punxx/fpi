@@ -75,7 +75,7 @@ class DetailsPanel(wx.Frame):
         self._mean_baseline_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.mean_baseline:5.8f}')
 
         self._halfwidth_lbl = wx.StaticText(self.details_panel, label = 'Halfwitdh Mean')
-        self._halfwidth_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.halfwidth()[0]} - {self._experiment.halfwidth()[1]:5.8f}')
+        self._halfwidth_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.halfwidth()}')
 
         self._roi_lbl = wx.StaticText(self.details_panel, label = 'Roi Range')
         self._roi_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.roi_range}')
