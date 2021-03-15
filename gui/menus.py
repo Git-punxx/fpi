@@ -476,11 +476,11 @@ def ExportROIAttributes(parent):
     onset_latency = fpi.onset_latency(threshold, resp)
     peak_latency = fpi.peak_latency(resp)
     peak_val = resp.max()
-    attrs = {'Peak value': peak_val,
-             'Peak latency': peak_latency,
-             'Mean Baseline': mean_baseline,
-            'Onset Threshold': threshold,
-            'Onset Latency': onset_latency}
+    attrs = {'Peak value': [peak_val],
+             'Peak latency': [peak_latency],
+             'Mean Baseline': [mean_baseline],
+            'Onset Threshold': [threshold],
+            'Onset Latency': [onset_latency]}
     fname = f'ROI_attrs_{exp.name}'
     try:
         save_series(fname, attrs)
