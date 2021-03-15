@@ -4,7 +4,8 @@ import h5py
 import os
 import datetime
 import modified_intrinsic.imaging as intr
-from fpi import HDF5RoiWriter, fpiparser
+import fpi
+from fpi import HDF5RoiWriter, fpiparser, halfwidth
 import numpy as np
 import gui.image_roi
 from gui.custom_events import *
@@ -406,8 +407,15 @@ class ROIDialog(wx.Dialog):
         self._mean_baseline_lbl = wx.StaticText(self.details_panel, label = 'Baseline Mean')
         self._mean_baseline_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.mean_baseline:5.8f}')
 
+        response = self.parser.response(roi=True)
+        mean_baseline = self._experiment.mean_baseline
+        peak_value = self.parser.max_df(roi=True)
+
+
+        halfwidth = fpi.halfwidth(response, mean_baseline, peak_value)
+
         self._halfwidth_lbl = wx.StaticText(self.details_panel, label = 'Halfwitdh Mean')
-        self._halfwidth_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.halfwidth()[0]} - {self.halfwidth()[1]:5.8f}')
+        self._halfwidth_txt = wx.StaticText(self.details_panel, label = f'{halfwidth}')
 
         self._roi_lbl = wx.StaticText(self.details_panel, label = 'Roi Range')
         self._roi_txt = wx.StaticText(self.details_panel, label = f'{self._experiment.roi_range}')
@@ -536,7 +544,7 @@ class ROIDialog(wx.Dialog):
             return (0, 0), 0
         halfwidth_start, *_, halfwidth_end = idx
         print(f'Response value at {halfwidth_start + no_baseline} to {halfwidth_end} = {response_curve[idx + no_baseline]}')
-        return (halfwidth_start + no_baseline, halfwidth_end + no_baseline), half_val
+        return halfwidth_end - halfwidth_start
 
     def update_stats(self):
         self._max_df_txt.SetLabel(f'{self._experiment.max_df}')

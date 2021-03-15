@@ -435,11 +435,27 @@ def ExportROIOnsetLatency(parent):
     if roi_response is None:
         dlg = wx.MessageBox('No ROI for this experiment', 'Exception when reading ROI', style = wx.ICON_ERROR)
         return
-    #TODO Fixme
-    threshold = fpi.onset_threshold(mean_baseline)
     onset_latency = fpi.onset_latency(mean_baseline, roi_response)
-    save_series(f'{exp.name}-roi_onset_latency', threshold)
+    save_series(f'{exp.name}-roi_onset_latency', onset_latency)
 
+
+@register(ID_ROI_EXPORT_HALFWIDTH)
+def ExportROIHalfwidth(parent):
+    exp = parent.GetParent()._experiment
+    if not exp.has_roi():
+        wx.MessageBox("you need to analyze the experiment before export")
+        return
+    parser = HD5Parser(exp, exp._path)
+
+    mean_baseline = exp.mean_baseline
+    peak_value = parser.max_df(roi = True)
+    roi_response = parser.response(roi = True)
+
+    if roi_response is None:
+        dlg = wx.MessageBox('No ROI for this experiment', 'Exception when reading ROI', style = wx.ICON_ERROR)
+        return
+    halfwidth = fpi.halfwidth(roi_response, mean_baseline, peak_value)
+    save_series(f'{exp.name}-roi_onset_latency', halfwidth)
 
 @register(ID_ROI_PLOT_RESPONSE)
 def PlotROIResponse(parent):
@@ -448,8 +464,7 @@ def PlotROIResponse(parent):
         wx.MessageBox("you need to analyze the experiment before export")
         return
     parser = HD5Parser(exp, exp._path)
-    roi_resp = parser.response(roi = True)
-    resp = parser.response()
+    resp = parser.response(roi = True)
     if resp is None:
         wx.MessageBox('No response for this experiment', 'Plot failed')
         return
@@ -459,6 +474,8 @@ def PlotROIResponse(parent):
     plt.xlabel('Frames')
     plt.ylabel('dF/f')
     plt.show()
+
+
 
 @register(ID_EXPORT_ROI_ATTRIBUTES)
 def ExportROIAttributes(parent):
@@ -471,16 +488,24 @@ def ExportROIAttributes(parent):
     if resp is None:
         dlg = wx.MessageBox('No ROI for this experiment', 'Exception when reading ROI', style = wx.ICON_ERROR)
         return
+
+    response = parser.response(roi = True)
     mean_baseline = exp.mean_baseline
+    peak_value = parser.max_df(roi = True)
+
     threshold = fpi.onset_threshold(exp.mean_baseline)
     onset_latency = fpi.onset_latency(threshold, resp)
     peak_latency = fpi.peak_latency(resp)
-    peak_val = resp.max()
-    attrs = {'Peak value': [peak_val],
-             'Peak latency': [peak_latency],
+
+    halfwidth = fpi.halfwidth(response, mean_baseline, peak_value)
+
+    attrs = { 'Peak value': [peak_value],
              'Mean Baseline': [mean_baseline],
+             'Peak latency': [peak_latency],
+             'Onset Latency': [onset_latency],
             'Onset Threshold': [threshold],
-            'Onset Latency': [onset_latency]}
+            'Halfwidth': [halfwidth]
+             }
     fname = f'ROI_attrs_{exp.name}'
     try:
         save_series(fname, attrs)

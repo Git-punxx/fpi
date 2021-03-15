@@ -104,6 +104,23 @@ def peak_latency(response, start = 30, end = 75):
     return peak + 30
 
 
+def halfwidth(response, baseline_val, peak_val, no_baseline=30):
+    response_curve = response
+
+
+    half_val = (peak_val - baseline_val) / 2
+
+    med_line = np.zeros_like(response_curve[no_baseline:])
+    med_line[()] = half_val
+
+    idx = np.argwhere(np.diff(np.sign(response_curve[no_baseline:] - med_line))).flatten()
+    if len(idx) < 2:
+        return (0, 0), 0
+    halfwidth_start, *_, halfwidth_end = idx
+    print(f'Response value at {halfwidth_start + no_baseline} to {halfwidth_end} = {response_curve[idx + no_baseline]}')
+    return halfwidth_end - halfwidth_start
+
+
 def fpiparser(path, root = 'df'):
     '''
     A factory method that tries to understand if we are dealing with a list of csv files or a single datastore file
