@@ -2,6 +2,7 @@ import wx
 import PIL.Image as Image
 import numpy as np
 from scipy.optimize import linprog
+from skimage.io import imread
 import matplotlib.pyplot as plt
 
 
@@ -74,3 +75,29 @@ def in_hull(points, x):
     lp = linprog(c, A_eq=A, b_eq=b)
     return lp.success
 '''
+
+fnmames = ['C:/Users/thor/Downloads/Archive/lo1.tif', 'C:/Users/thor/Downloads/Archive/lo2.tif', 'C:/Users/thor/Downloads/Archive/lo3.tif']
+
+class TiffStack:
+    def __init__(self, path):
+        self.path = path
+        self._pics = imread(path)
+        print(self._pics.shape)
+        self.images = self._pics
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        for im in self._pics:
+            yield im
+
+    def __getitem__(self, item):
+        return self._pics[item]
+
+    def __len__(self):
+        return len(self._pics)
+
+if __name__ == '__main__':
+    for f in fnmames:
+        TiffStack(f)

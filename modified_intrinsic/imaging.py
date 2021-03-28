@@ -1,4 +1,5 @@
 import sys
+from image_analysis.util import TiffStack as MyTiffStack
 
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
@@ -87,6 +88,7 @@ class TiffStack(Stack):
         # Open the Tiff Stack
         self._pics = imread(path)
         # List of the paths to all the stack images
+        print(self._pics.shape)
         self.images = np.array([os.path.basename(path)+f'_{ix}' for ix in range(self._pics.shape[0])])
 
     def next(self):
@@ -141,24 +143,24 @@ class Intrinsic(object):
             raise ValueError('Empty stacks. Do we have enough images to cover baseline?')
 
     def create_tiff_stack(self, tiff_files):
-        self.stacks = [TiffStack(f) for f in tqdm(tiff_files, desc='Loading TIFF')]
+        tiff_files = [str(self.path)+'/'+tiff for tiff in tiff_files]
+        self.stacks = [MyTiffStack(f) for f in tiff_files]
         self.trial_folders = [self.path]
 
     def get_tiff_list(self):
         regex = re.compile('([0-9]*)')
-        l_path = np.array(list(self.path.glob(self.pattern)))
-        l_filenames = [p.name for p in l_path
-                       if p.name.split('.')[-1] == 'tif']
+        l_filenames = np.array([p for p in os.listdir(self.path)
+                       if p.split('.')[-1] == 'tif'])
 
         try:
             index = [int(''.join(regex.findall(flnm)))
                      for flnm in l_filenames]
         except ValueError:
             print("No number detected in one file")
-            return l_path
+            return self.path
         # get the indexes of the last number in the file name
         index = np.argsort(index)
-        return l_path[index]
+        return l_filenames[index]
 
     @staticmethod
     def get_trial_folders(path: Union[str, Path]):
@@ -206,6 +208,7 @@ class Intrinsic(object):
 
     def average_trials(self, start=0, end=-1):
         max_frames = max([len(s) for s in self.stacks])
+        print(max_frames)
         frame_shape = self.stacks[0][0].shape
         print(frame_shape)
         self.avg_stack = np.zeros((frame_shape[0], frame_shape[1], max_frames))

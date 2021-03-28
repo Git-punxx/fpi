@@ -21,7 +21,6 @@ class RawAnalysisController:
         for folder in trial_folders:
             folder_path = os.path.join(self.root, folder)
             images = [os.path.join(folder_path, img) for img in os.listdir(folder_path) if 'img_' in img]
-            print(images)
             images.sort(key = lambda x: int(os.path.basename(x).split('_')[1].split('.')[0]))
             self.trial_tree[folder] = images
         return self.trial_tree

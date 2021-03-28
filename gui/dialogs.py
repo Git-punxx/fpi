@@ -136,20 +136,29 @@ class AnalysisPanel(wx.Dialog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         #self.controller = RawAnalysisController(mgr.raw_dir)
+        self.IMG_TYPES = ['PNG', 'TIFF']
         self.choices = []
-        self.SetSize(700, 200)
+        self.SetSize(700, 400)
         self.SetTitle('Raw Data Analysis')
         self.path= wx.StaticText(self, label = 'Folder: ', style = wx.ALIGN_CENTER_VERTICAL)
         self.folder_input = wx.ComboBox(self, choices = self.choices, size = (500, 25))
         self.browse = wx.Button(self, label = 'Select Folder', style = wx.ALIGN_CENTER_VERTICAL)
-        self.from_lbl = wx.StaticText(self, label = 'From Trial: ', style = wx.ALIGN_CENTER_VERTICAL)
+        self.from_lbl = wx.StaticText(self, label = 'From Trial: ', size = (140, 25), style = wx.ALIGN_CENTER_VERTICAL)
         self.to_lbl = wx.StaticText(self, label = 'To Trial: ', style = wx.ALIGN_CENTER_VERTICAL)
 
         self.from_input = wx.TextCtrl(self, value = '0', size = (40, 25))
         self.to_input = wx.TextCtrl(self, value = '-1', size = (40, 25))
 
-        # self.strategy_txt = wx.StaticText(self, label = 'Strategy on corrupted photo: ', style = wx.ALIGN_CENTER_VERTICAL)
-        # self.strategy = wx.ComboBox(self, choices = ['Skip', 'Duplicate', 'Average'])
+        self.binning_txt = wx.StaticText(self, label = 'Binning: ', size = (140, 25), style = wx.ALIGN_CENTER_VERTICAL)
+        self.binning_input = wx.ComboBox(self, choices = '1 2 3'.split())
+        self.binning_input.SetSelection(2)
+
+        self.baseline_text = wx.StaticText(self, label = 'No Baseline Frames: ', size = (140, 24), style = wx.ALIGN_CENTER_VERTICAL)
+        self.baseline_input = wx.TextCtrl(self, value = '30', size = (40, 25))
+
+        self.imgtype_text = wx.StaticText(self, label = 'Image Type: ', size = (140, 25), style = wx.ALIGN_CENTER_VERTICAL)
+        self.imgtype_input = wx.ComboBox(self, choices = self.IMG_TYPES, size = (80, 25))
+        self.imgtype_input.SetSelection(0)
 
         self.analyze = wx.Button(self, label = 'Analyze')
 
@@ -168,9 +177,18 @@ class AnalysisPanel(wx.Dialog):
         range_sizer.Add(self.to_lbl, 0, flag = wx.ALIGN_CENTER_VERTICAL)
         range_sizer.Add(self.to_input, 0, flag = wx.ALIGN_CENTER_VERTICAL)
 
-        # strategy_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        # strategy_sizer.Add(self.strategy_txt, 0, flag = wx.ALIGN_CENTER_VERTICAL)
-        # strategy_sizer.Add(self.strategy, 0, flag = wx.ALIGN_CENTER_VERTICAL)
+        binning_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        binning_sizer.Add(self.binning_txt, 0, flag = wx.ALIGN_CENTER_VERTICAL)
+        binning_sizer.Add(self.binning_input, 0, flag = wx.ALIGN_CENTER_VERTICAL)
+
+        baseline_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        baseline_sizer.Add(self.baseline_text, 0, flag = wx.ALIGN_CENTER_VERTICAL)
+        baseline_sizer.Add(self.baseline_input, 0, flag = wx.ALIGN_CENTER_VERTICAL)
+
+        img_type_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        img_type_sizer.Add(self.imgtype_text, 0, flag = wx.ALIGN_CENTER_VERTICAL)
+        img_type_sizer.Add(self.imgtype_input, 0, flag = wx.ALIGN_CENTER_VERTICAL)
+
 
         #center_sizer = wx.BoxSizer(wx.VERTICAL)
         #center_sizer.Add(trial_panel, 0, wx.EXPAND)
@@ -181,8 +199,10 @@ class AnalysisPanel(wx.Dialog):
         main_sizer = wx.BoxSizer(wx.VERTICAL)
         main_sizer.Add(folder_sizer, 0, wx.EXPAND | wx.ALL, 5)
         main_sizer.Add(range_sizer, 0, wx.EXPAND | wx.ALL, 5)
-        # main_sizer.Add(strategy_sizer, 0, wx.EXPAND | wx.ALL, 5)
-        #main_sizer.Add(center_sizer, 1, wx.EXPAND | wx.ALL, 5)
+        main_sizer.Add(binning_sizer, 0, wx.EXPAND | wx.ALL, 5)
+        main_sizer.Add(baseline_sizer, 0, wx.EXPAND | wx.ALL, 5)
+        main_sizer.Add(img_type_sizer, 0, wx.EXPAND | wx.ALL, 5)
+
         main_sizer.Add(footer_sizer, 0, wx.EXPAND | wx.ALL, 5)
         self.SetSizer(main_sizer)
 
@@ -197,8 +217,15 @@ class AnalysisPanel(wx.Dialog):
             val_from = int(self.from_input.GetValue())
             val_to = int(self.to_input.GetValue())
             path = self.folder_input.GetValue()
-            with wx.BusyInfo("Analyzing images...") as info:
-                analysis = ThreadedIntrinsic(path, start = val_from, end = val_to)
+            binning = int(self.binning_input.GetValue())
+            baseline = int(self.baseline_input.GetValue())
+            img_type = self.imgtype_input.GetValue()
+            if img_type == 'PNG':
+                pattern = '*.png'
+            else:
+                pattern = '*.tif'
+            with wx.BusyInfo("Analyzing images") as info:
+                analysis = ThreadedIntrinsic(path, binning=binning, pattern = pattern, n_baseline=baseline, start = val_from, end = val_to)
                 analysis.complete_analysis()
         except Exception as e:
             print(f'Exception: {e}')
