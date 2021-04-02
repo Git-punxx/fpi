@@ -164,15 +164,15 @@ Given a path:
 2. Collect the directories that contain tiff files
 3. Run analysis in every one of them in parallel
 '''
-logging.basicConfig(level=logging.DEBUG, filename=LOG_FILE, format = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s', filemode='w', datefmt='%m-%d %H:%M')
-logger = logging.getLogger('TIFF')
+logging.basicConfig(level=logging.DEBUG, filename=LOG_FILE, format = '%(asctime)s %(levelname)-8s %(message)s', filemode='w', datefmt='%m-%d %H:%M')
+logger = logging.getLogger()
 
 def tiff_analysis(path):
     logger.debug('[INFO] Analysis for path %s started', path)
     try:
         analysis = ThreadedIntrinsic(path, binning=1, pattern='*.tif')
         analysis.complete_analysis()
-        logger.debug('[INFO] Analysis for path %s succeded', path)
+        logger.debug('[INFO] Analysis for path %s succeeded', path)
     except Exception as e:
         logger.debug('[FAILURE] Analysis for path %s failed: %s', path, e)
 
