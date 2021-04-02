@@ -119,7 +119,7 @@ class Intrinsic(object):
             tiff_files = self.get_tiff_list()
             if end != -1:
                 tiff_files = tiff_files[start:end]
-            self.stacks = [TiffStack(f) for f in tqdm(tiff_files, desc='Loading TIFF')]
+            self.stacks = [TiffStack(f) for f in tiff_files]
             self.trial_folders = [self.path]
 
         self.l_base = np.array([])
@@ -188,14 +188,14 @@ class Intrinsic(object):
 
     def compute_baselines(self):
         self.l_base = [s[:self.n_baseline].mean(0)
-                       for s in tqdm(self.stacks, desc='Computing baseline')]
+                       for s in self.stacks]
         self.baseline = np.mean(self.l_base, 0)
 
     def average_trials(self, start=0, end=-1):
         max_frames = max([len(s) for s in self.stacks])
         frame_shape = self.stacks[0][0].shape
         self.avg_stack = np.zeros((frame_shape[0], frame_shape[1], max_frames))
-        for ix_frame in tqdm(range(max_frames), desc='Average trial'):
+        for ix_frame in range(max_frames):
             all_c_frame = [s[ix_frame]
                            for i_s, s in enumerate(self.stacks[start:end])
                            if (ix_frame < len(s))]
@@ -638,7 +638,7 @@ def multi_analysis(path: Union[str, Path], pattern=ALL_PNG):
         elif pattern == ALL_PNG:
             folders.add(file.parent.parent)
 
-    for folder in tqdm(folders, desc='Analysing all folders'):
+    for folder in folders:
         # exts = Counter([f.name.split('.')[-1] for f in folder.iterdir() if f.is_file()])
         # most_common = exts.most_common(1)[0][0]
         try:

@@ -4,6 +4,10 @@ import numpy as np
 from scipy.optimize import linprog
 from skimage.io import imread
 import matplotlib.pyplot as plt
+import logging
+
+
+logging.basicConfig(filename = './tiff_analysis.log')
 
 
 def PIL2wx(image):
@@ -82,8 +86,11 @@ class TiffStack:
     def __init__(self, path):
         self.path = path
         self._pics = imread(path)
-        print(self._pics.shape)
+        logging.info(f'Tiff image shape for {self.path}: {self._pics.shape}')
         self.images = self._pics
+
+    def shape(self):
+        return self._pics.shape
 
     def __iter__(self):
         return self
@@ -97,6 +104,9 @@ class TiffStack:
 
     def __len__(self):
         return len(self._pics)
+
+    def __str__(self):
+        return f'{self.path}: {self.shape()}'
 
 if __name__ == '__main__':
     for f in fnmames:

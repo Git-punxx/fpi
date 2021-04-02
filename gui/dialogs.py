@@ -267,7 +267,7 @@ class TrialMatrix(wx.Panel):
 
     def setup(self):
         print('Setting up trial matric')
-        for trial, experiment_list in tqdm(self.trial_tree.items()):
+        for trial, experiment_list in self.trial_tree.items():
             print(f'Trial {trial}')
             print(experiment_list)
             self.sizer.Add(TrialPanel(self, trial, experiment_list))
@@ -304,7 +304,7 @@ class TrialPanel(wx.Panel):
     def setup(self):
         self.SetBackgroundColour('red')
         images = self._load_images()
-        for index, image in tqdm(enumerate(images, 1)):
+        for index, image in enumerate(images, 1):
             # make a thumbnail and set it as image to button
             bmp = wx.Bitmap(image)
             img = ImageButton(self, bmp, name = f'img_{index}.png', style = wx.BORDER_SUNKEN)

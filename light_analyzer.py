@@ -4,11 +4,18 @@ from skimage.measure import block_reduce
 import h5py
 import numpy as np
 from app_config import config_manager as mgr
+from app_config import LOG_FILE
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor
 import os
 import sys
 import time
+import concurrent.futures as fut
+import time
+import os
+from pathlib import Path
+import sys
+import logging
 
 class RawAnalysisController:
     def __init__(self, root_folder = None):
@@ -96,11 +103,8 @@ class ThreadedIntrinsic(Intrinsic):
 
 
     def mean_baseline(self, stack):
-        start = time.time()
-        print('Mean baseline processing...')
         sys.stdout.flush()
         s = stack[:self.n_baseline].mean(0)
-        print(time.time() - start)
         return s
 
     def compute_baselines(self):
@@ -115,6 +119,7 @@ class ThreadedIntrinsic(Intrinsic):
 
 def analyze(df_file):
     with h5py.File(df_file, 'a') as ds:
+        print(f'Saving to {df_file}...')
         stack = ds['df']['stack'][()]
         r, df = resp_map(stack)
         df_grp = ds['df']
@@ -149,6 +154,38 @@ def completion_color(stage):
 def experiment_statistics(exp_list):
     # TODO Create a report for the whole of the experiments
     pass
+
+
+
+'''
+What we need to do:
+Given a path:
+1. Descend into the child directories and find which one contains tiff files
+2. Collect the directories that contain tiff files
+3. Run analysis in every one of them in parallel
+'''
+logging.basicConfig(level=logging.DEBUG, filename=LOG_FILE, format = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s', filemode='w', datefmt='%m-%d %H:%M')
+logger = logging.getLogger('TIFF')
+
+def tiff_analysis(path):
+    logger.debug('[INFO] Analysis for path %s started', path)
+    try:
+        analysis = ThreadedIntrinsic(path, binning=1, pattern='*.tif')
+        analysis.complete_analysis()
+        logger.debug('[INFO] Analysis for path %s succeded', path)
+    except Exception as e:
+        logger.debug('[FAILURE] Analysis for path %s failed: %s', path, e)
+
+def scan(path):
+    p = Path(path)
+    parent_dirs = set([str(p.parent) for p in p.glob('**/*.tif')])
+    return parent_dirs
+
+def do_analysis(path):
+    dirs = scan(path)
+    with fut.ThreadPoolExecutor(max_workers = 8) as executor:
+        futures = [executor.submit(tiff_analysis, d) for d in dirs]
+    [f.result() for f in futures]
 
 
 

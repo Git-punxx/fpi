@@ -8,6 +8,8 @@ from enum import Enum
 
 CONFIG_FILE = 'config.ini'
 FPI_CONFIG_JSON = os.path.join(os.path.dirname(__file__), 'fpi_config.json')
+LOG_FILE = 'tif_analysis.log'
+
 
 
 class ConfigManager:

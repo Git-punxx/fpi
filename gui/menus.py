@@ -1,4 +1,5 @@
 import wx
+from light_analyzer import do_analysis
 import subprocess
 from gui.dialogs import *
 from app_config import config_manager as app_config
@@ -48,6 +49,7 @@ ID_MEAN_RESPONSE = wx.NewId()
 # Analysis ids
 ID_INTRINSIC_ANALYSIS = wx.NewId()
 ID_NEW_EXPERIMENT_ANALYSIS = wx.NewId()
+ID_TIFF_MULTIANALYSIS = wx.NewId()
 
 # A dict that associates wx.Ids with functions
 # We will use a decorator to populate it
@@ -85,7 +87,8 @@ plot_menu = [(ID_STATS, 'Plot total stats'),
 roi_plot_menu = [(ID_ROI_PLOT_RESPONSE, 'Plot Response')]
 
 intrincic_menu = [(ID_INTRINSIC_ANALYSIS, 'Intrinsic analysis'),
-                  (ID_NEW_EXPERIMENT_ANALYSIS, 'Analyze new experiment folder')]
+                  (ID_NEW_EXPERIMENT_ANALYSIS, 'Analyze new experiment folder'),
+                  (ID_TIFF_MULTIANALYSIS, 'TIFF Multianalysis')]
 
 export_menu = [(ID_EXPORT_RESPONSE, 'Reponse'),
                (ID_EXPORT_PEAK_VALUES, 'Peak Values'),
@@ -529,6 +532,16 @@ def ExportROIAttributes(parent):
 def NewAnalysis(parent):
     with AnalysisPanel(None) as dlg:
         dlg.ShowModal()
+
+@register(ID_TIFF_MULTIANALYSIS)
+def Multianalysis(parent):
+    def notify():
+        wx.MessageBox('Analysis finished', 'Finished')
+    path = DataPathDialog(parent, 'Select experiments folder ')
+    with wx.BusyInfo("Analyzing TIFF directories...") as info:
+        do_analysis(path)
+    notify()
+
 
 
 def save_series(fname, series):

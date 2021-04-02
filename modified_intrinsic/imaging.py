@@ -144,8 +144,19 @@ class Intrinsic(object):
 
     def create_tiff_stack(self, tiff_files):
         tiff_files = [str(self.path)+'/'+tiff for tiff in tiff_files]
-        self.stacks = [MyTiffStack(f) for f in tiff_files]
+        self.stacks = []
+        for f in tiff_files:
+            try:
+                tiff_stack = MyTiffStack(f)
+                self.stacks.append(tiff_stack)
+            except Exception as e:
+                # handle exception
+                print(f'Not a valid tiff file: {f}')
+                sys.stdout.flush()
+                continue
+        #self.stacks = [MyTiffStack(f) for f in tiff_files]
         self.trial_folders = [self.path]
+        print(f'Created tiff stacks: {[str(s) for s in self.stacks]}')
 
     def get_tiff_list(self):
         regex = re.compile('([0-9]*)')
@@ -153,6 +164,8 @@ class Intrinsic(object):
                        if p.split('.')[-1] == 'tif'])
 
         try:
+            print(f'Analyzing {self.path}')
+            sys.stdout.flush()
             index = [int(''.join(regex.findall(flnm)))
                      for flnm in l_filenames]
         except ValueError:
@@ -184,35 +197,37 @@ class Intrinsic(object):
 
     def save_analysis(self):
         with h5py.File(self.save_path, 'w') as f:
-            f.create_dataset('n_baseline', data=self.n_baseline)
-            f.create_dataset('n_stim', data=self.n_stim)
-            f.create_dataset('n_recover', data=self.n_recover)
-            f.create_dataset('dt', data=self.exp_time)
-            f.create_dataset('anat', data=self.stacks[0][0])
-            trials_grp = f.create_group('trials')
-            for s in self.stacks:
-                trials_grp.create_dataset(os.path.basename(s.path), data=s.images.astype('S'))
-            analysed_grp = f.create_group('df')
-            analysed_grp.create_dataset('max_project', data=self.max_project())
-            analysed_grp.create_dataset('stack', data=self.avg_stack)
-            analysed_grp.create_dataset('response', data=self.find_resp())
-            # _, centers, cov = self.id_sources()
-            # analysed_grp.create_dataset('centers', data=centers)
-            # analysed_grp.create_dataset('cov', data=cov)
-         # imsave((self.path / 'overlay.png').as_posix(), self.overlay())
+            try:
+                f.create_dataset('n_baseline', data=self.n_baseline)
+                f.create_dataset('n_stim', data=self.n_stim)
+                f.create_dataset('n_recover', data=self.n_recover)
+                f.create_dataset('dt', data=self.exp_time)
+                f.create_dataset('anat', data=self.stacks[0][0])
+                trials_grp = f.create_group('trials')
+                for s in self.stacks:
+                    trials_grp.create_dataset(os.path.basename(s.path), data=s.images.astype('S'))
+                analysed_grp = f.create_group('df')
+                analysed_grp.create_dataset('max_project', data=self.max_project())
+                analysed_grp.create_dataset('stack', data=self.avg_stack)
+                analysed_grp.create_dataset('response', data=self.find_resp())
+                # _, centers, cov = self.id_sources()
+                # analysed_grp.create_dataset('centers', data=centers)
+                # analysed_grp.create_dataset('cov', data=cov)
+             # imsave((self.path / 'overlay.png').as_posix(), self.overlay())
+            except Exception as e:
+                print(f'Intrinsic - save_analysis: Could not save analysis for experiment {self.path}')
+                print(e)
 
     def compute_baselines(self):
         self.l_base = [s[:self.n_baseline].mean(0)
-                       for s in tqdm(self.stacks, desc='Computing baseline')]
+                       for s in self.stacks]
         self.baseline = np.mean(self.l_base, 0)
 
     def average_trials(self, start=0, end=-1):
         max_frames = max([len(s) for s in self.stacks])
-        print(max_frames)
         frame_shape = self.stacks[0][0].shape
-        print(frame_shape)
         self.avg_stack = np.zeros((frame_shape[0], frame_shape[1], max_frames))
-        for ix_frame in tqdm(range(max_frames), desc='Average trial'):
+        for ix_frame in range(max_frames):
             all_c_frame = [s[ix_frame]
                            for i_s, s in enumerate(self.stacks[start:end])
                            if (ix_frame < len(s))]
@@ -559,7 +574,7 @@ def find_resp(avg_stack, n_baseline=30, pvalue=0.05):
 
     resp = np.zeros((avg_stack.shape[0], avg_stack.shape[1]))
 
-    for row, r_slice in tqdm(enumerate(avg_stack)):
+    for row, r_slice in enumerate(avg_stack):
         for col, c_slice in enumerate(r_slice):
             # cs = (c_slice - c_slice.min()) / (c_slice.max() - c_slice.min())
             # cs -= cs[:n_baseline].mean()
@@ -662,11 +677,10 @@ def multi_analysis(path: Union[str, Path], pattern=ALL_PNG):
         elif pattern == ALL_PNG:
             folders.add(file.parent.parent)
 
-    for folder in tqdm(folders, desc='Analysing all folders'):
+    for folder in folders:
         # exts = Counter([f.name.split('.')[-1] for f in folder.iterdir() if f.is_file()])
         # most_common = exts.most_common(1)[0][0]
         try:
-            print(folder)
             session = Intrinsic(folder, pattern, binning=3)
             session.save_analysis()
         except ValueError:
