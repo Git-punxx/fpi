@@ -251,6 +251,7 @@ class DetailsPanel(wx.Frame):
                 x_slice, y_slice = slice
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 self.status_bar.SetStatusText(f'Analyzing norm_stack')
+                #TODO Check the normalized stack shape and ensure that we are getting the right 3D slice
                 norm_stack_future = executor.submit(intr.normalize_stack, self._experiment.stack[x_slice, y_slice])
                 resp_map_future = executor.submit(intr.find_resp, self._experiment.stack)
                 norm_stack = norm_stack_future.result()
