@@ -14,6 +14,7 @@ from gui.helper_panels import *
 from image_analysis import util
 from gui.menus import FPIImageMenu
 import matplotlib.pyplot as plt
+from light_analyzer import FPIImageController
 
 
 class DetailsPanel(wx.Frame):
@@ -327,7 +328,6 @@ class DetailsPanel(wx.Frame):
     def OnOpenROI(self, event):
         with ROIDialog(self, self._experiment) as dlg:
             dlg.ShowModal()
-
 
     def _save_roi_values(self, analysis_dict):
         writer = HDF5RoiWriter(self._experiment._path)

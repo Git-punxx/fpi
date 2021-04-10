@@ -35,6 +35,11 @@ def pil_to_cv(img):
 
 
 def normalize(arr):
+    '''
+    Convert the values of an ndarray to 0-255 to use the array with cv to find the contours
+    :param arr:ndarray
+    :return: ndarray
+    '''
     min_val = arr.min()
     arr = arr - min_val
     arr = np.uint8(arr*255/arr.max())
@@ -54,7 +59,7 @@ def create_mask(arr, threshold):
 
 active_contours = []
 
-def find_contours(arr: np.ndarray, threshold: int):
+def find_contours(arr: np.ndarray, threshold: int, rect_length):
     '''
     This function is used in the gui to update the image when changing the threshold and when we build the masked stack
     where we use the mask it returns
@@ -89,14 +94,33 @@ def find_contours(arr: np.ndarray, threshold: int):
     area_count = len(areas)
 
     global active_contours
-    active_contours = contours
+    active_contours = [contour for contour in contours if cv.contourArea(contour) > 200]
+    active_contours.sort(key = lambda c: -cv.contourArea(c))
+
+
+    for (index, c) in enumerate(active_contours):
+        # compute the center of each contour
+        M = cv.moments(c)
+        if M['m00'] == 0:
+            continue
+        cX = int(M['m10'] / M['m00'])
+        cY = int(M['m01'] / M['m00'])
+
+        # draw the a circle at the center of the contour
+        text_offset = 5
+
+        xs, xe, ys, ye = (cX - rect_length // 2, cX + rect_length // 2, cY - rect_length //2 , cY + rect_length //2)
+
+        cv.rectangle(img, (xs, ys), (xe, ye), (255, 0, 0), 1)
+        cv.putText(img, str(index), (xs - text_offset, ys - text_offset), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+
+
     mask = cv.drawContours(np.zeros_like(arr),contours, -1, (255), -1)
     final_image = cv.drawContours(img, contours, -1, GREEN, 1)
     return final_image, mean_area, max_area, min_area, area_count, mask
 
 def check_hitbox(x, y):
     global active_contours
-    print(type(active_contours))
     hit = [util.in_hull((x, y), contour[:, 0, :]) for contour in active_contours]
     #util.plot_triangulation(contour[:, 0, :])
     box = list(compress(active_contours, hit))
@@ -154,6 +178,27 @@ def build_masked_frames(threshold: int, roi = False):
     images = [util.PIL_image_from_array(frame) for index, frame in enumerate(frames)]
     return images, vmin, vmax, frames
 
+def compute_rect_timeseries(response, rect_size = 15):
+    '''
+    It returns the slice of the stack that corresponds to the rectangle positioned on the centroid of the contour
+    :param response: The stack of the experiments (ndarray 683*683*80)
+    :return:
+    '''
+    # We select the contour with the bigger area
+    live_cnt = active_contours[0]
+    M = cv.moments(live_cnt)
+    # See https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_imgproc/py_contours/py_contour_features/py_contour_features.html
+    if M['m00'] == 0:
+        raise ValueError('m00 is 0 on compute_rect_timeseries')
+    cX = int(M['m10'] / M['m00'])
+    cY = int(M['m01'] / M['m00'])
+    # draw a rect at the center of the contour
+    from_x, to_x, from_y, to_y = (cX, cX + rect_size, cY, cY + rect_size)
+
+    return response[from_x: to_x, from_y: to_y, :]
+
+
+
 def test_frame_ani():
     avg_stack, stack, timeline = load_data(fname)
     stack = normalize(stack)
@@ -167,7 +212,6 @@ def test_frame_ani():
 def play_animation(roi = False):
     stack, vmin, vmax, frames = build_masked_frames(20, roi)
     for frame in stack:
-        print(frame.size)
         cv.imshow('Some title', pil_to_cv(frame))
         if cv.waitKey(33) == 27:
             break #Esc to quit

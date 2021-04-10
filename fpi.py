@@ -11,6 +11,7 @@ from app_config import config_manager as app_config
 import re
 from pubsub import pub
 from pub_messages import ANALYSIS_UPDATE
+from matplotlib import pyplot as plt
 
 
 '''
@@ -691,6 +692,9 @@ class FPIExperiment:
         self._response = None
         self._timecourse = None
         self._resp_map = None
+        self._baseline_frame = None
+
+
 
         self._no_trials = None
         self._no_baseline = None
@@ -770,11 +774,21 @@ class FPIExperiment:
     @property
     def mean_baseline(self, n_baseline=30):
         if self._mean_baseline is None:
-            data = self.response
+            data = self.stack
             # Compute the mean of the baseline
             baseline = np.array(data[:n_baseline])
             self._mean_baseline = np.mean(baseline)
         return self._mean_baseline
+
+    @property
+    def baseline_frame(self, n_baseline=30):
+        if self._baseline_frame is None:
+            data = self.response
+            # Compute the mean of the baseline
+            baseline = np.array(data[:n_baseline])
+            self._baseline_frame = np.mean(baseline, axis = 0)
+        return self._baseline_frame
+
 
     @property
     def max_project(self):
@@ -966,4 +980,19 @@ if __name__ == '__main__':
     manager = ExperimentManager(root)
     exp = '20190924_1613'
     live = manager.get_experiment(exp)
-    print(live.halfwidth())
+    baseline = np.mean(live.stack[:, :, :30], axis = 2)
+
+    mean_f = baseline.mean()
+
+
+    def stim(t, t_on=30, tau_on=2, tau_off=4):
+        # Time constants in frames
+        return np.exp(-(t - t_on) / tau_off) - np.exp(-(t - t_on) / tau_on)
+
+
+    frames = live.stack[:, :, 31:]
+
+
+    data = stim(np.arange(30, 80))
+    plt.plot(data)
+    plt.show()

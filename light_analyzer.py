@@ -16,6 +16,8 @@ import os
 from pathlib import Path
 import sys
 import logging
+from fpi import FPIExperiment
+from PIL import Image
 
 class RawAnalysisController:
     def __init__(self, root_folder = None):
@@ -134,8 +136,6 @@ def analyze(df_file):
             df_grp.create_dataset('max_df', data=df.max(1).mean())
             df_grp.create_dataset('area', data=np.sum(r > 0))
 
-
-
 def completion_report(exp_path):
     STAGE = 0
     with h5py.File(exp_path, 'r') as df:
@@ -149,7 +149,6 @@ def completion_report(exp_path):
 
 def completion_color(stage):
     return mgr._json['stage_color'][str(stage)]
-
 
 def experiment_statistics(exp_list):
     # TODO Create a report for the whole of the experiments
@@ -187,6 +186,15 @@ def do_analysis(path):
         futures = [executor.submit(tiff_analysis, d) for d in dirs]
     [f.result() for f in futures]
 
+
+class FPIImageController:
+    def __init__(self, experiment: FPIExperiment):
+        self.experiment = experiment
+
+    def baseline_frame(self):
+        frame = self.experiment.baseline_frame
+        img = Image.fromarray(frame)
+        return img
 
 
 

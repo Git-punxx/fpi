@@ -125,6 +125,7 @@ class Intrinsic(object):
                 tiff_files = tiff_files[start:end]
             self.create_tiff_stack(tiff_files)
 
+
         self.l_base = np.array([])
         self.baseline = np.array([])
         self.avg_stack = np.array([])
@@ -233,11 +234,15 @@ class Intrinsic(object):
                            if (ix_frame < len(s))]
             all_c_frame = [x for x in all_c_frame if x.shape is not ()]
             c_frame = np.array([x for x in all_c_frame])
+            print(c_frame.shape)
+            sys.stdout.flush()
             avg_frame = c_frame.mean(0)
             avg_frame -= self.baseline
             avg_frame /= self.baseline
             avg_frame[np.isnan(avg_frame)] = 0
             self.avg_stack[:, :, ix_frame] = avg_frame
+            print(self.avg_stack)
+            sys.stdout.flush()
 
     def norm_stack(self):
         if len(self.avg_stack) == 0:

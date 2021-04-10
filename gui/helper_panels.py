@@ -24,17 +24,29 @@ class OperationPanel(wx.Panel):
         self.percentage = wx.SpinCtrl(self, value = '', style = wx.SP_ARROW_KEYS, min = 0, max = 100, initial = 0)
         self.total_pixels = wx.StaticText(self, label = f'Total Pixels: 0')
 
+
+        self.rect_size = wx.StaticText(self, label = "Rect Size: ")
+        self.size_spin = wx.SpinCtrl(self, value = '', style = wx.SP_ARROW_KEYS, min = 0, max = 100, initial = 15)
+
         self.Bind(wx.EVT_BUTTON, self.OnTimecourse, self.timecourse)
         self.Bind(wx.EVT_SPINCTRL, self.OnSpin, self.percentage)
+        self.Bind(wx.EVT_SPINCTRL, self.OnSizeChange, self.size_spin)
         self.Bind(wx.EVT_BUTTON, self.OnSave, self.to_csv)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.timecourse, 0, wx.ALL, 3)
         sizer.Add(self.percentage, 0, wx.ALL, 3)
         sizer.Add(self.total_pixels, 0, wx.ALL, 3)
+        sizer.Add(self.rect_size, 0, wx.ALL, 3)
+        sizer.Add(self.size_spin, 0, wx.ALL, 3)
+
         sizer.Add(self.to_csv, 0, wx.ALL, 3)
 
         self.SetSizer(sizer)
+
+    def OnSizeChange(self, event):
+        self.OnSpin(event)
+        event.Skip()
 
     def OnSave(self, event):
         if self.response is not None:
@@ -49,6 +61,7 @@ class OperationPanel(wx.Panel):
     def OnTimecourse(self, event):
         self.OnSpin(event)
         percent = self.percentage.GetValue()
+        rect_size = self.size_spin.GetValue()
         try:
             s = float(percent)
         except Exception:
@@ -56,7 +69,8 @@ class OperationPanel(wx.Panel):
             return
         threshold = float(percent)
         mask = create_mask(self.exp.resp_map, threshold)
-        response, *rest = masked_timeseries(self.exp.stack, mask)
+        # response, *rest = masked_timeseries(self.exp.stack, mask)
+        response = self.compute_timeseries(int(rect_size))
         self.reponse = response
         plt.plot(response, label = 'Mean Response Per Frame')
 
@@ -79,18 +93,29 @@ class OperationPanel(wx.Panel):
 
         '''
         percent = self.percentage.GetValue()
+        rect_size = int(self.size_spin.GetValue())
         try:
             s = float(percent)
         except Exception:
             wx.MessageBox('Not a valid percentage. It should be a value between 0 and 100', 'Invalid percentage')
             return
         # contours is a list of arrays, points? array([[[214, 32]]]) dtype = int32
-        contoured_image, mean_area, max_area, min_area, area_count, mask = find_contours(self.exp.resp_map, float(percent))
+        contoured_image, mean_area, max_area, min_area, area_count, mask = find_contours(self.exp.resp_map, float(percent), rect_size)
         self.Fit()
         parent = self.GetParent()
         parent.status_bar.SetStatusText(f'Mean Area: {mean_area:.2f} - Max Area: {max_area:.2f} - Min Area: {min_area:.2f} - Area Count: {area_count}')
         new_image = ImageControl.PIL_image_from_array(contoured_image, normalize = False)
         parent.set_image(new_image)
+
+    def compute_timeseries(self, rect_size):
+        '''
+        Compute the df/F using the small red rect area that is the centroid of the contout(island)
+        It
+        :return:
+        '''
+        roi_frames = compute_rect_timeseries(self.exp.stack, rect_size)
+        timeseries = roi_frames.mean(axis = (0, 1)) # compute the mean of every roi_frame
+        return timeseries
 
     def OnReset(self, event):
         parent = self.GetParent()
