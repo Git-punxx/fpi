@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from fpi import HD5Parser
 import cv2
+from modified_intrinsic.imaging import normalize_stack
 
 class FixedROIPanel(wx.Panel):
     def __init__(self, parent, exp, *args, **kwargs, ):
@@ -20,6 +21,7 @@ class OperationPanel(wx.Panel):
 
         self.timecourse = wx.Button(self, label = 'Plot timecourse')
         self.to_csv = wx.Button(self, label = 'Save to csv')
+        self.to_csv.Disable()
 
         self.percentage = wx.SpinCtrl(self, value = '', style = wx.SP_ARROW_KEYS, min = 0, max = 100, initial = 0)
         self.total_pixels = wx.StaticText(self, label = f'Total Pixels: 0')
@@ -28,10 +30,13 @@ class OperationPanel(wx.Panel):
         self.rect_size = wx.StaticText(self, label = "Rect Size: ")
         self.size_spin = wx.SpinCtrl(self, value = '', style = wx.SP_ARROW_KEYS, min = 0, max = 100, initial = 15)
 
+        self.image_type= wx.Choice(self, choices = ['Max Response', 'Response Map'])
+
         self.Bind(wx.EVT_BUTTON, self.OnTimecourse, self.timecourse)
         self.Bind(wx.EVT_SPINCTRL, self.OnSpin, self.percentage)
         self.Bind(wx.EVT_SPINCTRL, self.OnSizeChange, self.size_spin)
         self.Bind(wx.EVT_BUTTON, self.OnSave, self.to_csv)
+        self.Bind(wx.EVT_CHOICE, self.OnImageChange, self.image_type)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.timecourse, 0, wx.ALL, 3)
@@ -39,6 +44,7 @@ class OperationPanel(wx.Panel):
         sizer.Add(self.total_pixels, 0, wx.ALL, 3)
         sizer.Add(self.rect_size, 0, wx.ALL, 3)
         sizer.Add(self.size_spin, 0, wx.ALL, 3)
+        sizer.Add(self.image_type, 0, wx.ALL, 3)
 
         sizer.Add(self.to_csv, 0, wx.ALL, 3)
 
@@ -47,6 +53,16 @@ class OperationPanel(wx.Panel):
     def OnSizeChange(self, event):
         self.OnSpin(event)
         event.Skip()
+
+    def OnImageChange(self, event):
+        parent = self.GetParent()
+        choices = {'Max Response': self.exp.max_project, 'Response Map': self.exp.resp_map}
+        choice = self.image_type.GetString(self.image_type.GetSelection())
+        img = choices[choice]
+        new_image = ImageControl.PIL_image_from_array(img, normalize = True)
+        parent.set_image(new_image)
+
+
 
     def OnSave(self, event):
         if self.response is not None:
@@ -60,6 +76,7 @@ class OperationPanel(wx.Panel):
 
     def OnTimecourse(self, event):
         self.OnSpin(event)
+        self.to_csv.Enable()
         percent = self.percentage.GetValue()
         rect_size = self.size_spin.GetValue()
         try:
@@ -68,11 +85,12 @@ class OperationPanel(wx.Panel):
             wx.MessageBox('Not a valid percentage. It should be a value between 0 and 100', 'Invalid percentage')
             return
         threshold = float(percent)
-        mask = create_mask(self.exp.resp_map, threshold)
+        #mask = create_mask(self.exp.resp_map, threshold)
         # response, *rest = masked_timeseries(self.exp.stack, mask)
         response = self.compute_timeseries(int(rect_size))
-        self.reponse = response
-        plt.plot(response, label = 'Mean Response Per Frame')
+        self.response = response
+        max_df = self.response[30:70].max()
+        plt.plot(response, label = f'Mean Response Per Frame (Max Val: {max_df:.4f}')
 
         # plt.plot(np.trim_zeros(timecourse[:, 2]), label = 'Std Deviation')
         plt.legend()
@@ -92,6 +110,7 @@ class OperationPanel(wx.Panel):
         -------
 
         '''
+        self.to_csv.Disable()
         percent = self.percentage.GetValue()
         rect_size = int(self.size_spin.GetValue())
         try:
@@ -100,7 +119,7 @@ class OperationPanel(wx.Panel):
             wx.MessageBox('Not a valid percentage. It should be a value between 0 and 100', 'Invalid percentage')
             return
         # contours is a list of arrays, points? array([[[214, 32]]]) dtype = int32
-        contoured_image, mean_area, max_area, min_area, area_count, mask = find_contours(self.exp.resp_map, float(percent), rect_size)
+        contoured_image, mean_area, max_area, min_area, area_count, mask = find_contours(self.exp.resp_map, float(percent), rect_size, self.exp.max_project)
         self.Fit()
         parent = self.GetParent()
         parent.status_bar.SetStatusText(f'Mean Area: {mean_area:.2f} - Max Area: {max_area:.2f} - Min Area: {min_area:.2f} - Area Count: {area_count}')
@@ -113,9 +132,12 @@ class OperationPanel(wx.Panel):
         It
         :return:
         '''
-        roi_frames = compute_rect_timeseries(self.exp.stack, rect_size)
-        timeseries = roi_frames.mean(axis = (0, 1)) # compute the mean of every roi_frame
-        return timeseries
+        from_x, to_x, from_y, to_y = compute_slice(rect_size)
+
+        stack_frames = self.exp.stack[from_x: to_x, from_y: to_y, :]
+        normalized = normalize_stack(stack_frames)
+        #df = normalized[self.exp.resp_map[from_x: to_x, from_y: to_y] > 0, :]
+        return normalized.mean((0, 1))
 
     def OnReset(self, event):
         parent = self.GetParent()

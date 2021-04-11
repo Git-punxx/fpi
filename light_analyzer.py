@@ -1,4 +1,4 @@
-from modified_intrinsic.imaging import resp_map
+from modified_intrinsic.imaging import resp_map, normalize_stack
 from modified_intrinsic.imaging import Intrinsic, ReducedStack, Session
 from skimage.measure import block_reduce
 import h5py
@@ -18,6 +18,7 @@ import sys
 import logging
 from fpi import FPIExperiment
 from PIL import Image
+from image_analysis.feature import find_contours, compute_slice
 
 class RawAnalysisController:
     def __init__(self, root_folder = None):
@@ -123,6 +124,7 @@ def analyze(df_file):
     with h5py.File(df_file, 'a') as ds:
         print(f'Saving to {df_file}...')
         stack = ds['df']['stack'][()]
+        norm_stack = normalize_stack(stack)
         r, df = resp_map(stack)
         df_grp = ds['df']
         try:
@@ -130,11 +132,13 @@ def analyze(df_file):
             df_grp['avg_df'][...] = df.mean(0)
             df_grp['max_df'][...] = df.max(1).mean()
             df_grp['area'][...] = np.sum(r > 0)
+            df_grp['norm_stack'][...] = norm_stack
         except KeyError:
             df_grp.create_dataset('resp_map', data=r)
             df_grp.create_dataset('avg_df', data=df.mean(0))
             df_grp.create_dataset('max_df', data=df.max(1).mean())
             df_grp.create_dataset('area', data=np.sum(r > 0))
+            df_grp.create_dataset('norm_stack', data=norm_stack)
 
 def completion_report(exp_path):
     STAGE = 0
@@ -197,6 +201,22 @@ class FPIImageController:
         return img
 
 
+'''
+A function that analyzes a series of datastores.
+It uses the find_contours from image_analysis.features to compute islands over a given threshold.
+The threshold is computed as a percent of max_df
+It chooses the largest island and it finds its centroid
+Then it creates a rectangle of given size and fetches the corresponding slice from avg_stack
+It creates the normalized version and then finds the mean on every normalized frame which is the df/F
+It returns 
+'''
+
+
+
+if __name__ == '__main__':
+    path = 'F:/Data/Archive/'
+    i = ThreadedIntrinsic(path, pattern = '*.tif')
+    i.complete_analysis()
 
 
 

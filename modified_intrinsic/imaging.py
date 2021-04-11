@@ -119,10 +119,12 @@ class Intrinsic(object):
                 end = len(self.trial_folders) if end == -1 else end
                 self.trial_folders = self.trial_folders[start:end]
             self.create_reduced_stack(pattern, binning)
+            print('Creating reduced stack')
         else:
             tiff_files = self.get_tiff_list()
             if end != -1:
                 tiff_files = tiff_files[start:end]
+            print('Creating tiff stack')
             self.create_tiff_stack(tiff_files)
 
 
@@ -220,11 +222,14 @@ class Intrinsic(object):
                 print(e)
 
     def compute_baselines(self):
+        print('Computing baselines')
+        t = self.stacks[0]
         self.l_base = [s[:self.n_baseline].mean(0)
                        for s in self.stacks]
         self.baseline = np.mean(self.l_base, 0)
 
     def average_trials(self, start=0, end=-1):
+        print('Computing average trials')
         max_frames = max([len(s) for s in self.stacks])
         frame_shape = self.stacks[0][0].shape
         self.avg_stack = np.zeros((frame_shape[0], frame_shape[1], max_frames))
@@ -234,20 +239,17 @@ class Intrinsic(object):
                            if (ix_frame < len(s))]
             all_c_frame = [x for x in all_c_frame if x.shape is not ()]
             c_frame = np.array([x for x in all_c_frame])
-            print(c_frame.shape)
-            sys.stdout.flush()
             avg_frame = c_frame.mean(0)
             avg_frame -= self.baseline
             avg_frame /= self.baseline
             avg_frame[np.isnan(avg_frame)] = 0
             self.avg_stack[:, :, ix_frame] = avg_frame
-            print(self.avg_stack)
-            sys.stdout.flush()
 
     def norm_stack(self):
         if len(self.avg_stack) == 0:
             self.average_trials()
         if self._norm_stack is None:
+            print('Computing normalized stack')
             self._norm_stack = normalize_stack(self.avg_stack, self.n_baseline)
         return self._norm_stack
 
@@ -261,6 +263,7 @@ class Intrinsic(object):
     def find_resp(self):
         if self._resp is not None:
             return self._resp
+        print('Computing response (resp with find_resp)')
         self._resp = find_resp(self.norm_stack(), self.n_baseline)
         return self._resp
 

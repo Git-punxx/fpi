@@ -59,7 +59,7 @@ def create_mask(arr, threshold):
 
 active_contours = []
 
-def find_contours(arr: np.ndarray, threshold: int, rect_length):
+def find_contours(arr: np.ndarray, threshold: int, rect_length, background: np.ndarray):
     '''
     This function is used in the gui to update the image when changing the threshold and when we build the masked stack
     where we use the mask it returns
@@ -81,6 +81,12 @@ def find_contours(arr: np.ndarray, threshold: int, rect_length):
     # Copy the source image because findContours modifies it
     # Object should be white and background should be black
     arr = normalize(arr.copy())
+
+    # Prepare the background image
+    background = normalize(background.copy())
+    back_img = cv.cvtColor(background, cv.COLOR_GRAY2BGR)
+
+    # Prepare the target image
     threshold = int((threshold * 255) / 100)
     img = cv.cvtColor(arr, cv.COLOR_GRAY2BGR)
     imgray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
@@ -111,12 +117,12 @@ def find_contours(arr: np.ndarray, threshold: int, rect_length):
 
         xs, xe, ys, ye = (cX - rect_length // 2, cX + rect_length // 2, cY - rect_length //2 , cY + rect_length //2)
 
-        cv.rectangle(img, (xs, ys), (xe, ye), (255, 0, 0), 1)
-        cv.putText(img, str(index), (xs - text_offset, ys - text_offset), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+        cv.rectangle(back_img, (xs, ys), (xe, ye), (255, 0, 0), 1)
+        cv.putText(back_img, str(index), (xs - text_offset, ys - text_offset), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
 
 
     mask = cv.drawContours(np.zeros_like(arr),contours, -1, (255), -1)
-    final_image = cv.drawContours(img, contours, -1, GREEN, 1)
+    final_image = cv.drawContours(back_img, contours, -1, GREEN, 1)
     return final_image, mean_area, max_area, min_area, area_count, mask
 
 def check_hitbox(x, y):
@@ -178,9 +184,10 @@ def build_masked_frames(threshold: int, roi = False):
     images = [util.PIL_image_from_array(frame) for index, frame in enumerate(frames)]
     return images, vmin, vmax, frames
 
-def compute_rect_timeseries(response, rect_size = 15):
+def compute_slice(rect_size = 15):
     '''
     It returns the slice of the stack that corresponds to the rectangle positioned on the centroid of the contour
+    We must call find_contours first to populate the global active contours
     :param response: The stack of the experiments (ndarray 683*683*80)
     :return:
     '''
@@ -195,7 +202,7 @@ def compute_rect_timeseries(response, rect_size = 15):
     # draw a rect at the center of the contour
     from_x, to_x, from_y, to_y = (cX, cX + rect_size, cY, cY + rect_size)
 
-    return response[from_x: to_x, from_y: to_y, :]
+    return (from_x, to_x, from_y, to_y)
 
 
 

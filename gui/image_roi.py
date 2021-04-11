@@ -160,6 +160,8 @@ class ImageControl(wx.Panel):
             return
 
     def roi_to_slice(self):
+        if self.end is None or self.start is None:
+            return
         dx = abs(self.end[0] - self.start[0])
         dy = abs(self.end[1] - self.start[1])
 
@@ -201,6 +203,9 @@ class ImageControl(wx.Panel):
         self.Refresh()
         self.Update()
 
+    def set_image_from_array(self, array: np.ndarray):
+        im = ImageControl.PIL_image_from_array(array)
+        self.set_image(im)
 
     def reset_image(self):
         self.image = self._original

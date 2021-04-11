@@ -94,6 +94,7 @@ class DetailsPanel(wx.Frame):
         self._colormap_button = wx.Button(self.details_panel, label = 'Open Colormapped Image')
 
 
+
         sizer = wx.GridBagSizer(hgap = 5, vgap = 5)
         sizer.Add(self._file_lbl, (0, 0))
         sizer.Add(self._file_txt, (0, 1))
@@ -239,7 +240,7 @@ class DetailsPanel(wx.Frame):
         self.image_panel.reset_image()
 
     def build_image_panel(self):
-        df = self._experiment.resp_map
+        df = self._experiment.max_project
         im = util.wx_fromarray(df)
         image_panel = gui.image_roi.ImageControl(self, image = im)
         return image_panel
