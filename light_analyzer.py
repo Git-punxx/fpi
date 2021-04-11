@@ -1,5 +1,6 @@
 from modified_intrinsic.imaging import resp_map, normalize_stack
 from modified_intrinsic.imaging import Intrinsic, ReducedStack, Session
+from modified_intrinsic.stack import Stack
 from skimage.measure import block_reduce
 import h5py
 import numpy as np
@@ -18,7 +19,6 @@ import sys
 import logging
 from fpi import FPIExperiment
 from PIL import Image
-from image_analysis.feature import find_contours, compute_slice
 
 class RawAnalysisController:
     def __init__(self, root_folder = None):
@@ -215,8 +215,9 @@ It returns
 
 if __name__ == '__main__':
     path = 'F:/Data/Archive/'
-    i = ThreadedIntrinsic(path, pattern = '*.tif')
-    i.complete_analysis()
+    raw_path = 'F:/Data/20200527_1158_2_raw_trials/20200527_1158_0'
+    s = ReducedStack(raw_path, pattern = '*.png')
+    print(s.images)
 
 
 
