@@ -288,7 +288,7 @@ def ExportPeakValue(parent):
     selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
     exp_names = [exp.name for exp in selected]
 
-    response = {exp.name: [exp.response] for exp in selected}
+    response = {exp.name: exp.response for exp in selected}
     save_series(f'aggregated_response', response)
     wx.MessageBox(f'Response values for {exp_names} saved...')
 
@@ -548,8 +548,9 @@ def save_series(fname, series):
     if not os.path.exists(mgr.data_export_dir):
         os.mkdir(mgr.data_export_dir)
     fname = mgr.data_export_dir + '/' + fname + '.xlsx'
-    print(series)
     df = pd.DataFrame(series)
+
+    print(series)
     '''
     if type(series) == dict:
         with open(fname, 'w') as fd:
