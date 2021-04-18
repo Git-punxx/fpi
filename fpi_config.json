@@ -1,6 +1,6 @@
 {
   "paths": {
-    "databasedir": "/Volumes/Data/Vasiliki/h5/experinments",
+    "databasedir": "F:\\Data\\experiments",
     "rawdir": "C:\\Users\\spyros\\Documents\\Datasets\\20201204_1755_1\\20201204_1755_0",
     "csv": "C:\\Users\\\u0392\u03b1\u03c3\u03af\u03bb\u03b7\u03c2\\Documents\\MyProjects\\data\\Data\\csv"
   },
@@ -27,7 +27,9 @@
       "No",
       "ketamine",
       "PTX",
-      "SAL"
+      "SAL",
+      "Bicuculin",
+      "Diazepam"
     ],
     "genotype": [
       "KO",

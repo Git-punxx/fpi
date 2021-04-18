@@ -1,6 +1,7 @@
 from typing import Type
 from fpi_util import explain
 from concurrent.futures import ProcessPoolExecutor, as_completed
+
 import numpy as np
 import os
 import sys
@@ -733,6 +734,14 @@ class FPIExperiment:
         if self._area is None:
             self._area = parser.area()
         return self._area
+
+
+    def scaled_area(self):
+        width, height = self.anat.shape
+        to_scale = 2048
+        coeff = int(np.ceil(to_scale/width))
+        print(self.area * coeff)
+        return self.area * coeff
 
     def roi_area(self):
         parser = fpiparser(self._path, self.get_root())

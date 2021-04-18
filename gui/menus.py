@@ -29,6 +29,7 @@ ID_EXPORT_ONSET_LATENCY = wx.NewId()
 ID_EXPORT_ONSET_THRESHOLD = wx.NewId()
 ID_EXPORT_PEAK_LATENCY = wx.NewId()
 ID_EXPORT_HALFWIDTH = wx.NewId()
+ID_EXPORT_AREA = wx.NewId()
 
 ID_ROI_EXPORT_RESPONSE = wx.NewId()
 ID_ROI_EXPORT_PEAK_VALUES = wx.NewId()
@@ -95,7 +96,8 @@ export_menu = [(ID_EXPORT_RESPONSE, 'Reponse'),
                (ID_EXPORT_PEAK_LATENCY, 'Peak Latency'),
                (ID_EXPORT_ONSET_LATENCY, 'Onset Latency'),
                (ID_EXPORT_ONSET_THRESHOLD, 'Onset Threshold'),
-               (ID_EXPORT_HALFWIDTH, 'Halfwidth')]
+               (ID_EXPORT_HALFWIDTH, 'Halfwidth'),
+               (ID_EXPORT_AREA, 'Area')]
 
 roi_export_menu = [(ID_ROI_EXPORT_RESPONSE, 'ROI Response'),
                    (ID_ROI_EXPORT_PEAK_VALUES, 'ROI Peak Values'),
@@ -220,6 +222,7 @@ def SetDataPath(parent):
         parent.gatherer.scan()
         parent.exp_list.clear()
         parent.exp_list.add_rows(parent.gatherer.to_tuple())
+        parent.Refresh()
     else:
         ErrorDialog('Could not set requested path')
 
@@ -292,6 +295,18 @@ def ExportResponse(parent):
     save_series('aggregated_response', response)
     wx.MessageBox(f'Response values for {exp_names} saved...')
 
+
+@register(ID_EXPORT_AREA)
+def ExportArea(parent):
+    root = wx.App.Get().GetRoot()
+    exp_list = root.exp_list
+    gatherer = root.gatherer
+    selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
+    exp_names = [exp.name for exp in selected]
+
+    area = {exp.name: [exp.animalline, exp.stimulation, exp.treatment, exp.genotype, exp.scaled_area()] for exp in selected}
+    save_single_values('aggregated_area', area)
+    wx.MessageBox(f'Area values for {exp_names} saved...')
 
 @register(ID_EXPORT_PEAK_VALUES)
 def ExportPeakValue(parent):
@@ -583,6 +598,7 @@ def save_single_values(fname, series):
     if not os.path.exists(mgr.data_export_dir):
         os.mkdir(mgr.data_export_dir)
     fname = mgr.data_export_dir + '/' + fname + '.xlsx'
+    print(series)
     df = pd.DataFrame(series)
     df = df.T
     print(df)
