@@ -795,13 +795,15 @@ class FPIExperiment:
         data = self.response
         if data is None:
             return
-        return onset_threshold(self.mean_baseline, ratio)
-
+        try:
+            return onset_threshold(self.mean_baseline, ratio)
+        except Exception as e:
+            return 0
     @property
     def onset_latency(self, ratio=0.3, n_baseline=30):
-        # returns frames. Find 5 syneomena pou na plhroun th sun8hkh 1 + 0.3 * basekube <  frmaw
-        threshold = onset_threshold(self.mean_baseline)
-        res = onset_latency(threshold, self.response)
+        # returns frames. Find 5 syneomena pou na plhroun th sun8hkh 1 + 0.3 * basekube <  frmawj
+
+        res = onset_latency(self.onset_threshold, self.response)
         return res
 
 
