@@ -37,26 +37,26 @@ class FPIPlotter:
 
 
     def _plot_dict(self, genotype_dict):
+        print(genotype_dict)
         no_subplots = len(genotype_dict.keys())
-        print(f'Creating {no_subplots} subplots')
+        print(f'Number of subplots: {no_subplots}')
         axes = self.figure.subplots(1, len(genotype_dict.keys()), sharey = True)
-        print('Created axes')
+
         if no_subplots > 1:
             for ax, gen in zip(axes, genotype_dict.keys()):
                 if len(genotype_dict[gen].values()) == 0:
                     continue
                 vals = genotype_dict[gen].values()
                 labels = [gen.name for gen in genotype_dict[gen].keys()]
-                ax.boxplot(vals, labels = [gen.name for gen in genotype_dict[gen].keys()], patch_artist = True)
+                ax.boxplot(vals, labels = labels, patch_artist = True)
                 ax.set_xlabel(gen.name)
                 ax.grid(True, alpha = 0.1)
         else:
             for gen in genotype_dict.keys():
                 vals = genotype_dict[gen].values()
+                print(f'Plotting {vals} for {gen.name}')
                 labels = [gen.name for gen in genotype_dict[gen].keys()]
-                print(vals)
-                print(labels)
-                axes.boxplot(genotype_dict[gen].values(), labels=[gen.name for gen in genotype_dict[gen].keys()],
+                axes.boxplot(vals, labels=labels,
                              patch_artist=True)
                 axes.set_xlabel(gen.name)
                 axes.grid(True, alpha=0.1)
