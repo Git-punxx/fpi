@@ -548,6 +548,10 @@ def save_series(fname, series):
     if not os.path.exists(mgr.data_export_dir):
         os.mkdir(mgr.data_export_dir)
     fname = mgr.data_export_dir + '/' + fname + '.xlsx'
+    max_len = max(map(lambda x: len(x), series.values()))
+    for elem in series.values():
+        if len(elem) < max_len:
+            elem += (max_len - len(elem)) * [np.NAN]
     df = pd.DataFrame(series)
 
     print(series)
