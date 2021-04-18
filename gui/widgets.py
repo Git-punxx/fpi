@@ -361,7 +361,6 @@ class FilterPanel(wx.Panel):
         #pub.sendMessage(STIMULUS_CHANGED, args=selection)
         pub.sendMessage(CHOICES_CHANGED, selections=all)
         self.clear_selection()
-        self.GetParent().SetStatusText(STATUS_BAR_TEXT.format(status_text, len(self.current_selection), os.getenv('FPI_PATH')))
 
     def OnTreatChoice(self, event):
         status_text = 'Experiment {} selected'
@@ -370,7 +369,6 @@ class FilterPanel(wx.Panel):
         #pub.sendMessage(TREATMENT_CHANGED, args=selection)
         pub.sendMessage(CHOICES_CHANGED, selections=all)
         self.clear_selection()
-        self.GetParent().SetStatusText(STATUS_BAR_TEXT.format(status_text, len(self.current_selection), os.getenv('FPI_PATH')))
 
     def OnGenChoice(self, event):
         status_text = 'Experiment {} selected'
@@ -379,7 +377,6 @@ class FilterPanel(wx.Panel):
         #pub.sendMessage(GENOTYPE_CHANGED, args=selection)
         pub.sendMessage(CHOICES_CHANGED, selections=all)
         self.clear_selection()
-        self.GetParent().SetStatusText(STATUS_BAR_TEXT.format(status_text, len(self.current_selection), os.getenv('FPI_PATH')))
 
     def OnClear(self, event):
         status_text = 'Experiment {} selected'
@@ -388,7 +385,6 @@ class FilterPanel(wx.Panel):
         self.stim_choice.SetSelection(-1)
         self.gen_choice.SetSelection(-1)
         pub.sendMessage(CLEAR_FILTERS, args=None)
-        self.GetParent().SetStatusText(STATUS_BAR_TEXT.format(status_text, len(self.current_selection), os.getenv('FPI_PATH')))
 
     def GetChoices(self):
         return [choice.GetStringSelection() for choice in self.choices]
