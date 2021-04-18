@@ -69,9 +69,9 @@ class FPIPlotter:
         ax.set_ylabel(f'Response (avg_df)')
 
         try:
-            values = [(exp.response[1:80], exp.name, exp.resp_map.shape) for exp in experiments]
+            values = [(exp.response[1:-1], exp.name, exp.resp_map.shape) for exp in experiments]
             for data, name, shape in values:
-                plt = ax.plot(range(1, 80), data, label = name, linewidth = 2)
+                plt = ax.plot(range(1, len(data)+1), data, label = name, linewidth = 2)
                 plt[0].set_label(f'{name}: {shape}')
         except ValueError as e:
             print(f'######################## {name} cannot be plotted')
