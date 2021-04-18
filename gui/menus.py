@@ -543,15 +543,22 @@ def Multianalysis(parent):
     notify()
 
 
+def pad(series):
+    max_len = max(map(lambda x: len(x), series.values()))
+    for key, s in series.items():
+        if len(s) < max_len:
+            diff = max_len - len(s)
+            padding = np.full((diff,), np.NAN)
+            series[key] = np.append(s, padding)
+    return series
+
+
 
 def save_series(fname, series):
     if not os.path.exists(mgr.data_export_dir):
         os.mkdir(mgr.data_export_dir)
     fname = mgr.data_export_dir + '/' + fname + '.xlsx'
-    max_len = max(map(lambda x: len(x), series.values()))
-    for elem in series.values():
-        if len(elem) < max_len:
-            elem += (max_len - len(elem)) * [np.NAN]
+    series = pad(series)
     df = pd.DataFrame(series)
 
     print(series)
