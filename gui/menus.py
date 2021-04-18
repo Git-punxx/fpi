@@ -281,7 +281,7 @@ def TotalStats(parent):
 
 
 @register(ID_EXPORT_RESPONSE)
-def ExportPeakValue(parent):
+def ExportResponse(parent):
     root = wx.App.Get().GetRoot()
     exp_list = root.exp_list
     gatherer = root.gatherer
@@ -289,7 +289,7 @@ def ExportPeakValue(parent):
     exp_names = [exp.name for exp in selected]
 
     response = {exp.name: exp.response for exp in selected}
-    save_series(f'aggregated_response', response)
+    save_series('aggregated_response', response)
     wx.MessageBox(f'Response values for {exp_names} saved...')
 
 
@@ -301,8 +301,8 @@ def ExportPeakValue(parent):
     selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
     exp_names = [exp.name for exp in selected]
 
-    peak_value = {exp.name: [exp.max_df] for exp in selected}
-    save_series(f'peak_values', peak_value)
+    peak_value = {exp.name: [exp.animalline, exp.stimulation, exp.treatment, exp.genotype, exp.max_df] for exp in selected}
+    save_single_values(f'aggregated_peak_values', peak_value)
     wx.MessageBox(f'Peak values for {exp_names} saved...')
 
 
@@ -314,8 +314,8 @@ def ExportPeakLatency(parent):
     selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
     exp_names = [exp.name for exp in selected]
 
-    peak_latency = {exp.name: [exp.peak_latency] for exp in selected}
-    save_series('peak_latency', peak_latency)
+    peak_latency = {exp.name: [exp.animalline, exp.stimulation, exp.treatment, exp.genotype, exp.peak_latency] for exp in selected}
+    save_single_values('aggregated_peak_latency', peak_latency)
     wx.MessageBox(f'Peak latency values for {exp_names} saved...')
 
 
@@ -326,9 +326,9 @@ def ExportOnsetLatency(parent):
     gatherer = root.gatherer
     selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
 
-    onset_latency = {exp.name: [exp.onset_latency] for exp in selected}
+    onset_latency = {exp.name: [exp.animalline, exp.stimulation, exp.treatment, exp.genotype, exp.onset_latency] for exp in selected}
     exp_names = [exp.name for exp in selected]
-    save_series('onset_latency', onset_latency)
+    save_single_values('aggregated_onset_latency', onset_latency)
     wx.MessageBox(f'Onset latency values for {exp_names} saved...')
 
 
@@ -339,9 +339,9 @@ def ExportOnsetThreshold(parent):
     gatherer = root.gatherer
     selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
 
-    onset_threshold = {exp.name: [exp.onset_threshold] for exp in selected}
+    onset_threshold = {exp.name: [exp.animalline, exp.stimulation, exp.treatment, exp.genotype, exp.onset_threshold] for exp in selected}
     exp_names = [exp.name for exp in selected]
-    save_series('onset_threshold', onset_threshold)
+    save_single_values('aggregated_onset_threshold', onset_threshold)
     wx.MessageBox(f'Onset threshold values for {exp_names} saved...')
 
 
@@ -352,9 +352,9 @@ def ExportHalfwidth(parent):
     gatherer = root.gatherer
     selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
 
-    halfwidth = {exp.name: [exp.halfwidth()] for exp in selected}
+    halfwidth = {exp.name: [exp.animalline, exp.stimulation, exp.treatment, exp.genotype, exp.halfwidth()] for exp in selected}
     exp_names = [exp.name for exp in selected]
-    save_series('halfwidth', halfwidth)
+    save_single_values('aggreageted_halfwidth', halfwidth)
     wx.MessageBox(f'Halfwidth values for {exp_names} saved...')
 
 
@@ -577,3 +577,13 @@ def save_series(fname, series):
         '''
     df.to_excel(fname)
     print('Export complete...')
+
+
+def save_single_values(fname, series):
+    if not os.path.exists(mgr.data_export_dir):
+        os.mkdir(mgr.data_export_dir)
+    fname = mgr.data_export_dir + '/' + fname + '.xlsx'
+    df = pd.DataFrame(series)
+    df = df.T
+    print(df)
+    df.to_excel(fname)
