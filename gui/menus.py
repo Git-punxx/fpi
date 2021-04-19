@@ -1,5 +1,6 @@
 import wx
 from light_analyzer import do_analysis
+from image_analysis import feature
 import subprocess
 from gui.dialogs import *
 from app_config import config_manager as app_config
@@ -30,6 +31,7 @@ ID_EXPORT_ONSET_THRESHOLD = wx.NewId()
 ID_EXPORT_PEAK_LATENCY = wx.NewId()
 ID_EXPORT_HALFWIDTH = wx.NewId()
 ID_EXPORT_AREA = wx.NewId()
+ID_EXPORT_ROI_AREA = wx.NewId()
 
 ID_ROI_EXPORT_RESPONSE = wx.NewId()
 ID_ROI_EXPORT_PEAK_VALUES = wx.NewId()
@@ -97,7 +99,8 @@ export_menu = [(ID_EXPORT_RESPONSE, 'Reponse'),
                (ID_EXPORT_ONSET_LATENCY, 'Onset Latency'),
                (ID_EXPORT_ONSET_THRESHOLD, 'Onset Threshold'),
                (ID_EXPORT_HALFWIDTH, 'Halfwidth'),
-               (ID_EXPORT_AREA, 'Area')]
+               (ID_EXPORT_AREA, 'Area'),
+               (ID_EXPORT_ROI_AREA, 'ROI Area')]
 
 roi_export_menu = [(ID_ROI_EXPORT_RESPONSE, 'ROI Response'),
                    (ID_ROI_EXPORT_PEAK_VALUES, 'ROI Peak Values'),
@@ -306,6 +309,27 @@ def ExportArea(parent):
 
     area = {exp.name: [exp.animalline, exp.stimulation, exp.treatment, exp.genotype, exp.scaled_area()] for exp in selected}
     save_single_values('aggregated_area', area)
+    wx.MessageBox(f'Area values for {exp_names} saved...')
+
+@register(ID_EXPORT_ROI_AREA)
+def ExportROIArea(parent):
+
+    root = wx.App.Get().GetRoot()
+    exp_list = root.exp_list
+    gatherer = root.gatherer
+    selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
+    exp_names = [exp.name for exp in selected]
+
+    dlg = wx.TextEntryDialog(None, message = 'Enter threshold', caption = 'Enter threshold to calculate ROI Area', value = "75")
+    dlg.ShowModal()
+    try:
+        threshold = int(dlg.GetValue())
+    except Exception as e:
+        threshold = 75
+    dlg.Destroy()
+    # Find the max area of the contour for the given threshold and scale it to 2048 - the original resolution
+    roi_area = {exp.name: [exp.animalline, exp.stimulation, exp.treatment, exp.genotype, feature.find_contours(exp.resp_map, threshold)[2] * np.ceil(2048 / exp.resp_map.shape[0])] for exp in selected}
+    save_single_values(f'aggregated_roi_area-{threshold}%', roi_area)
     wx.MessageBox(f'Area values for {exp_names} saved...')
 
 @register(ID_EXPORT_PEAK_VALUES)
