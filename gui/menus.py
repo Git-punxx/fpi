@@ -328,7 +328,7 @@ def ExportROIArea(parent):
         threshold = 75
     dlg.Destroy()
     # Find the max area of the contour for the given threshold and scale it to 2048 - the original resolution
-    roi_area = {exp.name: [exp.animalline, exp.stimulation, exp.treatment, exp.genotype, feature.find_contours(exp.resp_map, threshold)[2] * np.ceil(2048 / exp.resp_map.shape[0])] for exp in selected}
+    roi_area = {exp.name: [exp.animalline, exp.stimulation, exp.treatment, exp.genotype, original_area(exp.resp_map, threshold) * np.ceil(2048 / exp.resp_map.shape[0])] for exp in selected}
     save_single_values(f'aggregated_roi_area-{threshold}%', roi_area)
     wx.MessageBox(f'Area values for {exp_names} saved...')
 
@@ -627,3 +627,25 @@ def save_single_values(fname, series):
     df = df.T
     print(df)
     df.to_excel(fname)
+
+def estimate_zoom(resp_map):
+    width, height = resp_map.shape
+    if width == 512:    # that means that binning is 4. Original is 2048 x 2048. Vlad's expereiments -> zoom = 1
+        coeff = 1
+    elif width == 683:  # binning = 3 -> Remi-vas experiments -> zoom = 1.6
+        coeff = 1.5
+    else:
+        raise ValueError("Unknown zoom")
+    return coeff
+
+def original_area(resp_map, threshold):
+    try:
+        coeff = estimate_zoom(resp_map)
+    except ValueError:
+        coeff = np.NAN
+    if coeff != np.NAN:
+        area = feature.find_contours(resp_map, threshold)[2]
+        area = area * (6.5 / coeff / coeff) ** 2
+    else:
+        area = 0
+    return area

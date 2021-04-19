@@ -735,13 +735,22 @@ class FPIExperiment:
             self._area = parser.area()
         return self._area
 
+    def estimate_zoom(self):
+        width, height = self.resp_map.shape
+        if width == 512:  # that means that binning is 4. Original is 2048 x 2048. Vlad's expereiments -> zoom = 1
+            coeff = 1
+        elif width == 683:  # binning = 3 -> Remi-vas experiments -> zoom = 1.6
+            coeff = 1.5
+        else:
+            raise ValueError("Unknown zoom")
+        return coeff
 
     def scaled_area(self):
+        zoom_coeff = self.estimate_zoom()
         width, height = self.anat.shape
         to_scale = 2048
         coeff = int(np.ceil(to_scale/width))
-        print(self.area * coeff)
-        return self.area * coeff
+        return self.area * coeff * (6.5 / zoom_coeff / zoom_coeff) ** 2
 
     def roi_area(self):
         parser = fpiparser(self._path, self.get_root())
