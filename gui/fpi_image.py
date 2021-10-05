@@ -295,7 +295,7 @@ class DetailsPanel(wx.Frame):
         res = dlg.GetValue()
         frame_list = [int(arg) for arg in res.split()]
         dlg.Destroy()
-        export_frames(self._experiment, frame_list)
+        export_frames_plot(self._experiment, frame_list)
 
     def OnDeleteROI(self, event):
         with wx.MessageDialog(None, 'Are you sure you want to delete this ROI?', 'Deleting ROI', style = wx.YES_NO | wx.NO_DEFAULT | wx.ICON_WARNING) as dlg:

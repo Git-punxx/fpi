@@ -977,6 +977,12 @@ class FPIExperiment:
     def log_tuple(msg, tup):
         print(f'{msg}: {tup[0]}: {tup[1]}')
 
+    def timecource_area(self):
+        timecource = np.where( self.timecourse > self.mean_baseline, self.timecourse, self.mean_baseline)
+        length = timecource.shape
+        area = np.trapz(timecource, np.full(length, self.mean_baseline))
+        return area
+
 
 
 

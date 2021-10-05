@@ -51,6 +51,24 @@ def export_frames(exp, frame_list):
             print(e)
             continue
 
+def export_frames_plot(exp, frame_list):
+    if exp._use_roi:
+        s = exp.norm_stack
+    else:
+        s = exp.stack
+        print('Printing from stack')
+    for index in frame_list:
+        path = f'./{exp.name}-Frame-{index}.png'
+        try:
+            nparray = s[:, :, index]
+            vmin = s.min()
+            vmax = s.max()
+            plt.imsave(path, nparray, vmin = vmin, vmax = vmax)
+        except Exception as e:
+            print(e)
+            continue
+
+
 
 def get_avg_stack_frames(exp):
     return exp.stack
