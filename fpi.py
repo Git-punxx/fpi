@@ -889,6 +889,12 @@ class FPIExperiment:
         parser = fpiparser(self._path)
         return parser.has_roi()
 
+    def timecourse_area(self):
+        mean_baseline = np.full(self.response.shape, self.mean_baseline)
+        line = np.maximum(self.response[30:80] - mean_baseline[30:80], 0)
+        return np.trapz(line)
+
+
 
     def clear(self):
         self._response = None
@@ -977,11 +983,6 @@ class FPIExperiment:
     def log_tuple(msg, tup):
         print(f'{msg}: {tup[0]}: {tup[1]}')
 
-    def timecource_area(self):
-        timecource = np.where( self.timecourse > self.mean_baseline, self.timecourse, self.mean_baseline)
-        length = timecource.shape
-        area = np.trapz(timecource, np.full(length, self.mean_baseline))
-        return area
 
 
 
