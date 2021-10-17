@@ -8,6 +8,17 @@ import numpy as np
 from PIL import Image
 from matplotlib import cm
 import os
+from sklearn.preprocessing import minmax_scale
+
+def reject_outliers(data, m = 2.):
+    d = np.abs(data - np.median(data))
+    mdev = np.median(d)
+    s = d/mdev if mdev else 0.
+    return data[s<m]
+
+def scale_stack(stack):
+    stack = reject_outliers(stack, 3.5)
+    return minmax_scale(stack, feature_range= (0, 1))
 
 def animate(exp):
     fig, ax = plt.subplots()
@@ -16,6 +27,7 @@ def animate(exp):
         stack = exp.norm_stack.swapaxes(0, 2)
     else:
         stack = exp.stack.swapaxes(0, 2)
+    stack = scale_stack(stack)
     for index, frame in enumerate(stack):
         ax.set_title(f'Image shape: {frame.shape}')
         im = ax.imshow(frame, animated = True)
@@ -38,6 +50,7 @@ def export_frames(exp, frame_list):
     else:
         s = exp.stack
         print('Printing from stack')
+    s = scale_stack(s)
     for index in frame_list:
         try:
             nparray = s[:, :, index]
@@ -60,6 +73,7 @@ def export_frames_plot(exp, frame_list):
 
     # take the 98 percentile
     # normalize it
+    s = scale_stack(s)
     for index in frame_list:
         path = f'./{exp.name}-Frame-{index}.png'
         try:
