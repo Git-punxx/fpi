@@ -39,6 +39,7 @@ ID_ROI_EXPORT_ONSET_LATENCY = wx.NewId()
 ID_ROI_EXPORT_ONSET_THRESHOLD = wx.NewId()
 ID_ROI_EXPORT_PEAK_LATENCY = wx.NewId()
 ID_ROI_EXPORT_HALFWIDTH = wx.NewId()
+ID_EXPORT_TIMECOURSE_AREA = wx.NewId()
 
 ID_EXPORT_ROI_ATTRIBUTES = wx.NewId()
 
@@ -100,7 +101,8 @@ export_menu = [(ID_EXPORT_RESPONSE, 'Reponse'),
                (ID_EXPORT_ONSET_THRESHOLD, 'Onset Threshold'),
                (ID_EXPORT_HALFWIDTH, 'Halfwidth'),
                (ID_EXPORT_AREA, 'Area'),
-               (ID_EXPORT_ROI_AREA, 'ROI Area')]
+               (ID_EXPORT_ROI_AREA, 'ROI Area'),
+               (ID_EXPORT_TIMECOURSE_AREA, 'Timecourse Area')]
 
 roi_export_menu = [(ID_ROI_EXPORT_RESPONSE, 'ROI Response'),
                    (ID_ROI_EXPORT_PEAK_VALUES, 'ROI Peak Values'),
@@ -411,6 +413,17 @@ def MeanResponse(parent):
     plt.ylabel('dF/F')
     plt.show()
 
+@register(ID_EXPORT_TIMECOURSE_AREA)
+def ExportTimecourseArea(parent):
+    root = wx.App.Get().GetRoot()
+    exp_list = root.exp_list
+    gatherer = root.gatherer
+    selected = [gatherer.get_experiment(exp) for exp in exp_list.current_selection]
+
+    timecourse_area = {exp.name: [exp.animalline, exp.stimulation, exp.treatment, exp.genotype, exp.timecourse_area()] for exp in selected}
+    exp_names = [exp.name for exp in selected]
+    save_single_values('aggreageted_timecourse_area', timecourse_area)
+    wx.MessageBox(f'Timecourse area values for {exp_names} saved...')
 
 @register(ID_ROI_EXPORT_RESPONSE)
 def ExportRoiResponse(parent):

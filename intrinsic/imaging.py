@@ -582,7 +582,6 @@ def resp_map(norm_stack, n_baseline=30, n_stim=30):
     im_resp = gauss_filt(im_resp, 2)
     im_resp = clean_response(im_resp)
     df = norm_stack[im_resp > 0, :]
-
     return im_resp, df
 
 
